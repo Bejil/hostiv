@@ -1,0 +1,23 @@
+{
+  "name": "TheGrandAppartement",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev --host localhost --port 3000",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare"
+  },
+  "dependencies": {
+    "@stripe/stripe-js": "^9.5.0",
+    "leaflet": "^1.9.4",
+    "nuxt": "^4.4.2",
+    "stripe": "^22.1.1",
+    "vue": "^3.5.32",
+    "vue-router": "^5.0.4"
+  },
+  "devDependencies": {
+    "@types/leaflet": "^1.9.21"
+  }
+}
