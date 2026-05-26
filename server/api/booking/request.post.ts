@@ -3,29 +3,38 @@ import {
   sendBookingRequestEmail,
   sendResendEmail
 } from "../../utils/booking-email"
+import { getPropertyBookingNotifyEmail } from "../../utils/property-site-repository"
 
 export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig()
 
-  const notifyTo = String(config.bookingNotifyEmail || "").trim()
   const resendApiKey = String(config.resendApiKey || "").trim()
   const from = String(config.bookingEmailFrom || "").trim()
 
-  if (!notifyTo || !resendApiKey || !from) {
+  if (!resendApiKey || !from) {
     throw createError({
       statusCode: 503,
-      message:
-        "Envoi d’e-mails non configuré : renseignez BOOKING_NOTIFY_EMAIL et RESEND_API_KEY sur le serveur."
+      message: "Envoi d’e-mails non configuré : renseignez RESEND_API_KEY sur le serveur."
     })
   }
 
   const body = await readBody(event)
-  const parsed = parseBookingRequestBody(body)
+  const parsed = await parseBookingRequestBody(body)
 
   if (!parsed.ok) {
     throw createError({
       statusCode: 400,
       message: parsed.message
+    })
+  }
+
+  const notifyTo = await getPropertyBookingNotifyEmail(parsed.propertySlug)
+
+  if (!notifyTo) {
+    throw createError({
+      statusCode: 503,
+      message:
+        "E-mail hôte non configuré pour ce site : renseignez booking_notify_email sur la propriété dans Supabase."
     })
   }
 

@@ -1,0 +1,1062 @@
+/* Hestia — design system aligné sur The Grand Appartement (tons chauds, Inter) */
+
+:global(html) {
+  scroll-behavior: smooth;
+  scroll-padding-top: 80px;
+}
+
+:global(body) {
+  margin: 0;
+  background:
+    radial-gradient(circle at 12% -8%, rgba(154, 120, 84, 0.16), transparent 42%),
+    radial-gradient(circle at 88% 0%, rgba(107, 79, 51, 0.1), transparent 36%),
+    linear-gradient(180deg, #f7f4f1 0%, #f3ede7 48%, #f8f6f3 100%);
+  color: #171311;
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.hestia-page {
+  --h-ink: #171311;
+  --h-ink-soft: #3d3834;
+  --h-muted: #726458;
+  --h-label: #8a7b6d;
+  --h-accent: #94633c;
+  --h-accent-deep: #6b4f33;
+  --h-cream: #faf7f3;
+  --h-sand: #e2d6c6;
+  --h-card: #fcf8f4;
+  --h-border: #d9cfc4;
+  --h-dark: #2a221c;
+  --h-radius: 16px;
+  --h-radius-lg: 22px;
+  --h-shadow: 0 16px 48px rgba(24, 18, 13, 0.1);
+  --h-shadow-soft: 0 8px 28px rgba(24, 18, 13, 0.08);
+  min-height: 100vh;
+  overflow-x: clip;
+}
+
+.hestia-page *,
+.hestia-page *::before,
+.hestia-page *::after {
+  box-sizing: border-box;
+}
+
+.hestia-container {
+  width: min(1120px, calc(100% - 40px));
+  margin-inline: auto;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Buttons */
+.hestia-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 12px 22px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 800;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease;
+}
+
+.hestia-btn:hover {
+  transform: translateY(-1px);
+}
+
+.hestia-btn--primary {
+  background: var(--h-dark);
+  color: #fffaf6;
+  box-shadow: var(--h-shadow-soft);
+}
+
+.hestia-btn--primary:hover {
+  background: #3d3229;
+  box-shadow: var(--h-shadow);
+}
+
+.hestia-btn--secondary {
+  background: #fff;
+  color: var(--h-accent-deep);
+  border-color: var(--h-border);
+}
+
+.hestia-btn--ghost {
+  background: transparent;
+  color: var(--h-ink-soft);
+}
+
+.hestia-btn--sm {
+  min-height: 40px;
+  padding: 8px 16px;
+  font-size: 0.88rem;
+}
+
+/* Eyebrow & headings */
+.hestia-eyebrow {
+  margin: 0 0 12px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--h-accent);
+}
+
+.hestia-h1 {
+  margin: 0 0 18px;
+  max-width: 14ch;
+  font-size: clamp(2.4rem, 5.5vw, 4rem);
+  line-height: 0.98;
+  letter-spacing: -0.045em;
+  color: var(--h-ink);
+}
+
+.hestia-lead {
+  margin: 0;
+  max-width: 52ch;
+  font-size: clamp(1.05rem, 1.8vw, 1.2rem);
+  line-height: 1.65;
+  color: var(--h-ink-soft);
+}
+
+.hestia-h2 {
+  margin: 0 0 14px;
+  font-size: clamp(1.85rem, 3.2vw, 2.75rem);
+  line-height: 1.02;
+  letter-spacing: -0.04em;
+  color: var(--h-ink);
+}
+
+.hestia-section-intro {
+  margin: 0;
+  max-width: 58ch;
+  font-size: 1.05rem;
+  line-height: 1.65;
+  color: var(--h-muted);
+}
+
+.hestia-section {
+  padding: clamp(64px, 10vw, 108px) 0;
+}
+
+.hestia-section--sand {
+  background: linear-gradient(180deg, #e2d6c6 0%, #d4c6b4 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+.hestia-section--light {
+  background: var(--h-cream);
+}
+
+.hestia-section--dark {
+  background: linear-gradient(155deg, #2a221c 0%, #3d3229 100%);
+  color: #fffaf6;
+}
+
+.hestia-section--dark .hestia-h2,
+.hestia-section--dark .hestia-section-intro {
+  color: #fffaf6;
+}
+
+.hestia-section--dark .hestia-section-intro {
+  color: rgba(255, 250, 246, 0.78);
+}
+
+/* Nav */
+.hestia-nav {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  border-bottom: 1px solid rgba(217, 207, 196, 0.7);
+  background: rgba(252, 248, 244, 0.88);
+  backdrop-filter: blur(14px);
+}
+
+.hestia-nav__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 72px;
+}
+
+.hestia-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: var(--h-ink);
+}
+
+.hestia-logo__mark {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
+  background: linear-gradient(145deg, #7a6f63, #574e44);
+  color: #fffaf6;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.hestia-logo__text {
+  font-size: 1.12rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.hestia-nav__links {
+  display: none;
+  align-items: center;
+  gap: 22px;
+}
+
+.hestia-nav__link {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--h-muted);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.hestia-nav__link:hover {
+  color: var(--h-ink);
+}
+
+.hestia-nav__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hestia-nav__toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border: 1px solid var(--h-border);
+  border-radius: 12px;
+  background: #fff;
+  color: var(--h-ink);
+  cursor: pointer;
+}
+
+.hestia-nav__mobile {
+  display: grid;
+  gap: 12px;
+  padding-bottom: 18px;
+}
+
+.hestia-nav__mobile-link {
+  padding: 10px 0;
+  font-weight: 600;
+  color: var(--h-ink);
+  text-decoration: none;
+  border-bottom: 1px solid var(--h-border);
+}
+
+/* Hero */
+.hestia-hero {
+  position: relative;
+  padding: clamp(48px, 8vw, 88px) 0 clamp(72px, 10vw, 100px);
+}
+
+.hestia-hero__grid {
+  display: grid;
+  gap: 40px;
+  align-items: center;
+}
+
+.hestia-hero__cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 28px;
+}
+
+.hestia-hero__proof {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px 20px;
+  margin-top: 28px;
+  font-size: 0.88rem;
+  color: var(--h-muted);
+}
+
+.hestia-hero__stars {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+  color: var(--h-ink);
+}
+
+.hestia-hero__visual {
+  position: relative;
+  min-height: 420px;
+}
+
+.hestia-hero__glow {
+  position: absolute;
+  inset: 8% 4%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(148, 99, 60, 0.22), transparent 68%);
+  filter: blur(24px);
+  pointer-events: none;
+}
+
+.hestia-mockup {
+  position: relative;
+  border-radius: var(--h-radius-lg);
+  border: 1px solid var(--h-border);
+  background: var(--h-card);
+  box-shadow: var(--h-shadow);
+  overflow: hidden;
+}
+
+.hestia-mockup__chrome {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--h-border);
+  background: #fff;
+}
+
+.hestia-mockup__dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #d9cfc4;
+}
+
+.hestia-mockup__dot:nth-child(1) {
+  background: #e8a598;
+}
+
+.hestia-mockup__dot:nth-child(2) {
+  background: #e8d4a0;
+}
+
+.hestia-mockup__dot:nth-child(3) {
+  background: #a8c9a0;
+}
+
+.hestia-float-card {
+  position: absolute;
+  z-index: 2;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--h-border);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: var(--h-shadow-soft);
+  font-size: 0.82rem;
+}
+
+.hestia-float-card strong {
+  display: block;
+  margin-bottom: 2px;
+  color: var(--h-ink);
+}
+
+.hestia-float-card span {
+  color: var(--h-muted);
+}
+
+.hestia-float-card--booking {
+  right: -8px;
+  top: 18%;
+  animation: hestia-float 5s ease-in-out infinite;
+}
+
+.hestia-float-card--revenue {
+  left: -12px;
+  bottom: 16%;
+  animation: hestia-float 5.5s ease-in-out infinite 0.6s;
+}
+
+@keyframes hestia-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+/* Stats */
+.hestia-stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+}
+
+.hestia-stat {
+  padding: 18px 16px;
+  border-radius: var(--h-radius);
+  border: 1px solid var(--h-border);
+  background: #fff;
+}
+
+.hestia-stat strong {
+  display: block;
+  font-size: clamp(1.35rem, 2.5vw, 1.85rem);
+  letter-spacing: -0.03em;
+  color: var(--h-ink);
+}
+
+.hestia-stat span {
+  font-size: 0.88rem;
+  color: var(--h-muted);
+}
+
+.hestia-logos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+  margin-top: 28px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(114, 100, 88, 0.55);
+}
+
+/* Features grid */
+.hestia-features-grid {
+  display: grid;
+  gap: 16px;
+  margin-top: 36px;
+}
+
+.hestia-feature-card {
+  padding: 22px 20px;
+  border-radius: var(--h-radius);
+  border: 1px solid var(--h-border);
+  background: #fff;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.hestia-feature-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--h-shadow-soft);
+}
+
+.hestia-feature-card__icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin-bottom: 14px;
+  border-radius: 12px;
+  background: linear-gradient(145deg, #f5efe8, #e8dfd4);
+  color: var(--h-accent-deep);
+}
+
+.hestia-feature-card h3 {
+  margin: 0 0 8px;
+  font-size: 1.05rem;
+  color: var(--h-ink);
+}
+
+.hestia-feature-card p {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.55;
+  color: var(--h-muted);
+}
+
+/* Steps */
+.hestia-steps {
+  display: grid;
+  gap: 18px;
+  margin-top: 36px;
+}
+
+.hestia-step {
+  position: relative;
+  padding: 24px 22px;
+  border-radius: var(--h-radius);
+  border: 1px solid var(--h-border);
+  background: #fff;
+}
+
+.hestia-step__num {
+  display: inline-block;
+  margin-bottom: 12px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: var(--h-accent);
+}
+
+.hestia-step h3 {
+  margin: 0 0 8px;
+  font-size: 1.15rem;
+}
+
+.hestia-step p {
+  margin: 0;
+  line-height: 1.55;
+  color: var(--h-muted);
+}
+
+/* Examples */
+.hestia-examples {
+  display: grid;
+  gap: 18px;
+  margin-top: 36px;
+}
+
+.hestia-example-card {
+  border-radius: var(--h-radius-lg);
+  border: 1px solid var(--h-border);
+  background: #fff;
+  overflow: hidden;
+  text-decoration: none;
+  color: inherit;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.hestia-example-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--h-shadow);
+}
+
+.hestia-example-card img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+}
+
+.hestia-example-card__body {
+  padding: 16px 18px 18px;
+}
+
+.hestia-example-card__tag {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--h-accent);
+}
+
+.hestia-example-card h3 {
+  margin: 6px 0 4px;
+  font-size: 1.1rem;
+}
+
+.hestia-example-card p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--h-muted);
+}
+
+/* Dashboard */
+.hestia-dashboard {
+  margin-top: 36px;
+  border-radius: var(--h-radius-lg);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: #1f1a17;
+  box-shadow: var(--h-shadow);
+  overflow: hidden;
+}
+
+.hestia-dashboard__layout {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  min-height: 380px;
+}
+
+.hestia-dashboard__sidebar {
+  padding: 18px 14px;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.hestia-dashboard__nav-item {
+  padding: 9px 10px;
+  margin-bottom: 4px;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  color: rgba(255, 250, 246, 0.62);
+}
+
+.hestia-dashboard__nav-item--active {
+  background: rgba(148, 99, 60, 0.35);
+  color: #fffaf6;
+  font-weight: 700;
+}
+
+.hestia-dashboard__main {
+  padding: 18px;
+}
+
+.hestia-dashboard__kpis {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.hestia-kpi {
+  padding: 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.hestia-kpi span {
+  display: block;
+  font-size: 0.72rem;
+  color: rgba(255, 250, 246, 0.55);
+}
+
+.hestia-kpi strong {
+  font-size: 1.1rem;
+  color: #fffaf6;
+}
+
+.hestia-dashboard__grid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 12px;
+}
+
+.hestia-panel {
+  padding: 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.hestia-panel h4 {
+  margin: 0 0 10px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255, 250, 246, 0.55);
+}
+
+.hestia-calendar-mini {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.hestia-calendar-mini span {
+  aspect-ratio: 1;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.hestia-calendar-mini span.is-busy {
+  background: rgba(148, 99, 60, 0.65);
+}
+
+.hestia-booking-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 0.78rem;
+  color: rgba(255, 250, 246, 0.82);
+}
+
+/* Benefits */
+.hestia-benefits-grid {
+  display: grid;
+  gap: 14px;
+  margin-top: 32px;
+}
+
+.hestia-benefit {
+  padding: 18px 16px;
+  border-radius: var(--h-radius);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.hestia-benefit h3 {
+  margin: 0 0 6px;
+  font-size: 1rem;
+  color: #fffaf6;
+}
+
+.hestia-benefit p {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: rgba(255, 250, 246, 0.72);
+}
+
+/* Testimonials */
+.hestia-testimonials {
+  display: grid;
+  gap: 16px;
+  margin-top: 36px;
+}
+
+.hestia-testimonial {
+  padding: 22px 20px;
+  border-radius: var(--h-radius);
+  border: 1px solid var(--h-border);
+  background: #fff;
+}
+
+.hestia-testimonial p {
+  margin: 0 0 16px;
+  font-size: 0.98rem;
+  line-height: 1.6;
+  color: var(--h-ink-soft);
+}
+
+.hestia-testimonial__author {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.hestia-avatar {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #7a6f63, #574e44);
+  color: #fffaf6;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.hestia-testimonial__author strong {
+  display: block;
+  font-size: 0.92rem;
+}
+
+.hestia-testimonial__author span {
+  font-size: 0.82rem;
+  color: var(--h-muted);
+}
+
+/* Pricing */
+.hestia-billing-toggle {
+  display: inline-flex;
+  padding: 4px;
+  margin-top: 24px;
+  border-radius: 999px;
+  border: 1px solid var(--h-border);
+  background: #fff;
+}
+
+.hestia-billing-toggle button {
+  padding: 8px 16px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--h-muted);
+  cursor: pointer;
+}
+
+.hestia-billing-toggle button.is-active {
+  background: var(--h-dark);
+  color: #fffaf6;
+}
+
+.hestia-pricing-grid {
+  display: grid;
+  gap: 18px;
+  margin-top: 28px;
+}
+
+.hestia-price-card {
+  display: flex;
+  flex-direction: column;
+  padding: 26px 22px;
+  border-radius: var(--h-radius-lg);
+  border: 1px solid var(--h-border);
+  background: #fff;
+}
+
+.hestia-price-card--highlight {
+  border-color: var(--h-accent-deep);
+  box-shadow: var(--h-shadow);
+  background: linear-gradient(180deg, #fff 0%, #f9f5f0 100%);
+}
+
+.hestia-price-card h3 {
+  margin: 0 0 6px;
+  font-size: 1.2rem;
+}
+
+.hestia-price-card__amount {
+  margin: 12px 0;
+  font-size: 2.2rem;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+}
+
+.hestia-price-card__amount small {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--h-muted);
+}
+
+.hestia-price-card ul {
+  margin: 0 0 22px;
+  padding: 0;
+  list-style: none;
+  flex: 1;
+}
+
+.hestia-price-card li {
+  position: relative;
+  padding-left: 22px;
+  margin-bottom: 8px;
+  font-size: 0.9rem;
+  color: var(--h-ink-soft);
+}
+
+.hestia-price-card li::before {
+  content: "✓";
+  position: absolute;
+  left: 0;
+  color: var(--h-accent);
+  font-weight: 800;
+}
+
+/* FAQ */
+.hestia-faq {
+  display: grid;
+  gap: 10px;
+  margin-top: 32px;
+}
+
+.hestia-faq details {
+  border-radius: var(--h-radius);
+  border: 1px solid var(--h-border);
+  background: #fff;
+  overflow: hidden;
+}
+
+.hestia-faq summary {
+  padding: 16px 18px;
+  font-weight: 700;
+  cursor: pointer;
+  list-style: none;
+}
+
+.hestia-faq summary::-webkit-details-marker {
+  display: none;
+}
+
+.hestia-faq__answer {
+  padding: 0 18px 16px;
+  font-size: 0.92rem;
+  line-height: 1.6;
+  color: var(--h-muted);
+}
+
+/* CTA band */
+.hestia-cta-band {
+  padding: clamp(56px, 8vw, 88px) 0;
+  text-align: center;
+}
+
+.hestia-cta-band .hestia-h2 {
+  max-width: 18ch;
+  margin-inline: auto;
+}
+
+.hestia-cta-band .hestia-section-intro {
+  margin-inline: auto;
+}
+
+.hestia-cta-band__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 28px;
+}
+
+/* Footer */
+.hestia-footer {
+  padding: 48px 0 32px;
+  border-top: 1px solid var(--h-border);
+  background: #f5efe8;
+}
+
+.hestia-footer__grid {
+  display: grid;
+  gap: 28px;
+}
+
+.hestia-footer__brand p {
+  margin: 10px 0 0;
+  max-width: 36ch;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: var(--h-muted);
+}
+
+.hestia-footer__cols {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
+.hestia-footer h4 {
+  margin: 0 0 10px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--h-label);
+}
+
+.hestia-footer a {
+  display: block;
+  padding: 4px 0;
+  font-size: 0.9rem;
+  color: var(--h-muted);
+  text-decoration: none;
+}
+
+.hestia-footer a:hover {
+  color: var(--h-accent-deep);
+}
+
+.hestia-footer__bottom {
+  margin-top: 28px;
+  padding-top: 18px;
+  border-top: 1px solid var(--h-border);
+  font-size: 0.82rem;
+  color: var(--h-muted);
+}
+
+/* Scroll reveal (plugin existant) */
+.hestia-page .scroll-reveal {
+  opacity: 0;
+  transform: translateY(18px);
+  transition:
+    opacity 0.55s ease,
+    transform 0.55s ease;
+  transition-delay: var(--scroll-reveal-delay, 120ms);
+}
+
+.hestia-page .scroll-reveal.scroll-reveal-visible {
+  opacity: 1;
+  transform: none;
+}
+
+@media (min-width: 768px) {
+  .hestia-nav__links {
+    display: flex;
+  }
+
+  .hestia-nav__toggle {
+    display: none;
+  }
+
+  .hestia-nav__mobile {
+    display: none !important;
+  }
+
+  .hestia-hero__grid {
+    grid-template-columns: 1fr 1.05fr;
+  }
+
+  .hestia-stats {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .hestia-features-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .hestia-steps {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .hestia-examples {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .hestia-benefits-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .hestia-testimonials {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .hestia-pricing-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .hestia-footer__grid {
+    grid-template-columns: 1.2fr 1fr;
+  }
+}
+
+@media (min-width: 1024px) {
+  .hestia-features-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .hestia-examples {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .hestia-testimonials {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hestia-float-card--booking,
+  .hestia-float-card--revenue {
+    animation: none;
+  }
+
+  .hestia-page .scroll-reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}

@@ -1,10 +1,5 @@
-import {
-  BOOKING_BASE_NIGHT_PRICE_EUR,
-  BOOKING_EXTRA_MAIN_GUEST_PER_NIGHT_EUR,
-  BOOKING_INCLUDED_MAIN_GUESTS,
-  computeBookingPriceEstimate,
-  formatEuro
-} from "../../app/data/bookingPricing"
+import type { PropertyBookingConfig } from "../../app/types/property-site"
+import { computeBookingPriceEstimate, formatEuro } from "../../app/utils/booking-price"
 
 export type BookingPriceRecapLine = {
   label: string
@@ -25,14 +20,15 @@ function pluralize(value: number, singular: string, plural: string) {
 export function buildBookingPriceRecap(
   nights: number,
   mainGuests: number,
+  config: PropertyBookingConfig,
   options?: { paidByCard?: boolean }
 ): BookingPriceRecap {
-  const estimate = computeBookingPriceEstimate(nights, mainGuests)
+  const estimate = computeBookingPriceEstimate(nights, mainGuests, config)
   const discountEur = Math.max(0, estimate.baseLodgingEur - estimate.lodgingAfterDiscountEur)
 
   const lines: BookingPriceRecapLine[] = [
     {
-      label: `${pluralize(estimate.nights, "nuit", "nuits")} × ${BOOKING_BASE_NIGHT_PRICE_EUR}\u00a0€`,
+      label: `${pluralize(estimate.nights, "nuit", "nuits")} × ${config.base_night_price_eur}\u00a0€`,
       amount: formatEuro(estimate.baseLodgingEur)
     }
   ]
@@ -47,7 +43,7 @@ export function buildBookingPriceRecap(
 
   if (estimate.guestSupplementEur > 0) {
     lines.push({
-      label: `Supplément voyageurs (+ ${BOOKING_EXTRA_MAIN_GUEST_PER_NIGHT_EUR}\u00a0€ / nuit / voyageur au-delà de ${BOOKING_INCLUDED_MAIN_GUESTS})`,
+      label: `Supplément voyageurs (+ ${config.extra_main_guest_per_night_eur}\u00a0€ / nuit / voyageur au-delà de ${config.included_main_guests})`,
       amount: formatEuro(estimate.guestSupplementEur)
     })
   }

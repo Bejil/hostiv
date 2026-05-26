@@ -10,7 +10,9 @@
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
+    "@lucide/vue": "^1.16.0",
     "@stripe/stripe-js": "^9.5.0",
+    "@supabase/supabase-js": "^2.105.4",
     "leaflet": "^1.9.4",
     "nuxt": "^4.4.2",
     "stripe": "^22.1.1",

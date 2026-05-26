@@ -1,15 +1,11 @@
 <script setup lang="ts">
-import {
-  BOOKING_BASE_NIGHT_PRICE_EUR,
-  BOOKING_EXTRA_MAIN_GUEST_PER_NIGHT_EUR,
-  BOOKING_INCLUDED_MAIN_GUESTS,
-  formatEuro,
-  type BookingPriceEstimate
-} from "../../data/bookingPricing"
+import type { PropertyBookingConfig } from "../../types/property-site"
+import { formatEuro, type BookingPriceEstimate } from "../../utils/booking-price"
 
-defineProps<{
+const props = defineProps<{
   estimate: BookingPriceEstimate
   discountAmountEur: number
+  bookingConfig: PropertyBookingConfig
   titleId?: string
   note: string
 }>()
@@ -32,7 +28,7 @@ function pluralize(value: number, singular: string, plural: string) {
       <div class="booking-modal-price-recap-row">
         <dt>
           {{ pluralize(estimate.nights, "nuit", "nuits") }}
-          × {{ BOOKING_BASE_NIGHT_PRICE_EUR }}&nbsp;€
+          × {{ bookingConfig.base_night_price_eur }}&nbsp;€
         </dt>
         <dd>{{ formatEuro(estimate.baseLodgingEur) }}</dd>
       </div>
@@ -48,8 +44,8 @@ function pluralize(value: number, singular: string, plural: string) {
       <div v-if="estimate.guestSupplementEur > 0" class="booking-modal-price-recap-row">
         <dt>
           Supplément voyageurs (+
-          {{ BOOKING_EXTRA_MAIN_GUEST_PER_NIGHT_EUR }}&nbsp;€ / nuit / voyageur au-delà de
-          {{ BOOKING_INCLUDED_MAIN_GUESTS }})
+          {{ bookingConfig.extra_main_guest_per_night_eur }}&nbsp;€ / nuit / voyageur au-delà de
+          {{ bookingConfig.included_main_guests }})
         </dt>
         <dd>{{ formatEuro(estimate.guestSupplementEur) }}</dd>
       </div>
