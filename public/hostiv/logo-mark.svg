@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" role="img" aria-label="Hostiv">
+  <defs>
+    <linearGradient id="hostiv-grad" x1="6" y1="4" x2="34" y2="36" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0e7a62" />
+      <stop offset="1" stop-color="#12b886" />
+    </linearGradient>
+  </defs>
+  <rect width="40" height="40" rx="12" fill="url(#hostiv-grad)" />
+  <path
+    fill="#fff"
+    d="M20 10.2 30.8 19.2V30.5H25.2V19.2h-10.4v11.3H9.2V19.2L20 10.2z"
+  />
+  <path fill="#9ef5d8" d="M17.2 19.2h5.6v9.3h-5.6z" />
+  <circle cx="31" cy="11" r="2.2" fill="#7dffd8" />
+</svg>

@@ -1,11 +1,15 @@
 import { sendBookingReservationEmails } from "../../utils/booking-notify"
 import type { ParsedBookingReservation } from "../../utils/booking-reservation"
+import { saveConfirmedBookingReservation } from "../../utils/booking-reservation-repository"
+import { getPropertyBookingNotifyEmail } from "../../utils/property-site-repository"
 import { getStripeClient } from "../../utils/stripe-client"
 
 function metadataToReservation(
   metadata: Record<string, string>
 ): ParsedBookingReservation | null {
   const {
+    propertySlug,
+    propertyBrandName,
     arrivalDate,
     departureDate,
     adults,
@@ -25,6 +29,7 @@ function metadataToReservation(
   } = metadata
 
   if (
+    !propertySlug ||
     !arrivalDate ||
     !departureDate ||
     !lastName ||
@@ -62,6 +67,8 @@ function metadataToReservation(
   )
 
   return {
+    propertySlug,
+    propertyBrandName: propertyBrandName || "",
     arrivalDate,
     departureDate,
     adults: adultsNum,
@@ -88,7 +95,6 @@ export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig()
 
   const stripeSecretKey = String(config.stripeSecretKey || "").trim()
-  const notifyTo = String(config.bookingNotifyEmail || "").trim()
   const resendApiKey = String(config.resendApiKey || "").trim()
   const from = String(config.bookingEmailFrom || "").trim()
 
@@ -99,11 +105,10 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  if (!notifyTo || !resendApiKey || !from) {
+  if (!resendApiKey || !from) {
     throw createError({
       statusCode: 503,
-      message:
-        "Confirmation par e-mail non configurée : renseignez BOOKING_NOTIFY_EMAIL et RESEND_API_KEY."
+      message: "Confirmation par e-mail non configurée : renseignez RESEND_API_KEY."
     })
   }
 
@@ -142,10 +147,6 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  if (paymentIntent.metadata.emailsSent === "true") {
-    return { ok: true as const, alreadySent: true as const }
-  }
-
   const reservation = metadataToReservation(
     paymentIntent.metadata as Record<string, string>
   )
@@ -164,6 +165,22 @@ export default defineEventHandler(async (event) => {
     })
   }
 
+  if (paymentIntent.metadata.emailsSent === "true") {
+    await saveConfirmedBookingReservation(reservation, paymentIntentId)
+
+    return { ok: true as const, alreadySent: true as const }
+  }
+
+  const notifyTo = await getPropertyBookingNotifyEmail(reservation.propertySlug)
+
+  if (!notifyTo) {
+    throw createError({
+      statusCode: 503,
+      message:
+        "E-mail hôte non configuré pour ce site : renseignez booking_notify_email sur la propriété dans Supabase."
+    })
+  }
+
   try {
     await sendBookingReservationEmails(reservation, {
       notifyTo,
@@ -174,6 +191,8 @@ export default defineEventHandler(async (event) => {
     await stripe.paymentIntents.update(paymentIntentId, {
       metadata: { emailsSent: "true" }
     })
+
+    await saveConfirmedBookingReservation(reservation, paymentIntentId)
   } catch (error) {
     const detail = error instanceof Error ? error.message : "Erreur d’envoi."
 

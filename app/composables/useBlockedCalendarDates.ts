@@ -1,7 +1,12 @@
-export function useBlockedCalendarDates() {
-  const blockedDates = useState<Set<string>>("blocked-calendar-dates", () => new Set())
-  const isLoading = useState("blocked-calendar-dates-loading", () => false)
-  const lastFetchedAt = useState<string | null>("blocked-calendar-dates-fetched-at", () => null)
+export function useBlockedCalendarDates(slug?: Ref<string> | string) {
+  const slugValue = computed(() => (typeof slug === "string" ? slug : slug?.value ?? "default"))
+  const stateKey = typeof slug === "string" ? slug : slug?.value ?? "default"
+  const blockedDates = useState<Set<string>>(`blocked-calendar-dates:${stateKey}`, () => new Set())
+  const isLoading = useState(`blocked-calendar-dates-loading:${stateKey}`, () => false)
+  const lastFetchedAt = useState<string | null>(
+    `blocked-calendar-dates-fetched-at:${stateKey}`,
+    () => null
+  )
 
   async function refreshBlockedDates() {
     if (isLoading.value) {
@@ -14,7 +19,9 @@ export function useBlockedCalendarDates() {
       const response = await $fetch<{
         dates: string[]
         fetchedAt: string
-      }>("/api/calendar/blocked-dates")
+      }>("/api/calendar/blocked-dates", {
+        query: slugValue.value === "default" ? undefined : { slug: slugValue.value }
+      })
 
       blockedDates.value = new Set(response.dates)
       lastFetchedAt.value = response.fetchedAt

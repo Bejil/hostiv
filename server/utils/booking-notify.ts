@@ -14,7 +14,7 @@ export async function sendBookingReservationEmails(
     from: string
   }
 ) {
-  const parsed = parseBookingRequestBody(reservationToEmailPayload(data))
+  const parsed = await parseBookingRequestBody(reservationToEmailPayload(data))
 
   if (!parsed.ok) {
     throw new Error(parsed.message)

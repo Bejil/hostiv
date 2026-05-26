@@ -4,6 +4,8 @@ import {
   buildBookingPriceRecapTextLines,
   type BookingPriceRecap
 } from "./booking-price-recap"
+import type { PropertySiteRecord } from "../../app/types/property-site"
+import { getPropertySiteBySlug } from "./property-site-repository"
 import {
   buildApartmentTextBlock,
   buildEmailApartmentSection,
@@ -15,7 +17,8 @@ import {
   buildEmailSiteLinksSection,
   buildSiteLinksTextBlock,
   getBookingSiteLinks,
-  getBookingSiteUrl,
+  getPropertyLogoUrl,
+  getPropertyPublicSiteUrl,
   sanitizeBookingEmailMeta
 } from "./booking-email-layout"
 
@@ -35,6 +38,7 @@ function telHref(phone: string): string {
 }
 
 type BookingEmailContentParts = {
+  site: PropertySiteRecord
   safeLastName?: string
   safeFirstName: string
   safePhone?: string
@@ -46,6 +50,7 @@ type BookingEmailContentParts = {
   priceRecap: BookingPriceRecap | null
   safeMessage: string
   siteUrl: string
+  logoUrl: string
   siteLinks: ReturnType<typeof getBookingSiteLinks>
 }
 
@@ -55,7 +60,9 @@ function buildSharedEmailSections(
 ) {
   const z = escapeHtml
   const priceRecapSection = parts.priceRecap ? buildBookingPriceRecapHtml(parts.priceRecap, z) : ""
-  const apartmentSection = options.includeApartment ? buildEmailApartmentSection(z) : ""
+  const apartmentSection = options.includeApartment
+    ? buildEmailApartmentSection(parts.site, z)
+    : ""
   const linksIntro = options.isGuest
     ? "Retrouvez le quartier, le règlement d’arrivée et la liste des équipements sur le site."
     : "Rappel des informations publiées sur le site pour le voyageur."
@@ -121,13 +128,14 @@ function buildBookingRequestHtml(parts: BookingEmailContentParts & {
   return buildEmailShell({
     title: "Nouvelle réservation",
     headerSubtitle: parts.datesSummary,
-    siteUrl: parts.siteUrl,
+    brandName: parts.site.brand_name,
+    logoUrl: parts.logoUrl || undefined,
     preheader: `Nouvelle réservation — ${parts.datesSummary}`,
     bodyHtml,
     footerHtml: buildEmailFooter(
       parts.siteUrl,
       z,
-      "Notification envoyée depuis le site The Grand Appartement."
+      `Notification envoyée depuis le site ${parts.site.brand_name}.`
     )
   })
 }
@@ -156,7 +164,8 @@ function buildGuestConfirmationHtml(parts: BookingEmailContentParts) {
   return buildEmailShell({
     title: "Réservation confirmée",
     headerSubtitle: parts.datesSummary,
-    siteUrl: parts.siteUrl,
+    brandName: parts.site.brand_name,
+    logoUrl: parts.logoUrl || undefined,
     preheader: `Votre réservation est confirmée — ${parts.datesSummary}`,
     bodyHtml,
     footerHtml: buildEmailFooter(
@@ -245,12 +254,25 @@ export async function sendBookingRequestEmail(params: {
   })
 }
 
-export function parseBookingRequestBody(body: unknown) {
+export async function parseBookingRequestBody(body: unknown) {
   if (!body || typeof body !== "object") {
     return { ok: false as const, message: "Corps de requête invalide." }
   }
 
   const o = body as Record<string, unknown>
+
+  const propertySlug =
+    typeof o.propertySlug === "string" ? o.propertySlug.trim().toLowerCase() : ""
+
+  if (!propertySlug) {
+    return { ok: false as const, message: "Site de réservation non précisé." }
+  }
+
+  const site = await getPropertySiteBySlug(propertySlug)
+
+  if (!site) {
+    return { ok: false as const, message: "Site de réservation introuvable." }
+  }
 
   const guestEmail = typeof o.guestEmail === "string" ? o.guestEmail.trim() : ""
   const lastName =
@@ -314,13 +336,21 @@ export function parseBookingRequestBody(body: unknown) {
   const safeFirstName = normalizeMultiline(firstName, 80)
   const safePhone = normalizeMultiline(phone, 15)
 
-  const siteUrl = getBookingSiteUrl()
+  const siteUrl = getPropertyPublicSiteUrl(propertySlug)
+  const logoUrl = getPropertyLogoUrl(site, {
+    slug: propertySlug,
+    siteUrl,
+    supabaseUrl: process.env.SUPABASE_URL?.trim() || "",
+    bucket: process.env.NUXT_PUBLIC_PROPERTY_ASSETS_BUCKET?.trim() || undefined
+  })
   const siteLinks = getBookingSiteLinks(siteUrl)
 
   let priceRecap: BookingPriceRecap | null = null
 
   if (Number.isFinite(stayNights) && stayNights >= 1 && Number.isFinite(mainGuests) && mainGuests >= 1) {
-    priceRecap = buildBookingPriceRecap(stayNights, mainGuests, { paidByCard })
+    priceRecap = buildBookingPriceRecap(stayNights, mainGuests, site.booking_config, {
+      paidByCard
+    })
   } else if (estimateLabel) {
     priceRecap = {
       lines: [],
@@ -330,10 +360,11 @@ export function parseBookingRequestBody(body: unknown) {
   }
 
   const priceRecapTextLines = priceRecap ? buildBookingPriceRecapTextLines(priceRecap) : []
-  const apartmentText = buildApartmentTextBlock()
+  const apartmentText = buildApartmentTextBlock(site)
   const siteLinksText = buildSiteLinksTextBlock(siteLinks)
 
   const contentBase: BookingEmailContentParts = {
+    site,
     safeFirstName,
     datesSummary,
     safeMeta,
@@ -342,6 +373,7 @@ export function parseBookingRequestBody(body: unknown) {
     priceRecap,
     safeMessage,
     siteUrl,
+    logoUrl,
     siteLinks
   }
 
@@ -405,6 +437,7 @@ export function parseBookingRequestBody(body: unknown) {
 
   return {
     ok: true as const,
+    propertySlug,
     guestEmail,
     subject,
     text,

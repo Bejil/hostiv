@@ -1,0 +1,58 @@
+/**
+ * Tokens Hostiv — admin des sites (aligné sur la landing hostiv.css).
+ * Hérités par les modales téléportées sur body tant que .admin-page est présent.
+ */
+body:has(.admin-page) {
+  --admin-font: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --admin-bg: #f6f8f7;
+  --admin-bg-accent: rgba(13, 155, 110, 0.08);
+  --admin-surface: #ffffff;
+  --admin-surface-raised: #ffffff;
+  --admin-surface-muted: #eef3f1;
+  --admin-surface-muted-deep: #e4ebe8;
+  --admin-ink: #0c1513;
+  --admin-ink-soft: #3a4a45;
+  --admin-muted: #6a7c76;
+  --admin-label: #6a7c76;
+  --admin-accent: #0d9b6e;
+  --admin-accent-mid: #12b886;
+  --admin-accent-deep: #067a57;
+  --admin-accent-soft: rgba(13, 155, 110, 0.14);
+  --admin-accent-glow: rgba(13, 155, 110, 0.22);
+  --admin-secondary: #e2564a;
+  --admin-secondary-deep: #c94a40;
+  --admin-secondary-soft: rgba(226, 86, 74, 0.14);
+  --admin-border: rgba(12, 21, 19, 0.08);
+  --admin-border-strong: rgba(12, 21, 19, 0.14);
+  --admin-radius: 14px;
+  --admin-radius-lg: 20px;
+  --admin-radius-pill: 999px;
+  --admin-shadow: 0 24px 64px rgba(12, 21, 19, 0.1);
+  --admin-shadow-soft: 0 10px 32px rgba(12, 21, 19, 0.06);
+  --admin-sidebar-w: 240px;
+  --admin-header-h: 64px;
+  --admin-success: #067a57;
+  --admin-success-bg: #ecfdf5;
+  --admin-error: #b42318;
+  --admin-error-bg: #fef3f2;
+  --admin-info: #175cd3;
+  --admin-info-bg: #eff8ff;
+  --admin-warning-bg: #fff8ee;
+  --admin-warning-border: #f5d9a8;
+  --admin-warning-ink: #8a5a12;
+  --admin-warning-dot: #e8a020;
+  --admin-overlay: rgba(12, 21, 19, 0.52);
+  --admin-gradient-surface: linear-gradient(180deg, #fff 0%, var(--admin-surface-muted) 100%);
+  --admin-gradient-page: linear-gradient(
+    180deg,
+    #f6f8f7 0%,
+    var(--admin-bg) 55%,
+    #f6f8f7 100%
+  );
+  --admin-gradient-hero: linear-gradient(135deg, #0c1513 0%, var(--admin-accent-deep) 55%, var(--admin-accent-mid) 100%);
+}
+
+body:has(.admin-page) {
+  font-family: var(--admin-font);
+  -webkit-font-smoothing: antialiased;
+}

@@ -2,6 +2,8 @@ import {
   parseBookingReservationBody,
   reservationStripeMetadata
 } from "../../utils/booking-reservation"
+import { getPropertyStripeBySlug } from "../../utils/property-stripe-repository"
+import { computePlatformFeeCents, normalizePlatformFeePercent } from "../../utils/stripe-connect"
 import { getStripeClient } from "../../utils/stripe-client"
 
 export default defineEventHandler(async (event) => {
@@ -27,6 +29,18 @@ export default defineEventHandler(async (event) => {
   }
 
   const { data } = parsed
+  const stripeRow = await getPropertyStripeBySlug(data.propertySlug)
+
+  if (!stripeRow?.stripe_account_id || !stripeRow.stripe_charges_enabled) {
+    throw createError({
+      statusCode: 503,
+      message:
+        "Les paiements en ligne ne sont pas encore activés pour ce logement. L’hôte doit terminer la configuration Stripe dans Versements."
+    })
+  }
+
+  const platformFeePercent = normalizePlatformFeePercent(config.hestiaPlatformFeePercent)
+  const applicationFeeAmount = computePlatformFeeCents(data.amountCents, platformFeePercent)
   const stripe = getStripeClient(stripeSecretKey)
   const paymentMethodConfiguration = String(
     config.stripePaymentMethodConfiguration || ""
@@ -36,6 +50,10 @@ export default defineEventHandler(async (event) => {
     const paymentIntent = await stripe.paymentIntents.create({
       amount: data.amountCents,
       currency: "eur",
+      transfer_data: {
+        destination: stripeRow.stripe_account_id
+      },
+      ...(applicationFeeAmount > 0 ? { application_fee_amount: applicationFeeAmount } : {}),
       automatic_payment_methods: {
         enabled: true,
         allow_redirects: "always"
@@ -44,7 +62,7 @@ export default defineEventHandler(async (event) => {
         ? { payment_method_configuration: paymentMethodConfiguration }
         : {}),
       receipt_email: data.guestEmail,
-      description: `The Grand Appartement — ${data.datesSummary}`,
+      description: `${data.propertyBrandName} — ${data.datesSummary}`,
       metadata: reservationStripeMetadata(data)
     })
 

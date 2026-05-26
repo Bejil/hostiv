@@ -1,19 +1,10 @@
+import type { PropertySiteRecord } from "../../app/types/property-site"
+import { resolvePropertyAssetUrl } from "../../app/utils/property-asset-url"
+
 export type BookingEmailLink = {
   label: string
   href: string
 }
-
-export const BOOKING_APARTMENT = {
-  name: "The Grand Appartement",
-  tagline: "Le Chesnay · à deux pas de Versailles",
-  address: "5 rue du Colonel de Bange, 78150 Le Chesnay",
-  access: [
-    "Boîte à clés sécurisée — arrivée autonome, sans rendez-vous à l’immeuble.",
-    "Repère pratique : place de la Loi (bus), à quelques minutes à pied.",
-    "Parking possible dans la rue et les rues adjacentes (selon créneaux et zone).",
-    "Assistance à distance en français et en anglais si besoin pendant le séjour."
-  ]
-} as const
 
 export function getBookingSiteUrl() {
   const raw =
@@ -24,6 +15,60 @@ export function getBookingSiteUrl() {
   }
 
   return ""
+}
+
+/** URL publique du site d’un slug (ex. https://domaine.fr/thegrandappartement). */
+export function getPropertyPublicSiteUrl(slug: string) {
+  const base = getBookingSiteUrl()
+
+  if (!base) {
+    return ""
+  }
+
+  const normalizedSlug = slug.replace(/^\/+|\/+$/g, "")
+
+  if (!normalizedSlug) {
+    return base
+  }
+
+  if (base.endsWith(`/${normalizedSlug}`)) {
+    return base
+  }
+
+  return `${base}/${normalizedSlug}`
+}
+
+export function getPropertyLogoUrl(
+  site: PropertySiteRecord,
+  options: { slug: string; siteUrl?: string; supabaseUrl?: string; bucket?: string }
+) {
+  if (!site.logo_path) {
+    return ""
+  }
+
+  const supabaseUrl = options.supabaseUrl?.trim() || ""
+
+  if (supabaseUrl && options.slug) {
+    const storageUrl = resolvePropertyAssetUrl(site.logo_path, {
+      slug: options.slug,
+      supabaseUrl,
+      bucket: options.bucket
+    })
+
+    if (storageUrl) {
+      return storageUrl
+    }
+  }
+
+  const siteUrl = options.siteUrl?.replace(/\/$/, "") || ""
+
+  if (!siteUrl) {
+    return ""
+  }
+
+  const path = site.logo_path.startsWith("/") ? site.logo_path : `/${site.logo_path}`
+
+  return `${siteUrl}${path}`
 }
 
 export function getBookingSiteLinks(siteUrl: string): BookingEmailLink[] {
@@ -83,16 +128,17 @@ function escapeHtmlAttr(raw: string) {
 export function buildEmailHeaderRow(options: {
   title: string
   headerSubtitle?: string
-  siteUrl?: string
+  brandName: string
+  logoUrl?: string
 }) {
   const title = escapeHtmlAttr(options.title)
   const subtitle = options.headerSubtitle?.trim()
     ? `<p style="margin:10px 0 0;font-size:14px;line-height:1.5;color:#3d3834;">${escapeHtmlAttr(options.headerSubtitle)}</p>`
     : ""
 
-  const brandBlock = options.siteUrl
-    ? `<img src="${escapeHtmlAttr(`${options.siteUrl}/branding/header-logo.png`)}" alt="${escapeHtmlAttr(BOOKING_APARTMENT.name)}" width="168" style="display:block;width:168px;max-width:100%;height:auto;margin:0 0 14px;border:0;outline:none;text-decoration:none;" />`
-    : `<p style="margin:0 0 10px;font-size:11px;font-weight:700;letter-spacing:0.16em;text-transform:uppercase;color:#6b4f33;">${escapeHtmlAttr(BOOKING_APARTMENT.name)}</p>`
+  const brandBlock = options.logoUrl
+    ? `<img src="${escapeHtmlAttr(options.logoUrl)}" alt="${escapeHtmlAttr(options.brandName)}" width="168" style="display:block;width:168px;max-width:100%;height:auto;margin:0 0 14px;border:0;outline:none;text-decoration:none;" />`
+    : `<p style="margin:0 0 10px;font-size:11px;font-weight:700;letter-spacing:0.16em;text-transform:uppercase;color:#6b4f33;">${escapeHtmlAttr(options.brandName)}</p>`
 
   return `
           <tr>
@@ -108,7 +154,8 @@ export function buildEmailHeaderRow(options: {
 export function buildEmailShell(options: {
   title: string
   headerSubtitle?: string
-  siteUrl?: string
+  brandName: string
+  logoUrl?: string
   bodyHtml: string
   footerHtml: string
   preheader?: string
@@ -120,7 +167,8 @@ export function buildEmailShell(options: {
   const headerRow = buildEmailHeaderRow({
     title: options.title,
     headerSubtitle: options.headerSubtitle,
-    siteUrl: options.siteUrl
+    brandName: options.brandName,
+    logoUrl: options.logoUrl
   })
 
   return `<!DOCTYPE html>
@@ -215,8 +263,11 @@ export function buildEmailContactGrid(
           </tr>`
 }
 
-export function buildEmailApartmentSection(escape: (s: string) => string) {
-  const bullets = BOOKING_APARTMENT.access
+export function buildEmailApartmentSection(
+  site: PropertySiteRecord,
+  escape: (s: string) => string
+) {
+  const bullets = site.content.email.access_lines
     .map(
       (line) =>
         `<tr><td style="padding:0 0 10px 0;font-size:14px;line-height:1.5;color:${C.inkSoft};vertical-align:top;">
@@ -230,9 +281,9 @@ export function buildEmailApartmentSection(escape: (s: string) => string) {
             <td style="padding:24px 32px;">
               ${buildEmailSectionLabel("L’appartement")}
               <div style="margin-top:12px;padding:18px 20px;background-color:#fff;border:1px solid ${C.border};border-radius:14px;">
-                <p style="margin:0 0 6px;font-size:15px;font-weight:700;color:${C.ink};">${escape(BOOKING_APARTMENT.name)}</p>
-                <p style="margin:0 0 14px;font-size:13px;color:${C.muted};">${escape(BOOKING_APARTMENT.tagline)}</p>
-                <p style="margin:0 0 12px;font-size:14px;line-height:1.5;color:${C.inkSoft};"><strong style="color:${C.ink};">Adresse</strong><br/>${escape(BOOKING_APARTMENT.address)}</p>
+                <p style="margin:0 0 6px;font-size:15px;font-weight:700;color:${C.ink};">${escape(site.brand_name)}</p>
+                <p style="margin:0 0 14px;font-size:13px;color:${C.muted};">${escape(site.brand_meta)}</p>
+                <p style="margin:0 0 12px;font-size:14px;line-height:1.5;color:${C.inkSoft};"><strong style="color:${C.ink};">Adresse</strong><br/>${escape(site.location.address)}</p>
                 <p style="margin:0 0 8px;font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:${C.label};">Accès &amp; arrivée</p>
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">${bullets}</table>
               </div>
@@ -284,14 +335,14 @@ export function buildEmailFooter(siteUrl: string, escape: (s: string) => string,
   return `<p style="margin:20px 0 0;font-size:12px;line-height:1.55;color:${C.muted};text-align:center;max-width:600px;">${siteLine}${escape(note)}</p>`
 }
 
-export function buildApartmentTextBlock(): string[] {
+export function buildApartmentTextBlock(site: PropertySiteRecord): string[] {
   return [
     ``,
-    `— ${BOOKING_APARTMENT.name} —`,
-    BOOKING_APARTMENT.tagline,
-    `Adresse : ${BOOKING_APARTMENT.address}`,
+    `— ${site.brand_name} —`,
+    site.brand_meta,
+    `Adresse : ${site.location.address}`,
     `Accès :`,
-    ...BOOKING_APARTMENT.access.map((line) => `  · ${line}`)
+    ...site.content.email.access_lines.map((line) => `  · ${line}`)
   ]
 }
 

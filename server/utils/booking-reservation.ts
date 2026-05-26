@@ -1,11 +1,6 @@
-import { computeBookingPriceEstimate } from "../../app/data/bookingPricing"
-import { getMergedBlockedNightDates } from "./calendar-blocked"
-
-const MIN_BOOKING_NOTICE_DAYS = 3
-const MIN_STAY_NIGHTS = 1
-const MAX_STAY_NIGHTS = 31
-const MAX_TRAVELERS = 4
-const MAX_BABIES = 1
+import { computeBookingPriceEstimate } from "../../app/utils/booking-price"
+import { getMergedBlockedNightDatesForProperty } from "./calendar-blocked"
+import { getPropertySiteBySlug } from "./property-site-repository"
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -90,6 +85,8 @@ function enumerateStayNights(arrivalDate: string, departureDate: string) {
 }
 
 export type ParsedBookingReservation = {
+  propertySlug: string
+  propertyBrandName: string
   arrivalDate: string
   departureDate: string
   adults: number
@@ -118,6 +115,22 @@ export async function parseBookingReservationBody(body: unknown) {
 
   const o = body as Record<string, unknown>
 
+  const propertySlug =
+    typeof o.propertySlug === "string" ? o.propertySlug.trim().toLowerCase() : ""
+  const normalizedSlug = propertySlug
+
+  if (!propertySlug) {
+    return { ok: false as const, message: "Site de réservation non précisé." }
+  }
+
+  const site = await getPropertySiteBySlug(propertySlug)
+
+  if (!site) {
+    return { ok: false as const, message: "Site de réservation introuvable." }
+  }
+
+  const booking = site.booking_config
+
   const arrivalDate = typeof o.arrivalDate === "string" ? o.arrivalDate.trim() : ""
   const departureDate = typeof o.departureDate === "string" ? o.departureDate.trim() : ""
   const adults = typeof o.adults === "number" ? Math.round(o.adults) : Number(o.adults)
@@ -129,17 +142,19 @@ export async function parseBookingReservationBody(body: unknown) {
   const guestEmail = typeof o.guestEmail === "string" ? o.guestEmail.trim() : ""
   const message = typeof o.message === "string" ? o.message : ""
 
-  const minimumArrivalDate = toInputDate(addDays(new Date(), MIN_BOOKING_NOTICE_DAYS))
+  const minimumArrivalDate = toInputDate(
+    addDays(new Date(), booking.min_booking_notice_days)
+  )
 
   if (!arrivalDate || !departureDate) {
     return { ok: false as const, message: "Dates de séjour invalides." }
   }
 
   const minimumDepartureDate = toInputDate(
-    addDays(fromInputDate(arrivalDate), MIN_STAY_NIGHTS)
+    addDays(fromInputDate(arrivalDate), booking.min_stay_nights)
   )
   const maximumDepartureDate = toInputDate(
-    addDays(fromInputDate(arrivalDate), MAX_STAY_NIGHTS)
+    addDays(fromInputDate(arrivalDate), booking.max_stay_nights)
   )
 
   if (
@@ -152,11 +167,11 @@ export async function parseBookingReservationBody(body: unknown) {
 
   const stayNights = enumerateStayNights(arrivalDate, departureDate).length
 
-  if (stayNights < MIN_STAY_NIGHTS || stayNights > MAX_STAY_NIGHTS) {
+  if (stayNights < booking.min_stay_nights || stayNights > booking.max_stay_nights) {
     return { ok: false as const, message: "Durée de séjour invalide." }
   }
 
-  const { dates: blockedDateList } = await getMergedBlockedNightDates()
+  const { dates: blockedDateList } = await getMergedBlockedNightDatesForProperty(normalizedSlug)
   const blockedDates = new Set(blockedDateList)
   const blockedNight = enumerateStayNights(arrivalDate, departureDate).find((night) =>
     blockedDates.has(night)
@@ -177,11 +192,11 @@ export async function parseBookingReservationBody(body: unknown) {
   const safeBabies = Number.isFinite(babies) ? Math.max(0, babies) : 0
   const mainGuests = adults + safeChildren
 
-  if (mainGuests < 1 || mainGuests > MAX_TRAVELERS) {
+  if (mainGuests < 1 || mainGuests > booking.max_travelers) {
     return { ok: false as const, message: "Nombre de voyageurs invalide." }
   }
 
-  if (safeBabies > MAX_BABIES) {
+  if (safeBabies > booking.max_babies) {
     return { ok: false as const, message: "Nombre de bébés invalide." }
   }
 
@@ -205,7 +220,7 @@ export async function parseBookingReservationBody(body: unknown) {
     return { ok: false as const, message: "Message obligatoire." }
   }
 
-  const estimate = computeBookingPriceEstimate(stayNights, mainGuests)
+  const estimate = computeBookingPriceEstimate(stayNights, mainGuests, booking)
   const amountCents = estimate.totalEur * 100
 
   if (amountCents < 50) {
@@ -223,6 +238,8 @@ export async function parseBookingReservationBody(body: unknown) {
   }
 
   const data: ParsedBookingReservation = {
+    propertySlug,
+    propertyBrandName: site.brand_name,
     arrivalDate,
     departureDate,
     adults,
@@ -249,6 +266,7 @@ export async function parseBookingReservationBody(body: unknown) {
 
 export function reservationToEmailPayload(data: ParsedBookingReservation) {
   return {
+    propertySlug: data.propertySlug,
     guestEmail: data.guestEmail,
     lastName: data.lastName,
     firstName: data.firstName,
@@ -266,6 +284,8 @@ export function reservationToEmailPayload(data: ParsedBookingReservation) {
 
 export function reservationStripeMetadata(data: ParsedBookingReservation) {
   return {
+    propertySlug: data.propertySlug,
+    propertyBrandName: data.propertyBrandName.slice(0, 500),
     arrivalDate: data.arrivalDate,
     departureDate: data.departureDate,
     adults: String(data.adults),
