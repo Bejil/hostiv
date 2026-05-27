@@ -6657,3 +6657,280 @@ select.admin-field__control {
   flex-wrap: wrap;
   gap: 0.5rem;
 }
+
+.admin-account {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  max-width: 40rem;
+}
+
+.admin-account__loading {
+  margin: 0;
+  color: var(--admin-muted);
+  font-size: 0.9rem;
+}
+
+.admin-account__form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.admin-account__panel {
+  margin: 0;
+}
+
+.admin-account__lead {
+  margin: 0.35rem 0 0;
+  max-width: 42ch;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--admin-muted);
+}
+
+.admin-account__lead strong {
+  color: var(--admin-ink);
+  font-weight: 600;
+}
+
+.admin-account__fields {
+  display: grid;
+  gap: 0.85rem;
+}
+
+@media (min-width: 640px) {
+  .admin-account__fields {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .admin-account__fields .admin-field--full {
+    grid-column: 1 / -1;
+  }
+}
+
+.admin-account__actions {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.admin-account__danger-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1.1rem 1.15rem;
+  border: 1px solid color-mix(in srgb, var(--admin-danger, #c62828) 28%, var(--admin-border, #e8e0d8));
+  border-radius: var(--admin-radius-lg, 12px);
+  background: color-mix(in srgb, var(--admin-danger, #c62828) 5%, var(--admin-surface, #fff));
+}
+
+.admin-account__danger-head h3 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--admin-danger, #b3261e);
+}
+
+.admin-account-delete-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1400;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  background: rgba(12, 21, 19, 0.58);
+  backdrop-filter: blur(6px);
+  color: var(--admin-ink);
+  font-family: var(--admin-font);
+}
+
+.admin-account-delete-modal *,
+.admin-account-delete-modal *::before,
+.admin-account-delete-modal *::after {
+  box-sizing: border-box;
+}
+
+.admin-account-delete-modal__panel {
+  position: relative;
+  width: min(28rem, 100%);
+  max-height: min(90vh, 42rem);
+  overflow: auto;
+  padding: 1.35rem 1.35rem 1.15rem;
+  border: 1px solid color-mix(in srgb, var(--admin-danger, #c62828) 22%, var(--admin-border, #e8e0d8));
+  border-radius: var(--admin-radius-lg, 12px);
+  background: #fff;
+  box-shadow: 0 24px 64px rgba(12, 21, 19, 0.28);
+}
+
+.admin-account-delete-modal__close {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: none;
+  border-radius: var(--admin-radius-md, 8px);
+  background: transparent;
+  color: var(--admin-muted);
+  cursor: pointer;
+}
+
+.admin-account-delete-modal__close:hover:not(:disabled) {
+  background: var(--admin-surface-muted, #f8f5f1);
+  color: var(--admin-ink);
+}
+
+.admin-account-delete-modal__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  margin-bottom: 0.85rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--admin-danger, #c62828) 12%, #fff);
+  color: var(--admin-danger, #b3261e);
+}
+
+.admin-account-delete-modal__title {
+  margin: 0 0 0.5rem;
+  padding-right: 1.75rem;
+  font-size: 1.15rem;
+  line-height: 1.3;
+  color: var(--admin-ink);
+}
+
+.admin-account-delete-modal__lead {
+  margin: 0 0 0.75rem;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: var(--admin-muted);
+}
+
+.admin-account-delete-modal__list {
+  margin: 0 0 1.1rem;
+  padding-left: 1.15rem;
+  font-size: 0.84rem;
+  line-height: 1.55;
+  color: var(--admin-ink);
+}
+
+.admin-account-delete-modal__list li + li {
+  margin-top: 0.35rem;
+}
+
+.admin-account-delete-modal__list strong {
+  font-weight: 700;
+}
+
+.admin-account-delete-modal__confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 0.9rem 1rem;
+  border-radius: var(--admin-radius-md, 10px);
+  background: var(--admin-surface-muted, #f8f5f1);
+  border: 1px solid var(--admin-border, #e8e0d8);
+}
+
+.admin-account-delete-modal__confirm-label {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--admin-muted);
+}
+
+.admin-account-delete-modal__slug {
+  display: inline-block;
+  align-self: flex-start;
+  padding: 0.2rem 0.45rem;
+  border-radius: 6px;
+  background: #fff;
+  border: 1px solid var(--admin-border, #e8e0d8);
+  font-size: 0.82rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  color: var(--admin-danger, #b3261e);
+}
+
+.admin-account-delete-modal__error {
+  margin: 0.85rem 0 0;
+  font-size: 0.84rem;
+  line-height: 1.45;
+  color: var(--admin-danger, #b3261e);
+}
+
+.admin-account-delete-modal__footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1.15rem;
+  padding-top: 0.15rem;
+}
+
+.admin-account__password-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.admin-password-rules {
+  margin-top: -0.25rem;
+  padding: 0.85rem 1rem;
+  border-radius: var(--admin-radius-md, 10px);
+  background: var(--admin-surface-muted, #f8f5f1);
+  border: 1px solid var(--admin-border, #e8e0d8);
+}
+
+.admin-password-rules__intro {
+  margin: 0 0 0.65rem;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--admin-muted);
+}
+
+.admin-password-rules__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.admin-password-rules__rule {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.78rem;
+  color: var(--admin-muted);
+}
+
+.admin-password-rules__rule + .admin-password-rules__rule {
+  margin-top: 0.35rem;
+}
+
+.admin-password-rules__rule-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 1.1rem;
+  height: 1.1rem;
+  border-radius: 999px;
+  border: 1px solid var(--admin-border, #e8e0d8);
+  background: var(--admin-surface, #fff);
+}
+
+.admin-password-rules__rule--met {
+  color: var(--admin-ink);
+}
+
+.admin-password-rules__rule--met .admin-password-rules__rule-icon {
+  border-color: var(--admin-success, #1b7f4b);
+  background: var(--admin-success-bg, #e8f5ee);
+  color: var(--admin-success, #1b7f4b);
+}

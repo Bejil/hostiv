@@ -3,12 +3,8 @@ import { Check, CheckCircle2, Loader2, X } from "@lucide/vue"
 import type { HostivAccountModalMode } from "../../composables/useHostivAccountModal"
 import { hostivPricing, type HostivPricingPlanId } from "../../data/hostivLanding"
 import { useHostivPropertySlugCheck } from "../../composables/useHostivPropertySlugCheck"
-import {
-  evaluateHostivPassword,
-  isHostivPasswordValid,
-  hostivPasswordRuleLabels,
-  type HostivPasswordRuleKey
-} from "../../utils/hostiv-password-rules"
+import { isHostivPasswordValid } from "../../utils/hostiv-password-rules"
+import HostivPasswordRulesChecklist from "../HostivPasswordRulesChecklist.vue"
 
 const { open, mode, close, selectedPlan, setSelectedPlan } = useHostivAccountModal()
 
@@ -33,16 +29,6 @@ const {
   isSlugReady,
   runCheck: runPropertySlugCheck
 } = useHostivPropertySlugCheck(propertyName)
-
-const passwordRuleKeys: HostivPasswordRuleKey[] = [
-  "length",
-  "lowercase",
-  "uppercase",
-  "digit",
-  "special"
-]
-
-const passwordRules = computed(() => evaluateHostivPassword(password.value))
 
 const showPasswordRules = computed(
   () =>
@@ -500,32 +486,11 @@ async function onLoginSubmit() {
                   @blur="passwordFieldFocused = false"
                 />
 
-                <div
-                  v-if="showPasswordRules"
-                  id="hostiv-password-rules"
-                  class="hostiv-modal__password-rules"
-                  role="status"
-                  aria-live="polite"
-                >
-                  <p class="hostiv-modal__password-rules-intro">
-                    Votre mot de passe doit être suffisamment long et complexe en intégrant des
-                    lettres (majuscules et minuscules), des chiffres, de la ponctuation et des
-                    caractères spéciaux :
-                  </p>
-                  <ul class="hostiv-modal__password-rules-list">
-                    <li
-                      v-for="key in passwordRuleKeys"
-                      :key="key"
-                      class="hostiv-modal__password-rule"
-                      :class="{ 'hostiv-modal__password-rule--met': passwordRules[key] }"
-                    >
-                      <span class="hostiv-modal__password-rule-icon" aria-hidden="true">
-                        <Check v-if="passwordRules[key]" :size="12" stroke-width="2.5" />
-                      </span>
-                      {{ hostivPasswordRuleLabels[key] }}
-                    </li>
-                  </ul>
-                </div>
+                <HostivPasswordRulesChecklist
+                  :password="password"
+                  :visible="showPasswordRules"
+                  id="hostiv-signup-password-rules"
+                />
               </div>
 
               <p v-if="error" class="hostiv-modal__error" role="alert">{{ error }}</p>

@@ -17,6 +17,7 @@ import AdminNeighborhoodHighlightsEditor from "./AdminNeighborhoodHighlightsEdit
 import AdminGeneralImagesEditor from "./AdminGeneralImagesEditor.vue"
 import AdminReservationsEditor from "./AdminReservationsEditor.vue"
 import AdminPayoutsEditor from "./AdminPayoutsEditor.vue"
+import AdminAccountEditor from "./AdminAccountEditor.vue"
 import AdminTemplateEditor from "./AdminTemplateEditor.vue"
 import AdminCopyFields from "./AdminCopyFields.vue"
 import AdminFeaturedPreview from "./AdminFeaturedPreview.vue"
@@ -639,6 +640,11 @@ defineExpose({
         <!-- Versements -->
         <section v-if="activeSection === 'payouts'" class="admin-panel admin-panel--payouts">
           <AdminPayoutsEditor :slug="slug" />
+        </section>
+
+        <!-- Compte Hostiv -->
+        <section v-if="activeSection === 'account'" class="admin-panel admin-panel--account">
+          <AdminAccountEditor :slug="slug" />
         </section>
 
         <!-- En-tête -->

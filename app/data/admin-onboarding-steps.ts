@@ -1,5 +1,6 @@
 import type { AdminSectionId } from "./admin-nav-sections"
 import type { PropertyAdminRecord } from "../types/property-admin"
+import { isValidBookingNotifyEmail } from "../utils/booking-notify-email"
 import { parseSiteTemplateId } from "./site-templates"
 
 export type AdminOnboardingStepId =
@@ -128,12 +129,6 @@ function hasText(value: unknown) {
   return typeof value === "string" && value.trim().length > 0
 }
 
-function hasValidEmail(value: unknown) {
-  const mail = typeof value === "string" ? value.trim() : ""
-
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail)
-}
-
 export function evaluateOnboardingStep(
   record: PropertyAdminRecord,
   stepId: AdminOnboardingStepId
@@ -254,7 +249,9 @@ export function getOnboardingStepMissingLabels(
       return missing
     }
     case "finish":
-      return hasValidEmail(record.booking_notify_email) ? [] : ["E-mail de réservation valide"]
+      return isValidBookingNotifyEmail(record.booking_notify_email)
+        ? []
+        : ["E-mail de réservation valide"]
     default:
       return []
   }

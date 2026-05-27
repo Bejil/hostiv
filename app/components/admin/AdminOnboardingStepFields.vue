@@ -292,11 +292,12 @@ const hostIntroExamples = [
     <div v-else-if="stepId === 'finish'" class="admin-onboarding-fields__section">
       <AdminField
         label="E-mail de réservation"
-        type="email"
+        type="text"
         required
         :model-value="record.booking_notify_email"
         full-width
-        hint="Notifications et demandes de réservation."
+        hint="Ex. vous@exemple.com — notifications et demandes de réservation."
+        placeholder="vous@exemple.com"
         @update:model-value="ctx.patch({ booking_notify_email: $event as string })"
       />
     </div>

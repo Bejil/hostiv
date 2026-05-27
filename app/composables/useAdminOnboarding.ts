@@ -214,10 +214,13 @@ export function useAdminOnboarding(options: {
       return
     }
 
-    if (markOnboardingCompleteIfDone(record)) {
-      stripOnboardingQuery()
-      autoLaunchDone = true
-      return
+    // Jamais de fermeture automatique pendant le parcours — uniquement via le bouton d’étape.
+    if (phase.value !== "active" && phase.value !== "welcome") {
+      if (markOnboardingCompleteIfDone(record)) {
+        stripOnboardingQuery()
+        autoLaunchDone = true
+        return
+      }
     }
 
     const forced = route.query.onboarding === "1"
@@ -277,30 +280,20 @@ export function useAdminOnboarding(options: {
         return
       }
 
+      if (phase.value === "active" || phase.value === "welcome") {
+        return
+      }
+
       if (markOnboardingCompleteIfDone(record)) {
         stripOnboardingQuery()
         return
       }
 
-      tryAutoLaunch()
+      if (!autoLaunchDone) {
+        tryAutoLaunch()
+      }
     },
     { immediate: true }
-  )
-
-  watch(
-    () => options.record.value,
-    (record) => {
-      if (!record || phase.value !== "active") {
-        return
-      }
-
-      const step = currentStep.value
-
-      if (step.id !== "welcome" && evaluateOnboardingStep(record, step.id)) {
-        markStepDone(step.id)
-      }
-    },
-    { deep: true }
   )
 
   return {

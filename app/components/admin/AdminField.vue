@@ -12,11 +12,16 @@ const props = withDefaults(
     placeholder?: string
     fullWidth?: boolean
     required?: boolean
+    disabled?: boolean
+    /** Bloque copier, coller et glisser-déposer (ex. confirmation sensible). */
+    preventClipboard?: boolean
   }>(),
   {
     type: "text",
     rows: 3,
-    fullWidth: false
+    fullWidth: false,
+    disabled: false,
+    preventClipboard: false
   }
 )
 
@@ -39,6 +44,12 @@ function onInput(event: Event) {
 
   emit("update:modelValue", target.value)
 }
+
+function onClipboardEvent(event: Event) {
+  if (props.preventClipboard) {
+    event.preventDefault()
+  }
+}
 </script>
 
 <template>
@@ -58,7 +69,12 @@ function onInput(event: Event) {
       :rows="rows"
       :value="String(modelValue)"
       :placeholder="placeholder"
+      :autocomplete="preventClipboard ? 'off' : undefined"
       @input="onInput"
+      @paste="onClipboardEvent"
+      @copy="onClipboardEvent"
+      @cut="onClipboardEvent"
+      @drop.prevent="preventClipboard"
     />
     <input
       v-else-if="type === 'checkbox'"
@@ -75,7 +91,13 @@ function onInput(event: Event) {
       :min="min"
       :max="max"
       :placeholder="placeholder"
+      :disabled="disabled"
+      :autocomplete="preventClipboard ? 'off' : undefined"
       @input="onInput"
+      @paste="onClipboardEvent"
+      @copy="onClipboardEvent"
+      @cut="onClipboardEvent"
+      @drop.prevent="preventClipboard"
     />
     <span v-if="type === 'checkbox'" class="admin-field__label">
       {{ label }}<span v-if="required" class="admin-field__required" aria-hidden="true"> *</span>

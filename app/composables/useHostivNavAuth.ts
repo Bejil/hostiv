@@ -27,6 +27,10 @@ export function useHostivNavAuth() {
     propertySlug.value ? `/${propertySlug.value}/admin` : null
   )
 
+  const accountPath = computed(() =>
+    propertySlug.value ? `/${propertySlug.value}/admin?section=account` : null
+  )
+
   const sitePath = computed(() => (propertySlug.value ? `/${propertySlug.value}` : null))
 
   let unsubscribe: (() => void) | null = null
@@ -131,6 +135,7 @@ export function useHostivNavAuth() {
     isLoggedIn,
     userEmail,
     adminPath,
+    accountPath,
     sitePath,
     logout,
     refresh

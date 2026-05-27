@@ -1,4 +1,4 @@
-export type AdminTopSectionId = "general" | "images" | "reservations" | "payouts"
+export type AdminTopSectionId = "general" | "images" | "reservations" | "payouts" | "account"
 
 export type AdminNavSectionId =
   | "template"
@@ -61,6 +61,13 @@ export const adminTopNavItems: AdminNavItem[] = [
     icon: "card",
     title: "Versements",
     description: "Compte Stripe Connect et réception des paiements."
+  },
+  {
+    id: "account",
+    label: "Compte",
+    icon: "user",
+    title: "Mon compte",
+    description: "Prénom, nom, e-mail et suppression du compte Hostiv."
   },
   {
     id: "images",
