@@ -97,9 +97,18 @@ async function loadStatus() {
       headers
     })
   } catch (err: unknown) {
-    const e = err as { data?: { message?: string }; message?: string }
+    const e = err as {
+      data?: { message?: string; statusMessage?: string }
+      statusMessage?: string
+      message?: string
+    }
 
-    error.value = e.data?.message || e.message || "Impossible de charger le statut Stripe."
+    error.value =
+      e.data?.message ||
+      e.data?.statusMessage ||
+      e.statusMessage ||
+      e.message ||
+      "Impossible de charger le statut Stripe."
     status.value = null
   } finally {
     loading.value = false
@@ -120,9 +129,18 @@ async function startOnboarding() {
 
     window.location.assign(url)
   } catch (err: unknown) {
-    const e = err as { data?: { message?: string }; message?: string }
+    const e = err as {
+      data?: { message?: string; statusMessage?: string }
+      statusMessage?: string
+      message?: string
+    }
 
-    error.value = e.data?.message || e.message || "Impossible d’ouvrir l’onboarding Stripe."
+    error.value =
+      e.data?.message ||
+      e.data?.statusMessage ||
+      e.statusMessage ||
+      e.message ||
+      "Impossible d’ouvrir l’onboarding Stripe."
   } finally {
     actionLoading.value = false
   }
@@ -142,9 +160,18 @@ async function openDashboard() {
 
     window.open(url, "_blank", "noopener,noreferrer")
   } catch (err: unknown) {
-    const e = err as { data?: { message?: string }; message?: string }
+    const e = err as {
+      data?: { message?: string; statusMessage?: string }
+      statusMessage?: string
+      message?: string
+    }
 
-    error.value = e.data?.message || e.message || "Impossible d’ouvrir le tableau de bord Stripe."
+    error.value =
+      e.data?.message ||
+      e.data?.statusMessage ||
+      e.statusMessage ||
+      e.message ||
+      "Impossible d’ouvrir le tableau de bord Stripe."
   } finally {
     actionLoading.value = false
   }

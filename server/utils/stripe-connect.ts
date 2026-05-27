@@ -207,9 +207,32 @@ export async function refreshPropertyStripeStatus(
   }
 }
 
-export function buildStripeConnectAdminUrls(event: Parameters<typeof getRequestURL>[0], slug: string) {
-  const origin = getRequestURL(event).origin
-  const adminPath = `/${slug.trim().toLowerCase()}/admin`
+export function buildStripeConnectAdminUrls(
+  event: Parameters<typeof getRequestURL>[0],
+  slug: string,
+  configuredSiteUrl = ""
+) {
+  const requestOrigin = getRequestURL(event).origin
+  const configuredSite = configuredSiteUrl.trim().replace(/\/$/, "")
+  const normalizedSlug = slug.trim().toLowerCase()
+
+  let origin = requestOrigin
+
+  if (configuredSite) {
+    try {
+      const siteOrigin = new URL(
+        configuredSite.includes("://") ? configuredSite : `https://${configuredSite}`
+      ).origin
+
+      if (siteOrigin.startsWith("http")) {
+        origin = siteOrigin
+      }
+    } catch {
+      /* URL publique invalide — repli sur l’origine de la requête */
+    }
+  }
+
+  const adminPath = `/${normalizedSlug}/admin`
 
   return {
     returnUrl: `${origin}${adminPath}?section=payouts&stripe=return`,
