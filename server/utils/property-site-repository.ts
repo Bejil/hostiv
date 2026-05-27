@@ -57,8 +57,12 @@ function mapRow(row: PropertySiteRow): PropertySiteRecord {
   }
 }
 
-export async function getPropertySiteBySlug(slug: string): Promise<PropertySiteRecord | null> {
+export async function getPropertySiteBySlug(
+  slug: string,
+  options?: { publishedOnly?: boolean }
+): Promise<PropertySiteRecord | null> {
   const normalizedSlug = slug.trim().toLowerCase()
+  const publishedOnly = options?.publishedOnly !== false
 
   if (!normalizedSlug) {
     return null
@@ -66,12 +70,16 @@ export async function getPropertySiteBySlug(slug: string): Promise<PropertySiteR
 
   const supabase = requireSupabaseAdmin()
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("properties")
     .select(PROPERTY_SITE_PUBLIC_SELECT)
     .eq("slug", normalizedSlug)
-    .eq("published", true)
-    .maybeSingle()
+
+  if (publishedOnly) {
+    query = query.eq("published", true)
+  }
+
+  const { data, error } = await query.maybeSingle()
 
   if (error) {
     console.error("[property-site] Supabase error:", error.message)

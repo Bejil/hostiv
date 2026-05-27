@@ -141,7 +141,6 @@ export function usePropertyAdmin(slug: Ref<string> | string) {
   }
 
   async function bootstrap() {
-    loading.value = true
     error.value = null
 
     try {
@@ -153,16 +152,23 @@ export function usePropertyAdmin(slug: Ref<string> | string) {
         authenticated.value = false
         site.value = null
         userEmail.value = null
+        loading.value = false
         return
       }
 
       userEmail.value = session.user.email ?? null
+
+      // Déjà chargé (retour sur l’onglet / remount léger) : ne pas masquer l’éditeur.
+      if (site.value) {
+        loading.value = false
+        return
+      }
+
       await fetchSite({ forceLoading: true })
     } catch (err: unknown) {
       error.value = err instanceof Error ? err.message : "Impossible d’initialiser l’administration."
       authenticated.value = false
       site.value = null
-    } finally {
       loading.value = false
     }
   }
@@ -248,7 +254,26 @@ export function usePropertyAdmin(slug: Ref<string> | string) {
     const supabase = useSupabaseClient()
 
     const { data } = supabase.auth.onAuthStateChange((event, session) => {
-      if (!session) {
+      if (event === "TOKEN_REFRESHED") {
+        if (session?.user.email) {
+          userEmail.value = session.user.email
+        }
+        return
+      }
+
+      if (event === "INITIAL_SESSION") {
+        if (session?.user.email) {
+          userEmail.value = session.user.email
+        }
+
+        if (session && !site.value) {
+          void fetchSite({ forceLoading: true })
+        }
+
+        return
+      }
+
+      if (event === "SIGNED_OUT") {
         authenticated.value = false
         site.value = null
         userEmail.value = null
@@ -257,10 +282,14 @@ export function usePropertyAdmin(slug: Ref<string> | string) {
         return
       }
 
+      if (!session) {
+        return
+      }
+
       userEmail.value = session.user.email ?? null
 
       if (event === "SIGNED_IN") {
-        void fetchSite({ forceLoading: true })
+        void fetchSite({ forceLoading: !site.value })
       }
     })
 

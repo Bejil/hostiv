@@ -2,6 +2,8 @@ import {
   adminOnboardingStepCount,
   adminOnboardingSteps,
   evaluateOnboardingStep,
+  getFirstIncompleteOnboardingStepIndex,
+  isOnboardingRequired,
   type AdminOnboardingStepId
 } from "../data/admin-onboarding-steps"
 import type { AdminSectionId } from "../data/admin-nav-sections"
@@ -167,7 +169,7 @@ export function useAdminOnboarding(options: {
     phase.value = "hidden"
   }
 
-  /** Réinitialise et rouvre le parcours (bouton Guide ou ?onboarding=1). */
+  /** Réinitialise et rouvre le parcours (bouton Guide uniquement). */
   function reopenTour() {
     autoLaunchDone = false
     persist({
@@ -181,33 +183,59 @@ export function useAdminOnboarding(options: {
   }
 
   function resumeTour() {
-    const index = adminOnboardingSteps.findIndex(
-      (step) => step.id === storage.value.currentStepId
-    )
+    const record = options.record.value
+
+    if (!record) {
+      return
+    }
 
     phase.value = "active"
-    goToStep(index >= 1 ? index : 1)
+    goToStep(getFirstIncompleteOnboardingStepIndex(record))
+  }
+
+  function markOnboardingCompleteIfDone(record: PropertyAdminRecord) {
+    if (isOnboardingRequired(record)) {
+      return false
+    }
+
+    persist({ completed: true, started: true, currentStepId: null })
+
+    if (phase.value !== "celebration") {
+      phase.value = "hidden"
+    }
+
+    return true
   }
 
   function tryAutoLaunch() {
-    if (!options.record.value) {
+    const record = options.record.value
+
+    if (!record) {
+      return
+    }
+
+    if (markOnboardingCompleteIfDone(record)) {
+      stripOnboardingQuery()
+      autoLaunchDone = true
       return
     }
 
     const forced = route.query.onboarding === "1"
 
     if (forced) {
-      reopenTour()
+      stripOnboardingQuery()
+
+      if (storage.value.started) {
+        resumeTour()
+      } else {
+        launchWelcome()
+      }
+
       autoLaunchDone = true
       return
     }
 
     if (autoLaunchDone) {
-      return
-    }
-
-    if (storage.value.completed) {
-      autoLaunchDone = true
       return
     }
 
@@ -236,7 +264,8 @@ export function useAdminOnboarding(options: {
     () => route.query.onboarding,
     (value) => {
       if (value === "1" && options.record.value) {
-        reopenTour()
+        autoLaunchDone = false
+        tryAutoLaunch()
       }
     }
   )
@@ -245,6 +274,11 @@ export function useAdminOnboarding(options: {
     () => options.record.value,
     (record) => {
       if (!record) {
+        return
+      }
+
+      if (markOnboardingCompleteIfDone(record)) {
+        stripOnboardingQuery()
         return
       }
 

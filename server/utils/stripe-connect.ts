@@ -1,6 +1,7 @@
 import type Stripe from "stripe"
-import type { StripeConnectStatus } from "../../app/types/stripe-connect"
+import type { StripeConnectStatus, StripeKeyMode } from "../../app/types/stripe-connect"
 import {
+  clearPropertyStripeConnect,
   getPropertyStripeByAccountId,
   getPropertyStripeBySlug,
   setPropertyStripeAccountId,
@@ -21,6 +22,38 @@ export function normalizePlatformFeePercent(value: unknown): number {
   }
 
   return parsed
+}
+
+export function getStripeKeyMode(secretKey: string): StripeKeyMode {
+  const key = secretKey.trim()
+
+  if (key.startsWith("sk_live_")) {
+    return "live"
+  }
+
+  if (key.startsWith("sk_test_")) {
+    return "test"
+  }
+
+  return "unknown"
+}
+
+function isStripeConnectAccountUnavailable(error: unknown): boolean {
+  if (!error || typeof error !== "object") {
+    return false
+  }
+
+  const stripeError = error as { code?: string; message?: string }
+  const code = stripeError.code ?? ""
+  const message = (stripeError.message ?? "").toLowerCase()
+
+  return (
+    code === "account_invalid" ||
+    message.includes("no such account") ||
+    message.includes("does not have access to account") ||
+    message.includes("test mode") ||
+    message.includes("live mode")
+  )
 }
 
 export function computePlatformFeeCents(amountCents: number, feePercent: number): number {
@@ -49,7 +82,11 @@ function mapRequirements(account: Stripe.Account): StripeConnectStatus["requirem
 export function stripeStatusFromRow(
   row: PropertyStripeRow,
   platformFeePercent: number,
-  requirements?: StripeConnectStatus["requirements"]
+  options?: {
+    requirements?: StripeConnectStatus["requirements"]
+    secretKey?: string
+    connectModeMismatch?: boolean
+  }
 ): StripeConnectStatus {
   const chargesEnabled = row.stripe_charges_enabled
 
@@ -60,20 +97,24 @@ export function stripeStatusFromRow(
     detailsSubmitted: row.stripe_details_submitted,
     onboardingCompletedAt: row.stripe_onboarding_completed_at,
     paymentsReady: Boolean(row.stripe_account_id && chargesEnabled),
-    requirements: requirements ?? {
+    requirements: options?.requirements ?? {
       currentlyDue: [],
       eventuallyDue: [],
       pastDue: [],
       disabledReason: null
     },
-    platformFeePercent: normalizePlatformFeePercent(platformFeePercent)
+    platformFeePercent: normalizePlatformFeePercent(platformFeePercent),
+    connectKeyMode: options?.secretKey ? getStripeKeyMode(options.secretKey) : "unknown",
+    connectModeMismatch: options?.connectModeMismatch ?? false
   }
 }
 
 export async function syncStripeAccountToProperty(
   stripe: Stripe,
   slug: string,
-  accountId: string
+  accountId: string,
+  platformFeePercent = 0,
+  secretKey = ""
 ): Promise<StripeConnectStatus> {
   const account = await stripe.accounts.retrieve(accountId)
   const existing = await getPropertyStripeBySlug(slug)
@@ -93,7 +134,31 @@ export async function syncStripeAccountToProperty(
       existing?.stripe_onboarding_completed_at ?? onboardingCompletedAt
   })
 
-  return stripeStatusFromRow(row, 0, requirements)
+  return stripeStatusFromRow(row, platformFeePercent, { requirements, secretKey })
+}
+
+/** Supprime le compte Connect en base s’il n’existe pas dans le mode des clés actuelles. */
+export async function disconnectStripeConnectIfUnavailable(
+  stripe: Stripe,
+  slug: string
+): Promise<boolean> {
+  const row = await getPropertyStripeBySlug(slug)
+
+  if (!row?.stripe_account_id) {
+    return false
+  }
+
+  try {
+    await stripe.accounts.retrieve(row.stripe_account_id)
+    return false
+  } catch (error) {
+    if (!isStripeConnectAccountUnavailable(error)) {
+      throw error
+    }
+
+    await clearPropertyStripeConnect(slug)
+    return true
+  }
 }
 
 export async function refreshPropertyStripeStatus(
@@ -107,14 +172,39 @@ export async function refreshPropertyStripeStatus(
     throw createError({ statusCode: 404, message: "Site introuvable." })
   }
 
+  const statusOptions = { secretKey: stripeSecretKey }
+
   if (!row.stripe_account_id) {
-    return stripeStatusFromRow(row, platformFeePercent)
+    return stripeStatusFromRow(row, platformFeePercent, statusOptions)
   }
 
   const stripe = getStripeClient(stripeSecretKey)
-  const status = await syncStripeAccountToProperty(stripe, slug, row.stripe_account_id)
 
-  return { ...status, platformFeePercent: normalizePlatformFeePercent(platformFeePercent) }
+  try {
+    return await syncStripeAccountToProperty(
+      stripe,
+      slug,
+      row.stripe_account_id,
+      platformFeePercent,
+      stripeSecretKey
+    )
+  } catch (error) {
+    if (!isStripeConnectAccountUnavailable(error)) {
+      throw error
+    }
+
+    await clearPropertyStripeConnect(slug)
+    const cleared = await getPropertyStripeBySlug(slug)
+
+    if (!cleared) {
+      throw createError({ statusCode: 404, message: "Site introuvable." })
+    }
+
+    return stripeStatusFromRow(cleared, platformFeePercent, {
+      ...statusOptions,
+      connectModeMismatch: true
+    })
+  }
 }
 
 export function buildStripeConnectAdminUrls(event: Parameters<typeof getRequestURL>[0], slug: string) {
@@ -139,7 +229,16 @@ export async function ensureExpressConnectAccount(
   }
 
   if (row.stripe_account_id) {
-    return row.stripe_account_id
+    try {
+      await stripe.accounts.retrieve(row.stripe_account_id)
+      return row.stripe_account_id
+    } catch (error) {
+      if (!isStripeConnectAccountUnavailable(error)) {
+        throw error
+      }
+
+      await clearPropertyStripeConnect(slug)
+    }
   }
 
   const account = await stripe.accounts.create({

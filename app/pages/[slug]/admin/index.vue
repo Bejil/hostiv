@@ -238,7 +238,7 @@ watch(
     }
 
     nextTick(() => {
-      editorRef.value?.tryAutoLaunch?.() ?? editorRef.value?.reopenOnboarding?.()
+      editorRef.value?.tryAutoLaunch?.()
     })
   },
   { flush: "post" }
@@ -379,10 +379,17 @@ useHead({
           <AdminIcon name="layout" :size="16" />
           <span class="admin-btn__label">Guide</span>
         </button>
-        <NuxtLink :to="`/${slug}`" class="admin-btn admin-btn--secondary" target="_blank">
+        <a
+          v-if="showEditor"
+          :href="`/${slug}/preview`"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="admin-btn admin-btn--secondary"
+          title="Aperçu du site (brouillon visible si vous êtes connecté)"
+        >
           <AdminIcon name="eye" :size="16" />
-          <span class="admin-btn__label">Voir le site</span>
-        </NuxtLink>
+          <span class="admin-btn__label">Aperçu</span>
+        </a>
         <button type="button" class="admin-btn admin-btn--secondary" :disabled="saving" @click="logout">
           <AdminIcon name="logout" :size="16" />
           <span class="admin-btn__label">Déconnexion</span>

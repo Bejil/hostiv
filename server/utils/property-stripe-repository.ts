@@ -138,6 +138,16 @@ export async function updatePropertyStripeStatus(
   return mapStripeRow(data as Record<string, unknown>)
 }
 
+export async function clearPropertyStripeConnect(slug: string): Promise<PropertyStripeRow> {
+  return updatePropertyStripeStatus(slug, {
+    stripe_account_id: null,
+    stripe_charges_enabled: false,
+    stripe_payouts_enabled: false,
+    stripe_details_submitted: false,
+    stripe_onboarding_completed_at: null
+  })
+}
+
 export async function setPropertyStripeAccountId(
   slug: string,
   accountId: string

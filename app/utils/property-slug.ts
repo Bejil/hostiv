@@ -14,6 +14,7 @@ export const RESERVED_PROPERTY_SLUGS = new Set([
   "hostiv",
   "mentions-legales",
   "politique-de-confidentialite",
+  "preview",
   "public",
   "robots",
   "signup",

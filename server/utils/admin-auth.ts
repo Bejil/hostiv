@@ -62,3 +62,38 @@ export async function requirePropertyOwner(event: H3Event, slug: string) {
 
   return data.user
 }
+
+export async function getAuthenticatedUserFromEvent(event: H3Event) {
+  const supabaseUrl = process.env.SUPABASE_URL?.trim()
+  const supabaseAnonKey = process.env.SUPABASE_ANON_KEY?.trim()
+  const token = getBearerToken(event)
+
+  if (!supabaseUrl || !supabaseAnonKey || !token) {
+    return null
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    auth: { persistSession: false, autoRefreshToken: false }
+  })
+
+  const { data, error } = await supabase.auth.getUser(token)
+
+  if (error || !data.user) {
+    return null
+  }
+
+  return data.user
+}
+
+/** true si l’utilisateur connecté est propriétaire du site (slug). */
+export async function isPropertyOwnerUser(event: H3Event, slug: string): Promise<boolean> {
+  const user = await getAuthenticatedUserFromEvent(event)
+
+  if (!user) {
+    return false
+  }
+
+  const ownerUserId = await getPropertyOwnerUserId(slug)
+
+  return Boolean(ownerUserId && ownerUserId === user.id)
+}

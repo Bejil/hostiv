@@ -44,6 +44,26 @@ const statusVariant = computed(() => {
   return "error"
 })
 
+const isProductionHost = computed(() => {
+  if (import.meta.server) {
+    return false
+  }
+
+  const host = window.location.hostname
+
+  return host !== "localhost" && host !== "127.0.0.1"
+})
+
+const showTestKeysWarning = computed(
+  () => isProductionHost.value && status.value?.connectKeyMode === "test"
+)
+
+const connectModeMismatchMessage =
+  "Votre compte Stripe Connect a été créé en mode test. Les clés de production (Live) ne peuvent pas l’utiliser : cliquez sur « Connecter mon compte Stripe » pour refaire l’onboarding en mode réel."
+
+const testKeysWarningMessage =
+  "Les clés Stripe du serveur sont encore en mode test (sk_test_). Sur Vercel, utilisez STRIPE_SECRET_KEY et NUXT_PUBLIC_STRIPE_PUBLISHABLE_KEY en sk_live_ / pk_live_, puis redéployez."
+
 const pendingRequirements = computed(() => {
   const requirements = status.value?.requirements
 
@@ -180,11 +200,23 @@ watch(
       </div>
 
       <AdminAlert v-if="error" variant="error" :message="error" />
-      <AdminAlert v-else-if="actionMessage" variant="success" :message="actionMessage" />
+      <AdminAlert v-else-if="actionMessage && !status" variant="success" :message="actionMessage" />
 
       <p v-if="loading" class="admin-payouts__loading">Chargement du statut…</p>
 
       <template v-else-if="status">
+        <AdminAlert
+          v-if="showTestKeysWarning"
+          variant="error"
+          :message="testKeysWarningMessage"
+        />
+        <AdminAlert
+          v-else-if="status.connectModeMismatch"
+          variant="info"
+          :message="connectModeMismatchMessage"
+        />
+        <AdminAlert v-else-if="actionMessage" variant="success" :message="actionMessage" />
+
         <div class="admin-payouts__status-row">
           <span class="admin-payouts__badge" :class="`admin-payouts__badge--${statusVariant}`">
             {{ statusLabel }}

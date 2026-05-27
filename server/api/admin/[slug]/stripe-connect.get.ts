@@ -26,7 +26,7 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 404, message: "Site introuvable." })
     }
 
-    return stripeStatusFromRow(row, platformFeePercent)
+    return stripeStatusFromRow(row, platformFeePercent, { secretKey: "" })
   }
 
   return await refreshPropertyStripeStatus(stripeSecretKey, slug, platformFeePercent)

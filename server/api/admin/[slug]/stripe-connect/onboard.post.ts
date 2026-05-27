@@ -2,6 +2,7 @@ import { requirePropertyOwner } from "../../../../utils/admin-auth"
 import {
   buildStripeConnectAdminUrls,
   createConnectOnboardingLink,
+  disconnectStripeConnectIfUnavailable,
   ensureExpressConnectAccount,
   normalizePlatformFeePercent,
   refreshPropertyStripeStatus
@@ -27,6 +28,9 @@ export default defineEventHandler(async (event) => {
   }
 
   const stripe = getStripeClient(stripeSecretKey)
+
+  await disconnectStripeConnectIfUnavailable(stripe, slug)
+
   const accountId = await ensureExpressConnectAccount(stripe, slug, user.email)
   const { returnUrl, refreshUrl } = buildStripeConnectAdminUrls(event, slug)
   const url = await createConnectOnboardingLink(stripe, accountId, returnUrl, refreshUrl)

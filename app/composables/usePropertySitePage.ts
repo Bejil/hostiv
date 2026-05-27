@@ -6,7 +6,8 @@ export async function usePropertySitePage() {
 
   const { data: site, error } = await useAsyncData(
     () => `property-site-${slug.value}`,
-    () => $fetch<PropertySiteRecord>(`/api/sites/${slug.value}`)
+    () => $fetch<PropertySiteRecord>(`/api/sites/${slug.value}`),
+    { watch: [slug] }
   )
 
   if (error.value?.statusCode === 404 || !site.value) {

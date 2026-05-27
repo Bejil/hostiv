@@ -102,6 +102,28 @@ export const adminOnboardingSteps: AdminOnboardingStep[] = [
 
 export const adminOnboardingStepCount = adminOnboardingSteps.length
 
+const progressOnboardingStepIds = adminOnboardingSteps
+  .filter((step) => step.id !== "welcome")
+  .map((step) => step.id)
+
+/** Vrai tant qu’au moins une étape obligatoire du parcours n’est pas remplie dans le site. */
+export function isOnboardingRequired(record: PropertyAdminRecord): boolean {
+  return progressOnboardingStepIds.some((stepId) => !evaluateOnboardingStep(record, stepId))
+}
+
+/** Index de la première étape incomplète (1…n), ou dernière étape si tout est rempli. */
+export function getFirstIncompleteOnboardingStepIndex(record: PropertyAdminRecord): number {
+  for (let index = 0; index < adminOnboardingSteps.length; index += 1) {
+    const step = adminOnboardingSteps[index]
+
+    if (step && step.id !== "welcome" && !evaluateOnboardingStep(record, step.id)) {
+      return index
+    }
+  }
+
+  return adminOnboardingSteps.length - 1
+}
+
 function hasText(value: unknown) {
   return typeof value === "string" && value.trim().length > 0
 }
