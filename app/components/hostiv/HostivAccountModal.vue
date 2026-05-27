@@ -43,6 +43,13 @@ const passwordRuleKeys: HostivPasswordRuleKey[] = [
 ]
 
 const passwordRules = computed(() => evaluateHostivPassword(password.value))
+
+const showPasswordRules = computed(
+  () =>
+    passwordFieldFocused.value ||
+    (password.value.length > 0 && !isHostivPasswordValid(password.value))
+)
+
 const error = ref("")
 const success = ref("")
 
@@ -494,7 +501,7 @@ async function onLoginSubmit() {
                 />
 
                 <div
-                  v-if="passwordFieldFocused"
+                  v-if="showPasswordRules"
                   id="hostiv-password-rules"
                   class="hostiv-modal__password-rules"
                   role="status"
@@ -527,6 +534,7 @@ async function onLoginSubmit() {
                 type="submit"
                 class="hostiv-btn hostiv-btn--primary hostiv-modal__submit"
                 :disabled="loading"
+                @mousedown.prevent
               >
                 {{
                   loading
