@@ -1,12 +1,8 @@
 <script setup lang="ts">
-import AdminField from "./AdminField.vue"
 import AdminIcon from "./AdminIcon.vue"
-import AdminImageUpload from "./AdminImageUpload.vue"
+import AdminVisualCardDeleteModal from "./AdminVisualCardDeleteModal.vue"
+import AdminVisualCardEditModal from "./AdminVisualCardEditModal.vue"
 import type { PropertyVisualCard } from "../../types/property-site"
-
-const GALLERY_CTA_TAB_ID = "gallery-cta" as const
-
-type VisualTabId = number | typeof GALLERY_CTA_TAB_ID
 
 const props = defineProps<{
   modelValue: PropertyVisualCard[]
@@ -18,36 +14,13 @@ const emit = defineEmits<{
   "update:modelValue": [value: PropertyVisualCard[]]
 }>()
 
-const activeTabId = ref<VisualTabId>(0)
-
-const visualTabs = computed(() => [
-  ...props.modelValue.map((card, index) => ({
-    id: index as VisualTabId,
-    label: card.title.trim() || `Carte ${index + 1}`,
-    isGalleryCta: false
-  })),
-  {
-    id: GALLERY_CTA_TAB_ID,
-    label: "Carte « Voir la galerie »",
-    isGalleryCta: true
-  }
-])
-
-const isCtaTabActive = computed(() => activeTabId.value === GALLERY_CTA_TAB_ID)
-
-const activeCard = computed(() => {
-  if (isCtaTabActive.value || typeof activeTabId.value !== "number") {
-    return null
-  }
-
-  return props.modelValue[activeTabId.value] ?? null
-})
-
-const activeCardIndex = computed(() =>
-  typeof activeTabId.value === "number" ? activeTabId.value : -1
-)
-
-const canRemoveActiveCard = computed(() => props.modelValue.length > 1)
+const editModalOpen = ref(false)
+const deleteModalOpen = ref(false)
+const editingIndex = ref(0)
+const deletingIndex = ref<number | null>(null)
+const isCreatingNew = ref(false)
+const dragIndex = ref<number | null>(null)
+const dragOverIndex = ref<number | null>(null)
 
 function createEmptyCard(): PropertyVisualCard {
   return {
@@ -57,39 +30,17 @@ function createEmptyCard(): PropertyVisualCard {
   }
 }
 
-function updateCard(index: number, partial: Partial<PropertyVisualCard>) {
-  const cards = [...props.modelValue]
-
-  if (!cards[index]) {
-    return
+const editingCard = computed(() => {
+  if (isCreatingNew.value) {
+    return createEmptyCard()
   }
 
-  cards[index] = { ...cards[index], ...partial }
-  emit("update:modelValue", cards)
-}
+  return props.modelValue[editingIndex.value] ?? createEmptyCard()
+})
 
-function selectTab(id: VisualTabId) {
-  activeTabId.value = id
-}
-
-function addCard() {
-  const cards = [...props.modelValue, createEmptyCard()]
-
-  emit("update:modelValue", cards)
-  activeTabId.value = cards.length - 1
-}
-
-function removeActiveCard() {
-  if (!canRemoveActiveCard.value || typeof activeTabId.value !== "number") {
-    return
-  }
-
-  const index = activeTabId.value
-  const cards = props.modelValue.filter((_, cardIndex) => cardIndex !== index)
-
-  emit("update:modelValue", cards)
-  activeTabId.value = Math.min(index, cards.length - 1)
-}
+const deletingCard = computed(() =>
+  deletingIndex.value === null ? null : props.modelValue[deletingIndex.value]
+)
 
 function defaultImagePath(index: number, current: string) {
   const trimmed = current.trim().replace(/^\/+/, "")
@@ -101,125 +52,213 @@ function defaultImagePath(index: number, current: string) {
   return `gallery/espaces/carte-${index + 1}.jpeg`
 }
 
-watch(
-  () => props.modelValue.length,
-  (length) => {
-    if (activeTabId.value === GALLERY_CTA_TAB_ID) {
-      return
-    }
+function cardImageSrc(card: PropertyVisualCard, index: number) {
+  const path = defaultImagePath(index, card.image)
 
-    if (typeof activeTabId.value === "number" && activeTabId.value >= length) {
-      activeTabId.value = length > 0 ? length - 1 : GALLERY_CTA_TAB_ID
-    }
-  },
-  { immediate: true }
-)
+  return path ? props.previewUrl(path) : ""
+}
+
+function cardTitle(card: PropertyVisualCard, index: number) {
+  return card.title.trim() || `Carte ${index + 1}`
+}
+
+function cardDescriptionPreview(card: PropertyVisualCard) {
+  return card.text.trim() || "Aucune description"
+}
+
+function openAdd() {
+  isCreatingNew.value = true
+  editingIndex.value = props.modelValue.length
+  editModalOpen.value = true
+}
+
+function openEdit(index: number) {
+  isCreatingNew.value = false
+  editingIndex.value = index
+  editModalOpen.value = true
+}
+
+function closeEdit() {
+  editModalOpen.value = false
+  isCreatingNew.value = false
+}
+
+function saveEdit(value: PropertyVisualCard) {
+  if (!value.title.trim() || !value.image.trim()) {
+    return
+  }
+
+  const cards = [...props.modelValue]
+
+  if (isCreatingNew.value) {
+    cards.push(value)
+  } else if (cards[editingIndex.value]) {
+    cards[editingIndex.value] = value
+  }
+
+  emit("update:modelValue", cards)
+  closeEdit()
+}
+
+function openDelete(index: number) {
+  deletingIndex.value = index
+  deleteModalOpen.value = true
+}
+
+function closeDelete() {
+  deleteModalOpen.value = false
+  deletingIndex.value = null
+}
+
+function confirmDelete() {
+  if (deletingIndex.value === null) {
+    return
+  }
+
+  const cards = props.modelValue.filter((_, index) => index !== deletingIndex.value)
+
+  emit("update:modelValue", cards)
+  closeDelete()
+}
+
+function onDragStart(index: number, event: DragEvent) {
+  dragIndex.value = index
+  dragOverIndex.value = index
+
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = "move"
+    event.dataTransfer.setData("text/plain", String(index))
+  }
+}
+
+function onDragEnd() {
+  dragIndex.value = null
+  dragOverIndex.value = null
+}
+
+function onDragOver(index: number, event: DragEvent) {
+  event.preventDefault()
+
+  if (event.dataTransfer) {
+    event.dataTransfer.dropEffect = "move"
+  }
+
+  dragOverIndex.value = index
+}
+
+function onDrop(index: number, event: DragEvent) {
+  event.preventDefault()
+
+  const from =
+    dragIndex.value ?? Number.parseInt(event.dataTransfer?.getData("text/plain") ?? "", 10)
+
+  if (!Number.isFinite(from) || from === index) {
+    onDragEnd()
+    return
+  }
+
+  const cards = [...props.modelValue]
+  const [moved] = cards.splice(from, 1)
+
+  if (!moved) {
+    onDragEnd()
+    return
+  }
+
+  cards.splice(index, 0, moved)
+  emit("update:modelValue", cards)
+  onDragEnd()
+}
 </script>
 
 <template>
   <div class="admin-visual-cards">
-    <div class="admin-subpanel">
-      <div class="admin-subpanel__head">
-        <h3>Cartes visuelles</h3>
-        <button type="button" class="admin-btn admin-btn--secondary admin-btn--sm" @click="addCard">
-          <AdminIcon name="plus" :size="16" />
-          Ajouter une carte
-        </button>
-      </div>
+    <div class="admin-subpanel__head admin-visual-cards__head">
+      <h3>Cartes visuelles</h3>
+      <button type="button" class="admin-btn admin-btn--secondary admin-btn--sm" @click="openAdd">
+        <AdminIcon name="plus" :size="16" />
+        Ajouter une carte
+      </button>
+    </div>
 
-      <div class="admin-tabs-shell">
-        <div class="admin-tabs admin-tabs--visual" role="tablist" aria-label="Cartes visuelles">
-          <button
-            v-for="tab in visualTabs"
-            :key="String(tab.id)"
-            type="button"
-            role="tab"
-            class="admin-tabs__btn"
-            :class="{
-              'admin-tabs__btn--gallery-cta': tab.isGalleryCta,
-              'admin-tabs__btn--active': activeTabId === tab.id
-            }"
-            :aria-selected="activeTabId === tab.id"
-            @click="selectTab(tab.id)"
-          >
-            {{ tab.label }}
-          </button>
-        </div>
-      </div>
+    <p v-if="!modelValue.length" class="admin-visual-cards__empty">
+      Aucune carte personnalisée. Utilisez « Ajouter une carte » pour en créer une.
+    </p>
 
-      <div
-        v-if="isCtaTabActive"
-        class="admin-visual-cards__panel admin-visual-cards__panel--cta"
-        role="tabpanel"
+    <ul v-else class="admin-visual-cards__list">
+      <li
+        v-for="(card, index) in modelValue"
+        :key="`${index}-${card.title}-${card.image}`"
+        class="admin-visual-cards__item"
+        :class="{
+          'admin-visual-cards__item--dragging': dragIndex === index,
+          'admin-visual-cards__item--drag-over': dragOverIndex === index && dragIndex !== index
+        }"
+        @dragover="onDragOver(index, $event)"
+        @drop="onDrop(index, $event)"
       >
-        <header class="admin-visual-cards__panel-top">
-          <div>
-            <p class="admin-visual-cards__panel-kicker admin-visual-cards__panel-kicker--cta">
-              Carte spéciale
-            </p>
-            <h4 class="admin-visual-cards__panel-title">Carte « Voir la galerie »</h4>
-            <p class="admin-visual-cards__panel-lead">
-              Ouvre la galerie complète au clic. Cette carte reste toujours en dernière position sur le site.
-            </p>
-          </div>
-        </header>
+        <button
+          type="button"
+          class="admin-sortable-list__drag-handle"
+          aria-label="Glisser pour réordonner"
+          draggable="true"
+          @dragstart="onDragStart(index, $event)"
+          @dragend="onDragEnd"
+        />
 
-        <div class="admin-visual-cards__cta-fields">
-          <slot name="cta-fields" />
+        <div class="admin-visual-cards__item-thumb" aria-hidden="true">
+          <img
+            v-if="cardImageSrc(card, index)"
+            :src="cardImageSrc(card, index)"
+            :alt="''"
+            class="admin-visual-cards__item-image"
+          />
+          <div v-else class="admin-visual-cards__item-image admin-visual-cards__item-image--empty" />
         </div>
-      </div>
 
-      <div v-else-if="activeCard" class="admin-visual-cards__panel" role="tabpanel">
-        <header class="admin-visual-cards__panel-top">
-          <div>
-            <p class="admin-visual-cards__panel-kicker">Carte visuelle</p>
-            <h4 class="admin-visual-cards__panel-title">
-              {{ activeCard.title.trim() || "Sans titre" }}
-            </h4>
-          </div>
+        <div class="admin-visual-cards__item-body">
+          <p class="admin-visual-cards__item-title">{{ cardTitle(card, index) }}</p>
+          <p class="admin-visual-cards__item-text">{{ cardDescriptionPreview(card) }}</p>
+        </div>
+
+        <div class="admin-visual-cards__item-actions">
           <button
-            v-if="canRemoveActiveCard"
             type="button"
-            class="admin-btn admin-btn--ghost admin-btn--danger-ghost admin-btn--sm"
-            @click="removeActiveCard"
+            class="admin-btn admin-btn--secondary admin-btn--sm admin-btn--icon-only"
+            aria-label="Modifier"
+            @click="openEdit(index)"
+          >
+            <AdminIcon name="pencil" :size="16" />
+          </button>
+          <button
+            type="button"
+            class="admin-btn admin-btn--ghost admin-btn--danger-ghost admin-btn--sm admin-btn--icon-only"
+            aria-label="Supprimer"
+            @click="openDelete(index)"
           >
             <AdminIcon name="trash" :size="16" />
-            Supprimer
           </button>
-        </header>
-
-        <div class="admin-featured-space-row">
-          <AdminImageUpload
-            cover
-            label="Image"
-            :model-value="activeCard.image"
-            :default-path="defaultImagePath(activeCardIndex, activeCard.image)"
-            :upload="upload"
-            :preview-url="previewUrl"
-            @update:model-value="updateCard(activeCardIndex, { image: $event as string })"
-          />
-          <div class="admin-featured-space-row__fields">
-            <AdminField
-              label="Titre"
-              full-width
-              :model-value="activeCard.title"
-              @update:model-value="updateCard(activeCardIndex, { title: $event as string })"
-            />
-            <AdminField
-              label="Texte"
-              type="textarea"
-              :rows="3"
-              full-width
-              :model-value="activeCard.text"
-              @update:model-value="updateCard(activeCardIndex, { text: $event as string })"
-            />
-          </div>
         </div>
-      </div>
+      </li>
+    </ul>
 
-      <p v-else class="admin-visual-cards__empty">
-        Aucune carte visuelle. Utilisez « Ajouter une carte » ou éditez la carte galerie.
-      </p>
-    </div>
+    <AdminVisualCardEditModal
+      v-if="editModalOpen"
+      :open="editModalOpen"
+      :card="editingCard"
+      :card-index="editingIndex"
+      :is-new="isCreatingNew"
+      :upload="upload"
+      :preview-url="previewUrl"
+      @close="closeEdit"
+      @save="saveEdit"
+    />
+
+    <AdminVisualCardDeleteModal
+      :open="deleteModalOpen"
+      :card-title="deletingCard ? cardTitle(deletingCard, deletingIndex ?? 0) : 'Cette carte'"
+      @cancel="closeDelete"
+      @confirm="confirmDelete"
+    />
   </div>
 </template>

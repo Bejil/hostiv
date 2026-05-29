@@ -1,4 +1,5 @@
 import type { Ref } from "vue"
+import { isSharedPlatformLogoPath, normalizePlatformLogoPath } from "../utils/platform-logo"
 import { resolvePropertyAssetUrl } from "../utils/property-asset-url"
 import { usePublicAsset } from "./usePublicAsset"
 
@@ -26,11 +27,17 @@ export function usePropertyAsset(slug: Ref<string> | string) {
       return path
     }
 
+    const normalizedPath = normalizePlatformLogoPath(path)
+
+    if (isSharedPlatformLogoPath(normalizedPath)) {
+      return publicAsset(normalizedPath)
+    }
+
     const supabaseUrl = String(config.public.supabaseUrl || "").trim()
     const bucket = String(config.public.propertyAssetsBucket || "").trim()
 
     if (supabaseUrl && slugRef.value) {
-      const storageUrl = resolvePropertyAssetUrl(path, {
+      const storageUrl = resolvePropertyAssetUrl(normalizedPath || path, {
         slug: slugRef.value,
         supabaseUrl,
         bucket: bucket || undefined
@@ -41,7 +48,7 @@ export function usePropertyAsset(slug: Ref<string> | string) {
       }
     }
 
-    return publicAsset(path)
+    return publicAsset(normalizedPath || path)
   }
 
   return { propertyAsset }

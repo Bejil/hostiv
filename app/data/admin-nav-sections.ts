@@ -1,5 +1,11 @@
-export type AdminTopSectionId = "general" | "images" | "reservations" | "payouts" | "account"
+export type AdminTopSectionId =
+  | "general"
+  | "customization"
+  | "images"
+  | "reservations"
+  | "payouts"
 
+/** Bloc éditable dans la page Personnalisation. */
 export type AdminNavSectionId =
   | "template"
   | "header"
@@ -46,7 +52,21 @@ export const adminTopNavItems: AdminNavItem[] = [
     label: "Général",
     icon: "settings",
     title: "Général",
-    description: "Publication, favicon, SEO et contact réservations."
+    description: "Publication et SEO."
+  },
+  {
+    id: "customization",
+    label: "Personnalisation",
+    icon: "layout",
+    title: "Personnalisation",
+    description: "Contenu et mise en page du site public — aperçu live à droite."
+  },
+  {
+    id: "images",
+    label: "Galerie",
+    icon: "image",
+    title: "Galerie",
+    description: "Photos organisées par sections avec titre et sous-titre."
   },
   {
     id: "reservations",
@@ -60,25 +80,11 @@ export const adminTopNavItems: AdminNavItem[] = [
     label: "Versements",
     icon: "card",
     title: "Versements",
-    description: "Compte Stripe Connect et réception des paiements."
-  },
-  {
-    id: "account",
-    label: "Compte",
-    icon: "user",
-    title: "Mon compte",
-    description: "Prénom, nom, e-mail et suppression du compte Hostiv."
-  },
-  {
-    id: "images",
-    label: "Images",
-    icon: "image",
-    title: "Galerie",
-    description: "Photos de la galerie organisées par sections avec titre et sous-titre."
+    description: "Tarifs, compte Stripe Connect et réception des paiements."
   }
 ]
 
-export const adminNavItems: AdminNavItem[] = [
+export const adminCustomizationBlocks: AdminNavItem[] = [
   {
     id: "template",
     label: "Template",
@@ -146,8 +152,8 @@ export const adminNavItems: AdminNavItem[] = [
     id: "booking",
     label: "Tarifs",
     icon: "calendar",
-    title: "Tarifs & réservation",
-    description: "Grille tarifaire, textes et e-mails de confirmation."
+    title: "Tarifs",
+    description: "Textes de la section tarifs sur le site public."
   },
   {
     id: "amenities",
@@ -172,10 +178,49 @@ export const adminNavItems: AdminNavItem[] = [
   }
 ]
 
-export const adminAllNavItems: AdminNavItem[] = [...adminTopNavItems, ...adminNavItems]
+/** @deprecated Utiliser adminCustomizationBlocks */
+export const adminNavItems = adminCustomizationBlocks
+
+export const adminAllNavItems: AdminNavItem[] = [...adminTopNavItems, ...adminCustomizationBlocks]
 
 const adminSectionIdSet = new Set(adminAllNavItems.map((item) => item.id))
 
+const adminCustomizationBlockIdSet = new Set(
+  adminCustomizationBlocks.map((item) => item.id)
+)
+
 export function isAdminSectionId(value: string): value is AdminSectionId {
   return adminSectionIdSet.has(value as AdminSectionId)
+}
+
+const adminTopSectionIdSet = new Set(adminTopNavItems.map((item) => item.id))
+
+export function isAdminTopSectionId(value: string): value is AdminTopSectionId {
+  return adminTopSectionIdSet.has(value as AdminTopSectionId)
+}
+
+export function isAdminCustomizationBlockId(value: string): value is AdminNavSectionId {
+  return adminCustomizationBlockIdSet.has(value as AdminNavSectionId)
+}
+
+export function resolveAdminMenuSection(id: AdminSectionId): AdminTopSectionId {
+  if (isAdminCustomizationBlockId(id)) {
+    return "customization"
+  }
+
+  return id as AdminTopSectionId
+}
+
+export function findAdminNavMeta(id: AdminSectionId): AdminNavItem {
+  const fallback =
+    adminTopNavItems[0] ??
+    ({
+      id: "general",
+      label: "Général",
+      icon: "settings",
+      title: "Général",
+      description: "Paramètres du site."
+    } as const)
+
+  return adminAllNavItems.find((item) => item.id === id) ?? fallback
 }

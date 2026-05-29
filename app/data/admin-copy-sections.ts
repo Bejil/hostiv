@@ -1,8 +1,9 @@
 type AdminCopyField = {
   key: string
   label: string
-  type?: "text" | "textarea"
+  type?: "text" | "textarea" | "time"
   fullWidth?: boolean
+  hint?: string
 }
 
 type AdminCopySection = {
@@ -49,7 +50,7 @@ export const adminCopySections: AdminCopySection[] = [
     fields: [
       { key: "eyebrow", label: "Sur-titre" },
       { key: "title", label: "Titre" },
-      { key: "intro", label: "Introduction", type: "textarea" as const, fullWidth: true }
+      { key: "intro", label: "Description", type: "textarea" as const, fullWidth: true }
     ]
   },
   {
@@ -76,10 +77,7 @@ export const adminCopySections: AdminCopySection[] = [
     fields: [
       { key: "eyebrow", label: "Sur-titre" },
       { key: "title", label: "Titre" },
-      { key: "intro", label: "Introduction", type: "textarea" as const, fullWidth: true },
-      { key: "gallery_cta_eyebrow", label: "Sur-titre" },
-      { key: "gallery_cta_title", label: "Titre" },
-      { key: "gallery_cta_text", label: "Texte", type: "textarea" as const }
+      { key: "intro", label: "Description", type: "textarea" as const, fullWidth: true }
     ]
   },
   {
@@ -116,9 +114,19 @@ export const adminCopySections: AdminCopySection[] = [
       { key: "title", label: "Titre" },
       { key: "intro", label: "Introduction", type: "textarea" as const },
       { key: "check_in_label", label: "Label arrivée" },
-      { key: "check_in_time", label: "Heure arrivée" },
+      {
+        key: "check_in_time",
+        label: "Heure d'arrivée",
+        type: "time" as const,
+        hint: "Heures et minutes (format 24 h)"
+      },
       { key: "check_out_label", label: "Label départ" },
-      { key: "check_out_time", label: "Heure départ" }
+      {
+        key: "check_out_time",
+        label: "Heure de départ",
+        type: "time" as const,
+        hint: "Heures et minutes (format 24 h)"
+      }
     ]
   },
   {

@@ -14,7 +14,7 @@ import { requireSupabaseAdmin } from "./supabase"
 
 /** Colonnes exposées au front (sans e-mail hôte). */
 const PROPERTY_SITE_PUBLIC_SELECT =
-  "id, slug, published, brand_name, brand_meta, logo_path, favicon_path, seo_title, seo_description, hero_image_path, hero_image_alt, testimonials_bg_path, host_photo_path, subscription_plan, stripe_charges_enabled, booking_config, location, content"
+  "id, slug, published, brand_name, brand_meta, logo_path, seo_title, seo_description, seo_keywords, seo_og_title, seo_og_description, seo_og_image_path, seo_twitter_card, seo_noindex, hero_image_path, hero_image_alt, testimonials_bg_path, host_photo_path, subscription_plan, stripe_charges_enabled, booking_config, location, content"
 
 const DEFAULT_EMAIL_CONTENT: PropertySiteEmailContent = {
   access_lines: []
@@ -42,9 +42,14 @@ function mapRow(row: PropertySiteRow): PropertySiteRecord {
     brand_name: row.brand_name,
     brand_meta: row.brand_meta || "",
     logo_path: row.logo_path,
-    favicon_path: row.favicon_path || row.logo_path,
     seo_title: row.seo_title,
     seo_description: row.seo_description,
+    seo_keywords: row.seo_keywords ?? "",
+    seo_og_title: row.seo_og_title ?? "",
+    seo_og_description: row.seo_og_description ?? "",
+    seo_og_image_path: row.seo_og_image_path ?? "",
+    seo_twitter_card: row.seo_twitter_card === "summary" ? "summary" : "summary_large_image",
+    seo_noindex: Boolean(row.seo_noindex),
     hero_image_path: row.hero_image_path,
     hero_image_alt: row.hero_image_alt || "",
     testimonials_bg_path: row.testimonials_bg_path,
@@ -96,6 +101,7 @@ export async function getPropertySiteBySlug(
   return mapRow(data as PropertySiteRow)
 }
 
+/** E-mail du propriétaire Hostiv (compte admin du site) pour les notifications de réservation. */
 export async function getPropertyBookingNotifyEmail(slug: string): Promise<string | null> {
   const normalizedSlug = slug.trim().toLowerCase()
 
@@ -107,7 +113,7 @@ export async function getPropertyBookingNotifyEmail(slug: string): Promise<strin
 
   const { data, error } = await supabase
     .from("properties")
-    .select("booking_notify_email")
+    .select("owner_user_id")
     .eq("slug", normalizedSlug)
     .eq("published", true)
     .maybeSingle()
@@ -120,7 +126,20 @@ export async function getPropertyBookingNotifyEmail(slug: string): Promise<strin
     })
   }
 
-  const email = typeof data?.booking_notify_email === "string" ? data.booking_notify_email.trim() : ""
+  const ownerUserId = typeof data?.owner_user_id === "string" ? data.owner_user_id : null
+
+  if (!ownerUserId) {
+    return null
+  }
+
+  const { data: userData, error: userError } = await supabase.auth.admin.getUserById(ownerUserId)
+
+  if (userError) {
+    console.error("[property-site] owner email:", userError.message)
+    return null
+  }
+
+  const email = userData.user?.email?.trim() ?? ""
 
   return email || null
 }

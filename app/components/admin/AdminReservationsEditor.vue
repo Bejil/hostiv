@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import AdminField from "./AdminField.vue"
 import AdminIcon from "./AdminIcon.vue"
+import AdminIcsCalendarsModal from "./AdminIcsCalendarsModal.vue"
 import AdminReservationModal from "./AdminReservationModal.vue"
-import AdminToggle from "./AdminToggle.vue"
 import type { AdminBookingReservation, AdminBookingReservationStatus } from "../../types/booking-reservation"
 import type { PropertyCalendarConfig, PropertyCalendarFeed } from "../../types/property-site"
 import { normalizeCalendarConfig } from "../../utils/calendar-config"
@@ -28,6 +27,7 @@ const reservations = ref<AdminBookingReservation[]>([])
 const reservationsLoading = ref(false)
 const reservationsError = ref<string | null>(null)
 const selectedReservation = ref<AdminBookingReservation | null>(null)
+const icsModalOpen = ref(false)
 let refreshTimer: ReturnType<typeof setTimeout> | null = null
 
 const reservationStatusLabels: Record<AdminBookingReservationStatus, string> = {
@@ -44,7 +44,11 @@ const feeds = computed(() =>
     enabled: typeof feed.enabled === "boolean" ? feed.enabled : true
   }))
 )
-const visibleMonths = computed(() => [visibleMonth.value, addMonths(visibleMonth.value, 1)])
+const visibleMonths = computed(() => [
+  visibleMonth.value,
+  addMonths(visibleMonth.value, 1),
+  addMonths(visibleMonth.value, 2)
+])
 
 function toInputDate(date: Date) {
   const year = date.getFullYear()
@@ -303,7 +307,85 @@ onUnmounted(() => {
 
 <template>
   <div class="admin-reservations">
-    <section class="admin-reservations__panel admin-reservations__panel--bookings">
+    <section class="admin-reservations__panel admin-reservations__panel--calendar admin-reservations__panel--full">
+      <header class="admin-reservations__head">
+        <div>
+          <p class="admin-reservations__kicker">Disponibilités</p>
+          <h3>Calendrier des dates réservées</h3>
+          <p v-if="previewFetchedAt" class="admin-reservations__meta">
+            Dernière actualisation : {{ formatFetchedAt(previewFetchedAt) }}
+            <span v-if="previewSources">
+              · {{ previewSources.succeeded }}/{{ previewSources.total }} calendrier(s) synchronisé(s)
+            </span>
+          </p>
+        </div>
+        <div class="admin-reservations__head-actions">
+          <button
+            type="button"
+            class="admin-btn admin-btn--secondary admin-btn--sm"
+            :disabled="previewLoading"
+            @click="refreshPreview"
+          >
+            <AdminIcon name="calendar" :size="16" />
+            {{ previewLoading ? "Chargement..." : "Actualiser" }}
+          </button>
+          <button
+            type="button"
+            class="admin-btn admin-btn--secondary admin-btn--sm"
+            @click="icsModalOpen = true"
+          >
+            <AdminIcon name="external" :size="16" />
+            Autres calendriers
+          </button>
+        </div>
+      </header>
+
+      <p v-if="previewError" class="admin-reservations__error">{{ previewError }}</p>
+
+      <div class="admin-reservations-calendar booking-calendar-shell">
+        <button type="button" class="calendar-nav-button" @click="shiftCalendarMonths(-1)">
+          ‹
+        </button>
+        <div class="calendar-months">
+          <section
+            v-for="month in visibleMonths"
+            :key="formatCalendarMonth(month)"
+            class="calendar-month"
+          >
+            <h4 class="calendar-month-title">{{ formatCalendarMonth(month) }}</h4>
+            <div class="calendar-weekdays">
+              <span v-for="weekday in calendarWeekdayLabels" :key="weekday" class="calendar-weekday">
+                {{ weekday }}
+              </span>
+            </div>
+            <div class="calendar-grid">
+              <template v-for="day in buildCalendarDays(month)" :key="day.key">
+                <span v-if="!day.isoDate" class="calendar-day-cell calendar-day-cell-empty" />
+
+                <span v-else class="calendar-day-cell">
+                  <button
+                    type="button"
+                    class="calendar-day-button"
+                    :class="{
+                      'is-disabled': day.isBlocked,
+                      'is-reserved': day.isBlocked
+                    }"
+                    :disabled="day.isBlocked"
+                  >
+                    {{ day.label }}
+                  </button>
+                </span>
+              </template>
+            </div>
+          </section>
+        </div>
+        <button type="button" class="calendar-nav-button" @click="shiftCalendarMonths(1)">
+          ›
+        </button>
+      </div>
+    </section>
+
+    <section class="admin-reservations__panel admin-reservations__panel--bookings admin-reservations__panel--full">
       <header class="admin-reservations__head">
         <div>
           <p class="admin-reservations__kicker">Réservations</p>
@@ -358,6 +440,15 @@ onUnmounted(() => {
       </ul>
     </section>
 
+    <AdminIcsCalendarsModal
+      :open="icsModalOpen"
+      :feeds="feeds"
+      @close="icsModalOpen = false"
+      @add="addFeed"
+      @update="updateFeed"
+      @remove="removeFeed"
+    />
+
     <AdminReservationModal
       :slug="slug"
       :reservation="selectedReservation"
@@ -365,109 +456,5 @@ onUnmounted(() => {
       @saved="onReservationSaved"
       @deleted="onReservationDeleted"
     />
-
-    <section class="admin-reservations__panel">
-      <header class="admin-reservations__head">
-        <div>
-          <p class="admin-reservations__kicker">Synchronisation</p>
-          <h3>Liens ICS</h3>
-        </div>
-        <button type="button" class="admin-btn admin-btn--secondary admin-btn--sm" @click="addFeed">
-          <AdminIcon name="plus" :size="16" />
-          Ajouter un lien
-        </button>
-      </header>
-
-      <p v-if="!feeds.length" class="admin-reservations__empty">
-        Aucun flux ICS. Ajoutez les calendriers Airbnb, Booking, Abritel ou toute autre plateforme.
-      </p>
-
-      <div v-else class="admin-reservations__feeds">
-        <article v-for="(feed, index) in feeds" :key="feed.id" class="admin-reservations-feed">
-          <AdminToggle
-            :model-value="feed.enabled"
-            @update:model-value="updateFeed(index, { enabled: $event })"
-          />
-          <AdminField
-            label="Lien ICS"
-            :model-value="feed.url"
-            type="url"
-            placeholder="https://.../calendar.ics"
-            @update:model-value="updateFeed(index, { url: $event as string })"
-          />
-          <button
-            type="button"
-            class="admin-btn admin-btn--ghost admin-btn--danger-ghost admin-btn--sm admin-reservations-feed__delete"
-            aria-label="Supprimer le lien ICS"
-            title="Supprimer"
-            @click="removeFeed(index)"
-          >
-            <AdminIcon name="trash" :size="16" />
-          </button>
-        </article>
-      </div>
-    </section>
-
-    <section class="admin-reservations__panel admin-reservations__panel--calendar">
-      <header class="admin-reservations__head">
-        <div>
-          <p class="admin-reservations__kicker">Disponibilités</p>
-          <h3>Dates réservées</h3>
-        </div>
-        <button
-          type="button"
-          class="admin-btn admin-btn--secondary admin-btn--sm"
-          :disabled="previewLoading"
-          @click="refreshPreview"
-        >
-          <AdminIcon name="calendar" :size="16" />
-          {{ previewLoading ? "Chargement..." : "Actualiser" }}
-        </button>
-      </header>
-
-      <p v-if="previewError" class="admin-reservations__error">{{ previewError }}</p>
-
-      <div class="admin-reservations-calendar booking-calendar-shell">
-        <button type="button" class="calendar-nav-button" @click="shiftCalendarMonths(-1)">
-          ‹
-        </button>
-        <div class="calendar-months">
-          <section
-            v-for="month in visibleMonths"
-            :key="formatCalendarMonth(month)"
-            class="calendar-month"
-          >
-            <h4 class="calendar-month-title">{{ formatCalendarMonth(month) }}</h4>
-            <div class="calendar-weekdays">
-              <span v-for="weekday in calendarWeekdayLabels" :key="weekday" class="calendar-weekday">
-                {{ weekday }}
-              </span>
-            </div>
-            <div class="calendar-grid">
-              <template v-for="day in buildCalendarDays(month)" :key="day.key">
-                <span v-if="!day.isoDate" class="calendar-day-cell calendar-day-cell-empty" />
-
-                <span v-else class="calendar-day-cell">
-                  <button
-                    type="button"
-                    class="calendar-day-button"
-                    :class="{
-                      'is-disabled': day.isBlocked,
-                      'is-reserved': day.isBlocked
-                    }"
-                    :disabled="day.isBlocked"
-                  >
-                    {{ day.label }}
-                  </button>
-                </span>
-              </template>
-            </div>
-          </section>
-        </div>
-        <button type="button" class="calendar-nav-button" @click="shiftCalendarMonths(1)">
-          ›
-        </button>
-      </div>
-    </section>
   </div>
 </template>

@@ -1,6 +1,5 @@
 import type { AdminSectionId } from "./admin-nav-sections"
 import type { PropertyAdminRecord } from "../types/property-admin"
-import { isValidBookingNotifyEmail } from "../utils/booking-notify-email"
 import { parseSiteTemplateId } from "./site-templates"
 
 export type AdminOnboardingStepId =
@@ -12,7 +11,6 @@ export type AdminOnboardingStepId =
   | "host"
   | "location"
   | "booking"
-  | "finish"
 
 export type AdminOnboardingStep = {
   id: AdminOnboardingStepId
@@ -28,10 +26,10 @@ export const adminOnboardingSteps: AdminOnboardingStep[] = [
     id: "welcome",
     section: null,
     title: "Bienvenue dans votre backoffice",
-    subtitle: "Complétez les 8 étapes pour configurer votre site de réservation directe.",
+    subtitle: "Complétez les 7 étapes pour configurer votre site de réservation directe.",
     tips: [
       "Tous les champs indiqués sont obligatoires",
-      "Vous pourrez affiner le contenu plus tard dans le menu latéral"
+      "Vous pourrez affiner le contenu plus tard dans Personnalisation"
     ],
     cta: "Commencer"
   },
@@ -89,14 +87,6 @@ export const adminOnboardingSteps: AdminOnboardingStep[] = [
     title: "Étape 7 — Tarifs",
     subtitle: "Le prix affiché par défaut et le nombre de voyageurs inclus.",
     tips: ["Prix par nuit", "Voyageurs inclus"],
-    cta: "Étape suivante"
-  },
-  {
-    id: "finish",
-    section: "general",
-    title: "Étape 8 — Contact réservations",
-    subtitle: "L’adresse e-mail qui recevra les demandes et confirmations.",
-    tips: ["E-mail de réservation"],
     cta: "Terminer le parcours"
   }
 ]
@@ -248,10 +238,6 @@ export function getOnboardingStepMissingLabels(
 
       return missing
     }
-    case "finish":
-      return isValidBookingNotifyEmail(record.booking_notify_email)
-        ? []
-        : ["E-mail de réservation valide"]
     default:
       return []
   }

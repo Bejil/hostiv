@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import AdminField from "./AdminField.vue"
+import AdminReviewDeleteModal from "./AdminReviewDeleteModal.vue"
+import AdminReviewEditModal from "./AdminReviewEditModal.vue"
 import AdminIcon from "./AdminIcon.vue"
 import type { PropertyReview } from "../../types/property-site"
 import { ratingToStars } from "../../utils/platform-rating-stars"
@@ -12,24 +13,21 @@ const emit = defineEmits<{
   "update:modelValue": [value: PropertyReview[]]
 }>()
 
-const activeIndex = ref(0)
+const editModalOpen = ref(false)
+const deleteModalOpen = ref(false)
+const editingIndex = ref(0)
+const deletingIndex = ref<number | null>(null)
+const isCreatingNew = ref(false)
+const dragIndex = ref<number | null>(null)
+const dragOverIndex = ref<number | null>(null)
 
-const tabs = computed(() =>
-  props.modelValue.map((review, index) => ({
-    id: index,
-    label: review.author.trim() || `Avis ${index + 1}`
-  }))
-)
-
-const activeReview = computed(() => props.modelValue[activeIndex.value])
-
-const canRemoveActiveReview = computed(() => props.modelValue.length > 1)
-
-const activeStars = computed(() => ratingToStars(activeReview.value?.rating ?? ""))
+function createReviewId() {
+  return `review-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+}
 
 function createEmptyReview(): PropertyReview {
   return {
-    id: `review-${Date.now()}`,
+    id: createReviewId(),
     author: "",
     date: "",
     quote: "",
@@ -37,155 +35,227 @@ function createEmptyReview(): PropertyReview {
   }
 }
 
-function updateRatingInput(value: string) {
-  updateReview(activeIndex.value, { rating: value })
+const editingReview = computed(() => {
+  if (isCreatingNew.value) {
+    return createEmptyReview()
+  }
+
+  return props.modelValue[editingIndex.value] ?? createEmptyReview()
+})
+
+const deletingReview = computed(() =>
+  deletingIndex.value === null ? null : props.modelValue[deletingIndex.value]
+)
+
+function reviewTitle(review: PropertyReview, index: number) {
+  return review.author.trim() || `Verbatim ${index + 1}`
 }
 
-function updateReview(index: number, partial: Partial<PropertyReview>) {
+function reviewQuotePreview(review: PropertyReview) {
+  const quote = review.quote.trim()
+
+  return quote || "Aucune citation"
+}
+
+function reviewMeta(review: PropertyReview) {
+  const stars = ratingToStars(review.rating)
+  const date = review.date.trim()
+
+  if (stars && date) {
+    return `${stars} · ${date}`
+  }
+
+  return stars || date || "Sans note ni date"
+}
+
+function openAdd() {
+  isCreatingNew.value = true
+  editingIndex.value = props.modelValue.length
+  editModalOpen.value = true
+}
+
+function openEdit(index: number) {
+  isCreatingNew.value = false
+  editingIndex.value = index
+  editModalOpen.value = true
+}
+
+function closeEdit() {
+  editModalOpen.value = false
+  isCreatingNew.value = false
+}
+
+function saveEdit(value: PropertyReview) {
+  if (!value.author.trim() || !value.quote.trim()) {
+    return
+  }
+
   const reviews = [...props.modelValue]
 
-  if (!reviews[index]) {
+  if (isCreatingNew.value) {
+    reviews.push(value)
+  } else if (reviews[editingIndex.value]) {
+    reviews[editingIndex.value] = value
+  }
+
+  emit("update:modelValue", reviews)
+  closeEdit()
+}
+
+function openDelete(index: number) {
+  deletingIndex.value = index
+  deleteModalOpen.value = true
+}
+
+function closeDelete() {
+  deleteModalOpen.value = false
+  deletingIndex.value = null
+}
+
+function confirmDelete() {
+  if (deletingIndex.value === null) {
     return
   }
 
-  reviews[index] = { ...reviews[index], ...partial }
-  emit("update:modelValue", reviews)
+  emit(
+    "update:modelValue",
+    props.modelValue.filter((_, index) => index !== deletingIndex.value)
+  )
+  closeDelete()
 }
 
-function selectTab(index: number) {
-  activeIndex.value = index
+function onDragStart(index: number, event: DragEvent) {
+  dragIndex.value = index
+  dragOverIndex.value = index
+
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = "move"
+    event.dataTransfer.setData("text/plain", String(index))
+  }
 }
 
-function addReview() {
-  const reviews = [...props.modelValue, createEmptyReview()]
-
-  emit("update:modelValue", reviews)
-  activeIndex.value = reviews.length - 1
+function onDragEnd() {
+  dragIndex.value = null
+  dragOverIndex.value = null
 }
 
-function removeActiveReview() {
-  if (!canRemoveActiveReview.value) {
+function onDragOver(index: number, event: DragEvent) {
+  event.preventDefault()
+
+  if (event.dataTransfer) {
+    event.dataTransfer.dropEffect = "move"
+  }
+
+  dragOverIndex.value = index
+}
+
+function onDrop(index: number, event: DragEvent) {
+  event.preventDefault()
+
+  const from =
+    dragIndex.value ?? Number.parseInt(event.dataTransfer?.getData("text/plain") ?? "", 10)
+
+  if (!Number.isFinite(from) || from === index) {
+    onDragEnd()
     return
   }
 
-  const reviews = props.modelValue.filter((_, index) => index !== activeIndex.value)
+  const reviews = [...props.modelValue]
+  const [moved] = reviews.splice(from, 1)
 
+  if (!moved) {
+    onDragEnd()
+    return
+  }
+
+  reviews.splice(index, 0, moved)
   emit("update:modelValue", reviews)
-  activeIndex.value = Math.min(activeIndex.value, reviews.length - 1)
+  onDragEnd()
 }
-
-watch(
-  tabs,
-  (items) => {
-    if (activeIndex.value < items.length) {
-      return
-    }
-
-    activeIndex.value = Math.max(0, items.length - 1)
-  },
-  { immediate: true }
-)
 </script>
 
 <template>
-  <div class="admin-reviews-editor">
-    <div class="admin-subpanel">
-      <div class="admin-subpanel__head">
-        <h3>Avis clients</h3>
-        <button type="button" class="admin-btn admin-btn--secondary admin-btn--sm" @click="addReview">
-          <AdminIcon name="plus" :size="16" />
-          Ajouter un avis
-        </button>
-      </div>
-
-      <p class="admin-reviews-editor__lead">
-        Les avis défilent en carrousel sur la page. Au moins un avis est recommandé.
-      </p>
-
-      <p v-if="!modelValue.length" class="admin-reviews-editor__empty">
-        Aucun avis. Ajoutez au moins un témoignage pour la section.
-      </p>
-
-      <template v-else>
-        <div class="admin-tabs-shell">
-          <div class="admin-tabs" role="tablist" aria-label="Avis clients">
-            <button
-              v-for="tab in tabs"
-              :key="tab.id"
-              type="button"
-              role="tab"
-              class="admin-tabs__btn"
-              :class="{ 'admin-tabs__btn--active': activeIndex === tab.id }"
-              :aria-selected="activeIndex === tab.id"
-              @click="selectTab(tab.id)"
-            >
-              {{ tab.label }}
-            </button>
-          </div>
-        </div>
-
-        <div v-if="activeReview" class="admin-reviews-editor__panel" role="tabpanel">
-          <header class="admin-reviews-editor__panel-top">
-            <div>
-              <p class="admin-reviews-editor__panel-kicker">Témoignage</p>
-              <h4 class="admin-reviews-editor__panel-title">
-                {{ activeReview.author.trim() || "Sans nom" }}
-              </h4>
-            </div>
-            <button
-              v-if="canRemoveActiveReview"
-              type="button"
-              class="admin-btn admin-btn--ghost admin-btn--danger-ghost admin-btn--sm"
-              @click="removeActiveReview"
-            >
-              <AdminIcon name="trash" :size="16" />
-              Supprimer
-            </button>
-          </header>
-
-          <div class="admin-reviews-editor__fields">
-            <AdminField
-              label="Auteur"
-              full-width
-              :model-value="activeReview.author"
-              @update:model-value="updateReview(activeIndex, { author: $event as string })"
-            />
-            <AdminField
-              label="Date affichée"
-              full-width
-              placeholder="ex. Mars 2025"
-              :model-value="activeReview.date"
-              @update:model-value="updateReview(activeIndex, { date: $event as string })"
-            />
-            <div class="admin-reviews-editor__rating-row">
-              <div class="admin-reviews-editor__rating-field">
-                <AdminField
-                  label="Note"
-                  hint="Toute note au format score / max (ex. 4,97/5, 5/10, 18/50) est convertie sur 5 étoiles"
-                  placeholder="ex. 4,97/5"
-                  :model-value="activeReview.rating"
-                  @update:model-value="updateRatingInput($event as string)"
-                />
-                <p
-                  class="admin-reviews-editor__stars-display"
-                  :class="{ 'admin-reviews-editor__stars-display--empty': !activeStars }"
-                  aria-label="Aperçu des étoiles"
-                >
-                  {{ activeStars || "☆☆☆☆☆" }}
-                </p>
-              </div>
-            </div>
-            <AdminField
-              label="Citation"
-              :model-value="activeReview.quote"
-              type="textarea"
-              :rows="4"
-              full-width
-              @update:model-value="updateReview(activeIndex, { quote: $event as string })"
-            />
-          </div>
-        </div>
-      </template>
+  <div class="admin-reviews-list">
+    <div class="admin-subpanel__head admin-reviews-list__head">
+      <h3>Verbatims</h3>
+      <button type="button" class="admin-btn admin-btn--secondary admin-btn--sm" @click="openAdd">
+        <AdminIcon name="plus" :size="16" />
+        Ajouter un verbatim
+      </button>
     </div>
+
+    <p class="admin-reviews-list__lead">
+      Les avis défilent en carrousel sur la page.
+    </p>
+
+    <p v-if="!modelValue.length" class="admin-reviews-list__empty">
+      Aucun verbatim. Utilisez « Ajouter un verbatim » pour en créer un.
+    </p>
+
+    <ul v-else class="admin-reviews-list__items">
+      <li
+        v-for="(review, index) in modelValue"
+        :key="`${review.id}-${index}`"
+        class="admin-reviews-list__item"
+        :class="{
+          'admin-reviews-list__item--dragging': dragIndex === index,
+          'admin-reviews-list__item--drag-over': dragOverIndex === index && dragIndex !== index
+        }"
+        @dragover="onDragOver(index, $event)"
+        @drop="onDrop(index, $event)"
+      >
+        <button
+          type="button"
+          class="admin-sortable-list__drag-handle"
+          aria-label="Glisser pour réordonner"
+          draggable="true"
+          @dragstart="onDragStart(index, $event)"
+          @dragend="onDragEnd"
+        />
+
+        <div class="admin-reviews-list__item-body">
+          <p class="admin-reviews-list__item-title">{{ reviewTitle(review, index) }}</p>
+          <p class="admin-reviews-list__item-text">{{ reviewQuotePreview(review) }}</p>
+          <p class="admin-reviews-list__item-meta">{{ reviewMeta(review) }}</p>
+        </div>
+
+        <div class="admin-reviews-list__item-actions">
+          <button
+            type="button"
+            class="admin-btn admin-btn--secondary admin-btn--sm admin-btn--icon-only"
+            aria-label="Modifier"
+            @click="openEdit(index)"
+          >
+            <AdminIcon name="pencil" :size="16" />
+          </button>
+          <button
+            type="button"
+            class="admin-btn admin-btn--ghost admin-btn--danger-ghost admin-btn--sm admin-btn--icon-only"
+            aria-label="Supprimer"
+            @click="openDelete(index)"
+          >
+            <AdminIcon name="trash" :size="16" />
+          </button>
+        </div>
+      </li>
+    </ul>
+
+    <AdminReviewEditModal
+      v-if="editModalOpen"
+      :open="editModalOpen"
+      :review="editingReview"
+      :is-new="isCreatingNew"
+      @close="closeEdit"
+      @save="saveEdit"
+    />
+
+    <AdminReviewDeleteModal
+      :open="deleteModalOpen"
+      :review-author="
+        deletingReview ? reviewTitle(deletingReview, deletingIndex ?? 0) : 'Cet auteur'
+      "
+      @cancel="closeDelete"
+      @confirm="confirmDelete"
+    />
   </div>
 </template>

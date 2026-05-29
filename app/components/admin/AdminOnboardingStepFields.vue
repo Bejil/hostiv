@@ -163,7 +163,6 @@ const hostIntroExamples = [
     <!-- Galerie -->
     <div v-else-if="stepId === 'images'" class="admin-onboarding-fields__section admin-onboarding-fields__section--wide">
       <AdminGeneralImagesEditor
-        hide-intro
         mark-required
         show-field-examples
         :model-value="record"
@@ -286,20 +285,6 @@ const hostIntroExamples = [
           "
         />
       </div>
-    </div>
-
-    <!-- Contact -->
-    <div v-else-if="stepId === 'finish'" class="admin-onboarding-fields__section">
-      <AdminField
-        label="E-mail de réservation"
-        type="text"
-        required
-        :model-value="record.booking_notify_email"
-        full-width
-        hint="Ex. vous@exemple.com — notifications et demandes de réservation."
-        placeholder="vous@exemple.com"
-        @update:model-value="ctx.patch({ booking_notify_email: $event as string })"
-      />
     </div>
   </div>
 </template>

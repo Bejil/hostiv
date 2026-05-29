@@ -1,18 +1,27 @@
 <script setup lang="ts">
 import AdminAlert from "./AdminAlert.vue"
-import AdminAccountDeleteModal from "./AdminAccountDeleteModal.vue"
 import AdminField from "./AdminField.vue"
 import HostivPasswordRulesChecklist from "../HostivPasswordRulesChecklist.vue"
 import type { HostivAccountProfile } from "../../types/hostiv-account"
 import { isHostivPasswordValid } from "../../utils/hostiv-password-rules"
 import { useSupabaseClient } from "../../composables/useSupabaseClient"
 
-const props = defineProps<{
-  slug: string
-}>()
+const props = withDefaults(
+  defineProps<{
+    slug: string
+    formId?: string
+    showActions?: boolean
+    embedded?: boolean
+  }>(),
+  {
+    formId: "admin-account-form",
+    showActions: true,
+    embedded: false
+  }
+)
 
 const emit = defineEmits<{
-  deleted: []
+  "request-delete": []
 }>()
 
 const profile = ref<HostivAccountProfile | null>(null)
@@ -22,15 +31,11 @@ const email = ref("")
 const newPassword = ref("")
 const confirmPassword = ref("")
 const passwordFieldFocused = ref(false)
-const deleteConfirmSlug = ref("")
 
 const loading = ref(true)
 const saving = ref(false)
-const deleting = ref(false)
 const error = ref<string | null>(null)
 const success = ref<string | null>(null)
-const deleteModalOpen = ref(false)
-const deleteError = ref<string | null>(null)
 
 const showPasswordRules = computed(
   () =>
@@ -138,70 +143,20 @@ async function onSave() {
   }
 }
 
-function openDeleteModal() {
-  deleteError.value = null
-  deleteConfirmSlug.value = ""
-  deleteModalOpen.value = true
-}
-
-function closeDeleteModal() {
-  if (deleting.value) {
-    return
-  }
-
-  deleteModalOpen.value = false
-  deleteConfirmSlug.value = ""
-  deleteError.value = null
-}
-
-async function onDeleteAccount() {
-  deleteError.value = null
-
-  if (deleteConfirmSlug.value.trim().toLowerCase() !== props.slug.trim().toLowerCase()) {
-    deleteError.value = `Saisissez exactement « ${props.slug} » pour confirmer.`
-    return
-  }
-
-  deleting.value = true
-
-  try {
-    const headers = await authHeaders()
-
-    await $fetch(`/api/admin/${props.slug}/account`, {
-      method: "DELETE",
-      headers,
-      body: { confirm_slug: deleteConfirmSlug.value.trim() }
-    })
-
-    const supabase = useSupabaseClient()
-
-    await supabase.auth.signOut()
-    deleteModalOpen.value = false
-    emit("deleted")
-    await navigateTo("/")
-  } catch (err: unknown) {
-    const e = err as { data?: { message?: string }; message?: string }
-
-    deleteError.value = e.data?.message || e.message || "Impossible de supprimer le compte."
-  } finally {
-    deleting.value = false
-  }
-}
-
 onMounted(() => {
   loadProfile()
 })
 </script>
 
 <template>
-  <div class="admin-account">
+  <div class="admin-account" :class="{ 'admin-account--modal': embedded }">
     <p v-if="loading" class="admin-account__loading">Chargement…</p>
 
     <template v-else>
       <AdminAlert v-if="error" variant="error" :message="error" />
       <AdminAlert v-if="success" variant="success" :message="success" />
 
-      <form class="admin-account__form" @submit.prevent="onSave">
+      <form :id="props.formId" class="admin-account__form" @submit.prevent="onSave">
         <div class="admin-subpanel admin-account__panel">
           <div class="admin-subpanel__head">
             <div>
@@ -251,7 +206,7 @@ onMounted(() => {
 
             <HostivPasswordRulesChecklist
               id="admin-account-password-rules"
-              variant="admin"
+              :variant="embedded ? 'hostiv' : 'admin'"
               :password="newPassword"
               :visible="showPasswordRules"
             />
@@ -266,11 +221,11 @@ onMounted(() => {
           </div>
         </div>
 
-        <div class="admin-account__actions">
+        <div v-if="props.showActions" class="admin-account__actions">
           <button
             type="submit"
             class="admin-btn admin-btn--primary"
-            :disabled="saving || deleting"
+            :disabled="saving"
             @mousedown.prevent
           >
             {{ saving ? "Enregistrement…" : "Enregistrer le compte" }}
@@ -289,23 +244,12 @@ onMounted(() => {
         <button
           type="button"
           class="admin-btn admin-btn--danger-ghost"
-          :disabled="saving || deleting"
-          @click="openDeleteModal"
+          :disabled="saving"
+          @click="emit('request-delete')"
         >
           Supprimer mon compte…
         </button>
       </section>
-
-      <AdminAccountDeleteModal
-        :open="deleteModalOpen"
-        :slug="slug"
-        :loading="deleting"
-        :error="deleteError"
-        :confirm-slug="deleteConfirmSlug"
-        @update:confirm-slug="deleteConfirmSlug = $event"
-        @cancel="closeDeleteModal"
-        @confirm="onDeleteAccount"
-      />
     </template>
   </div>
 </template>

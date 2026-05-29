@@ -34,7 +34,7 @@ export default defineEventHandler(async (event) => {
     throw createError({
       statusCode: 503,
       message:
-        "E-mail hôte non configuré pour ce site : renseignez booking_notify_email sur la propriété dans Supabase."
+        "E-mail hôte non configuré : associez un compte Hostiv au site ou vérifiez l’e-mail dans Mon compte > Paramètres."
     })
   }
 

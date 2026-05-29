@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import AdminField from "./AdminField.vue"
+import AdminHouseRuleDeleteModal from "./AdminHouseRuleDeleteModal.vue"
+import AdminHouseRuleEditModal from "./AdminHouseRuleEditModal.vue"
 import AdminIcon from "./AdminIcon.vue"
 import type { PropertyHouseRule } from "../../types/property-site"
 
@@ -11,18 +12,13 @@ const emit = defineEmits<{
   "update:modelValue": [value: PropertyHouseRule[]]
 }>()
 
-const activeIndex = ref(0)
-
-const tabs = computed(() =>
-  props.modelValue.map((rule, index) => ({
-    id: index,
-    label: rule.title.trim() || `Règle ${index + 1}`
-  }))
-)
-
-const activeRule = computed(() => props.modelValue[activeIndex.value])
-
-const canRemoveActiveRule = computed(() => props.modelValue.length > 1)
+const editModalOpen = ref(false)
+const deleteModalOpen = ref(false)
+const editingIndex = ref(0)
+const deletingIndex = ref<number | null>(null)
+const isCreatingNew = ref(false)
+const dragIndex = ref<number | null>(null)
+const dragOverIndex = ref<number | null>(null)
 
 function createEmptyRule(): PropertyHouseRule {
   return {
@@ -31,126 +27,211 @@ function createEmptyRule(): PropertyHouseRule {
   }
 }
 
-function updateRule(index: number, partial: Partial<PropertyHouseRule>) {
+const editingRule = computed(() => {
+  if (isCreatingNew.value) {
+    return createEmptyRule()
+  }
+
+  return props.modelValue[editingIndex.value] ?? createEmptyRule()
+})
+
+const deletingRule = computed(() =>
+  deletingIndex.value === null ? null : props.modelValue[deletingIndex.value]
+)
+
+function ruleTitle(rule: PropertyHouseRule, index: number) {
+  return rule.title.trim() || `Règle ${index + 1}`
+}
+
+function ruleTextPreview(rule: PropertyHouseRule) {
+  return rule.text.trim() || "Aucun texte"
+}
+
+function openAdd() {
+  isCreatingNew.value = true
+  editingIndex.value = props.modelValue.length
+  editModalOpen.value = true
+}
+
+function openEdit(index: number) {
+  isCreatingNew.value = false
+  editingIndex.value = index
+  editModalOpen.value = true
+}
+
+function closeEdit() {
+  editModalOpen.value = false
+  isCreatingNew.value = false
+}
+
+function saveEdit(value: PropertyHouseRule) {
+  if (!value.title.trim() || !value.text.trim()) {
+    return
+  }
+
   const rules = [...props.modelValue]
 
-  if (!rules[index]) {
+  if (isCreatingNew.value) {
+    rules.push(value)
+  } else if (rules[editingIndex.value]) {
+    rules[editingIndex.value] = value
+  }
+
+  emit("update:modelValue", rules)
+  closeEdit()
+}
+
+function openDelete(index: number) {
+  deletingIndex.value = index
+  deleteModalOpen.value = true
+}
+
+function closeDelete() {
+  deleteModalOpen.value = false
+  deletingIndex.value = null
+}
+
+function confirmDelete() {
+  if (deletingIndex.value === null) {
     return
   }
 
-  rules[index] = { ...rules[index], ...partial }
-  emit("update:modelValue", rules)
+  emit(
+    "update:modelValue",
+    props.modelValue.filter((_, index) => index !== deletingIndex.value)
+  )
+  closeDelete()
 }
 
-function selectTab(index: number) {
-  activeIndex.value = index
+function onDragStart(index: number, event: DragEvent) {
+  dragIndex.value = index
+  dragOverIndex.value = index
+
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = "move"
+    event.dataTransfer.setData("text/plain", String(index))
+  }
 }
 
-function addRule() {
-  const rules = [...props.modelValue, createEmptyRule()]
-
-  emit("update:modelValue", rules)
-  activeIndex.value = rules.length - 1
+function onDragEnd() {
+  dragIndex.value = null
+  dragOverIndex.value = null
 }
 
-function removeActiveRule() {
-  if (!canRemoveActiveRule.value) {
+function onDragOver(index: number, event: DragEvent) {
+  event.preventDefault()
+
+  if (event.dataTransfer) {
+    event.dataTransfer.dropEffect = "move"
+  }
+
+  dragOverIndex.value = index
+}
+
+function onDrop(index: number, event: DragEvent) {
+  event.preventDefault()
+
+  const from =
+    dragIndex.value ?? Number.parseInt(event.dataTransfer?.getData("text/plain") ?? "", 10)
+
+  if (!Number.isFinite(from) || from === index) {
+    onDragEnd()
     return
   }
 
-  const rules = props.modelValue.filter((_, index) => index !== activeIndex.value)
+  const rules = [...props.modelValue]
+  const [moved] = rules.splice(from, 1)
 
+  if (!moved) {
+    onDragEnd()
+    return
+  }
+
+  rules.splice(index, 0, moved)
   emit("update:modelValue", rules)
-  activeIndex.value = Math.min(activeIndex.value, rules.length - 1)
+  onDragEnd()
 }
-
-watch(
-  tabs,
-  (items) => {
-    if (activeIndex.value < items.length) {
-      return
-    }
-
-    activeIndex.value = Math.max(0, items.length - 1)
-  },
-  { immediate: true }
-)
 </script>
 
 <template>
-  <div class="admin-house-rules-editor">
-    <div class="admin-subpanel">
-      <div class="admin-subpanel__head">
-        <h3>Règles de la maison</h3>
-        <button type="button" class="admin-btn admin-btn--secondary admin-btn--sm" @click="addRule">
-          <AdminIcon name="plus" :size="16" />
-          Ajouter une règle
-        </button>
-      </div>
-
-      <p class="admin-house-rules-editor__lead">
-        Cartes affichées en grille sur la page (2 colonnes).
-      </p>
-
-      <p v-if="!modelValue.length" class="admin-house-rules-editor__empty">
-        Aucune règle. Ajoutez au moins une carte pour le règlement.
-      </p>
-
-      <template v-else>
-        <div class="admin-tabs-shell">
-          <div class="admin-tabs" role="tablist" aria-label="Règles de la maison">
-            <button
-              v-for="tab in tabs"
-              :key="tab.id"
-              type="button"
-              role="tab"
-              class="admin-tabs__btn"
-              :class="{ 'admin-tabs__btn--active': activeIndex === tab.id }"
-              :aria-selected="activeIndex === tab.id"
-              @click="selectTab(tab.id)"
-            >
-              {{ tab.label }}
-            </button>
-          </div>
-        </div>
-
-        <div v-if="activeRule" class="admin-house-rules-editor__panel" role="tabpanel">
-          <header class="admin-house-rules-editor__panel-top">
-            <div>
-              <p class="admin-house-rules-editor__panel-kicker">Règle</p>
-              <h4 class="admin-house-rules-editor__panel-title">
-                {{ activeRule.title.trim() || "Sans titre" }}
-              </h4>
-            </div>
-            <button
-              v-if="canRemoveActiveRule"
-              type="button"
-              class="admin-btn admin-btn--ghost admin-btn--danger-ghost admin-btn--sm"
-              @click="removeActiveRule"
-            >
-              <AdminIcon name="trash" :size="16" />
-              Supprimer
-            </button>
-          </header>
-
-          <div class="admin-house-rules-editor__fields">
-            <AdminField
-              label="Titre"
-              full-width
-              :model-value="activeRule.title"
-              @update:model-value="updateRule(activeIndex, { title: $event as string })"
-            />
-            <AdminField
-              label="Texte"
-              type="textarea"
-              :rows="4"
-              full-width
-              :model-value="activeRule.text"
-              @update:model-value="updateRule(activeIndex, { text: $event as string })"
-            />
-          </div>
-        </div>
-      </template>
+  <div class="admin-house-rules">
+    <div class="admin-subpanel__head admin-house-rules__head">
+      <h3>Règles de la maison</h3>
+      <button type="button" class="admin-btn admin-btn--secondary admin-btn--sm" @click="openAdd">
+        <AdminIcon name="plus" :size="16" />
+        Ajouter une règle
+      </button>
     </div>
+
+    <p class="admin-house-rules__lead">
+      Cartes affichées en grille sur la page (2 colonnes).
+    </p>
+
+    <p v-if="!modelValue.length" class="admin-house-rules__empty">
+      Aucune règle. Utilisez « Ajouter une règle » pour en créer une.
+    </p>
+
+    <ul v-else class="admin-house-rules__list">
+      <li
+        v-for="(rule, index) in modelValue"
+        :key="`${index}-${rule.title}`"
+        class="admin-house-rules__item"
+        :class="{
+          'admin-house-rules__item--dragging': dragIndex === index,
+          'admin-house-rules__item--drag-over': dragOverIndex === index && dragIndex !== index
+        }"
+        @dragover="onDragOver(index, $event)"
+        @drop="onDrop(index, $event)"
+      >
+        <button
+          type="button"
+          class="admin-sortable-list__drag-handle"
+          aria-label="Glisser pour réordonner"
+          draggable="true"
+          @dragstart="onDragStart(index, $event)"
+          @dragend="onDragEnd"
+        />
+
+        <div class="admin-house-rules__item-body">
+          <p class="admin-house-rules__item-title">{{ ruleTitle(rule, index) }}</p>
+          <p class="admin-house-rules__item-text">{{ ruleTextPreview(rule) }}</p>
+        </div>
+
+        <div class="admin-house-rules__item-actions">
+          <button
+            type="button"
+            class="admin-btn admin-btn--secondary admin-btn--sm admin-btn--icon-only"
+            aria-label="Modifier"
+            @click="openEdit(index)"
+          >
+            <AdminIcon name="pencil" :size="16" />
+          </button>
+          <button
+            type="button"
+            class="admin-btn admin-btn--ghost admin-btn--danger-ghost admin-btn--sm admin-btn--icon-only"
+            aria-label="Supprimer"
+            @click="openDelete(index)"
+          >
+            <AdminIcon name="trash" :size="16" />
+          </button>
+        </div>
+      </li>
+    </ul>
+
+    <AdminHouseRuleEditModal
+      v-if="editModalOpen"
+      :open="editModalOpen"
+      :rule="editingRule"
+      :is-new="isCreatingNew"
+      @close="closeEdit"
+      @save="saveEdit"
+    />
+
+    <AdminHouseRuleDeleteModal
+      :open="deleteModalOpen"
+      :rule-title="deletingRule ? ruleTitle(deletingRule, deletingIndex ?? 0) : 'Cette règle'"
+      @cancel="closeDelete"
+      @confirm="confirmDelete"
+    />
   </div>
 </template>

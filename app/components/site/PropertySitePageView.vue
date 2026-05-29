@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import { Menu, X } from "@lucide/vue"
 import type { Directive } from "vue"
 import BenefitIcon from "../BenefitIcon.vue"
+import AdminIcon from "../admin/AdminIcon.vue"
 import type { PropertyGalleryCategory } from "../../types/property-site"
 import type { PropertySiteRecord } from "../../types/property-site"
 import { computeBookingPriceEstimate, formatEuro } from "../../utils/booking-price"
@@ -17,8 +19,13 @@ import {
   type CalendarSelectionStep,
   type GuestType
 } from "../../composables/bookingReservationKey"
-import { faviconMimeType } from "../../utils/favicon-mime"
 import { visiblePlatformLinks } from "../../utils/platform-links"
+import {
+  normalizePlatformCustomIconId,
+  normalizePlatformIconBg
+} from "../../data/platform-custom-icons"
+import { isPresetPlatformId } from "../../data/admin-platform-tabs"
+import { resolvePlatformLogoPath } from "../../utils/platform-logo"
 import { ratingToStars } from "../../utils/platform-rating-stars"
 import { buildPricingDisplayCards } from "../../utils/pricing-display-cards"
 import {
@@ -26,58 +33,118 @@ import {
   visibleAmenityItems
 } from "../../utils/amenity-preview"
 import { normalizeSiteTemplateId } from "../../data/site-templates"
+import { HOUSE_RULES_SCHEDULE_LABELS } from "../../data/house-rules-schedule-labels"
+import {
+  formatHouseRuleTimeDisplay,
+  hasValidHouseRuleTime
+} from "../../utils/house-rules-time"
+import { VISUAL_GALLERY_CTA } from "../../data/visual-gallery-cta"
 
-const props = defineProps<{
-  site: PropertySiteRecord
-  slug: string
-}>()
+const SITE_NAV_LINKS = [
+  { href: "#resume", label: "À propos" },
+  { href: "#espaces", label: "Espaces" },
+  { href: "#quartier", label: "Quartier" },
+  { href: "#tarifs", label: "Tarifs" },
+  { href: "#equipements", label: "Équipements" },
+  { href: "#avis", label: "Avis" },
+  { href: "#reglement", label: "Règles" }
+] as const
 
-const site = props.site
-const slug = computed(() => props.slug)
-
-const bookingConfig = site.booking_config
-const copy = site.content.copy
-const siteTemplateClass = computed(
-  () => `site-template site-template--${normalizeSiteTemplateId(site.content.template?.id)}`
+const props = withDefaults(
+  defineProps<{
+    site: PropertySiteRecord
+    slug: string
+    /** Rendu dans l’éditeur visuel admin : pas de réservation ni SEO document. */
+    livePreview?: boolean
+    previewScrollAnchor?: string | null
+  }>(),
+  {
+    livePreview: false,
+    previewScrollAnchor: null
+  }
 )
 
-useSeoMeta({
-  title: () => site.seo_title,
-  description: () => site.seo_description
+const site = computed(() => props.site)
+const slug = computed(() => props.slug)
+
+const bookingConfig = computed(() => site.value.booking_config)
+
+/** Copie toujours complète (sites neufs / JSON partiel en base). */
+const copy = computed(() => {
+  const content = site.value.content
+
+  return {
+    header: {
+      brand_name: site.value.brand_name,
+      brand_meta: site.value.brand_meta,
+      logo_alt: content?.copy?.header?.logo_alt ?? site.value.brand_name
+    },
+    hero: content?.copy?.hero ?? { eyebrow: "", title: "", text: "", image_alt: "" },
+    platform_stats: content?.copy?.platform_stats ?? { eyebrow: "", title: "", intro: "" },
+    host: content?.copy?.host ?? {
+      caption: "",
+      eyebrow: "",
+      title: "",
+      quote: "",
+      intro_1: "",
+      intro_2: "",
+      image_alt: "",
+      cta: ""
+    },
+    spaces: content?.copy?.spaces ?? { eyebrow: "", title: "", intro: "" },
+    benefits: content?.copy?.benefits ?? { eyebrow: "", title: "" },
+    location: content?.copy?.location ?? { eyebrow: "", title: "", intro: "", lead: "" },
+    visual: content?.copy?.visual ?? {
+      eyebrow: "",
+      title: "",
+      intro: "",
+      gallery_cta_eyebrow: "",
+      gallery_cta_title: "",
+      gallery_cta_text: "",
+      gallery_cta_action: ""
+    },
+    pricing: content?.copy?.pricing ?? { eyebrow: "", title: "", intro: "" },
+    amenities: content?.copy?.amenities ?? { eyebrow: "", title: "", intro: "" },
+    reviews: content?.copy?.reviews ?? { eyebrow: "", title: "" },
+    rules: content?.copy?.rules ?? {
+      eyebrow: "",
+      title: "",
+      intro: "",
+      check_in_label: "",
+      check_in_time: "",
+      check_out_label: "",
+      check_out_time: ""
+    },
+    booking: content?.copy?.booking ?? {
+      price_recap_note: "",
+      price_recap_note_payment: ""
+    }
+  }
 })
+const siteTemplateClass = computed(
+  () => `site-template site-template--${normalizeSiteTemplateId(site.value.content.template?.id)}`
+)
+
+const minBookingNoticeDays = computed(() => bookingConfig.value.min_booking_notice_days)
+const minStayNights = computed(() => bookingConfig.value.min_stay_nights)
+const maxStayNights = computed(() => bookingConfig.value.max_stay_nights)
+const maxTravelers = computed(() => bookingConfig.value.max_travelers)
+const maxBabies = computed(() => bookingConfig.value.max_babies)
 
 const { propertyAsset } = usePropertyAsset(slug)
 
-const siteFaviconPath = computed(() => site.favicon_path || site.logo_path)
+if (!props.livePreview) {
+  usePropertySiteSeo({ site, propertyAsset, slug })
+}
 
-useHead({
-  link: computed(() => {
-    const href = propertyAsset(siteFaviconPath.value)
-
-    if (!href) {
-      return []
-    }
-
-    return [
-      {
-        rel: "icon",
-        href,
-        type: faviconMimeType(siteFaviconPath.value)
-      }
-    ]
-  })
-})
-
-const heroImage = computed(() => site.hero_image_path)
+const heroImage = computed(() => site.value.hero_image_path)
 const testimonialsSectionBg = computed(
-  () => `url('${propertyAsset(site.testimonials_bg_path)}')`
+  () => `url('${propertyAsset(site.value.testimonials_bg_path)}')`
 )
 
-const MIN_BOOKING_NOTICE_DAYS = bookingConfig.min_booking_notice_days
-const MIN_STAY_NIGHTS = bookingConfig.min_stay_nights
-const MAX_STAY_NIGHTS = bookingConfig.max_stay_nights
-const MAX_TRAVELERS = bookingConfig.max_travelers
-const MAX_BABIES = bookingConfig.max_babies
+const minimumArrivalDate = computed(() =>
+  toInputDate(addDays(new Date(), minBookingNoticeDays.value))
+)
 
 const calendarWeekdayLabels = ["L", "M", "M", "J", "V", "S", "D"]
 
@@ -140,10 +207,13 @@ function formatCalendarMonth(date: Date) {
   return label.charAt(0).toUpperCase() + label.slice(1)
 }
 
-const minimumArrivalDate = toInputDate(addDays(new Date(), MIN_BOOKING_NOTICE_DAYS))
-const arrivalDate = ref(minimumArrivalDate)
+const arrivalDate = ref(
+  toInputDate(addDays(new Date(), bookingConfig.value.min_booking_notice_days))
+)
 const departureDate = ref(
-  toInputDate(addDays(fromInputDate(minimumArrivalDate), MIN_STAY_NIGHTS))
+  toInputDate(
+    addDays(fromInputDate(arrivalDate.value), bookingConfig.value.min_stay_nights)
+  )
 )
 
 const openBookingPopover = ref<BookingPopover>(null)
@@ -178,10 +248,50 @@ const stickyDatesPopoverRef = ref<HTMLElement | null>(null)
 const stickyGuestsPopoverRef = ref<HTMLElement | null>(null)
 const bookingModalFieldsRef = ref<InstanceType<typeof BookingReservationFields> | null>(null)
 const activeCalendarStep = ref<CalendarSelectionStep>("arrival")
-const visibleCalendarMonth = ref(startOfMonth(fromInputDate(minimumArrivalDate)))
+const visibleCalendarMonth = ref(startOfMonth(fromInputDate(minimumArrivalDate.value)))
 const heroParallaxOffset = ref(0)
 const isStickyBookingStripVisible = ref(false)
+const mobileNavOpen = ref(false)
 const { blockedDates, refreshBlockedDates, isNightBlocked } = useBlockedCalendarDates(slug)
+
+function closeMobileNav() {
+  mobileNavOpen.value = false
+}
+
+function toggleMobileNav() {
+  if (props.livePreview) {
+    return
+  }
+
+  mobileNavOpen.value = !mobileNavOpen.value
+}
+
+function onMobileNavLinkClick() {
+  closeMobileNav()
+}
+
+function onMobileNavReserve() {
+  closeMobileNav()
+  openBookingModal()
+}
+
+watch(mobileNavOpen, (open) => {
+  if (props.livePreview || typeof document === "undefined") {
+    return
+  }
+
+  if (!open) {
+    if (!isBookingModalOpen.value) {
+      document.body.style.overflow = ""
+    }
+
+    return
+  }
+
+  if (!isBookingModalOpen.value) {
+    document.body.style.overflow = "hidden"
+  }
+})
 
 let heroParallaxFrame: number | null = null
 
@@ -192,11 +302,11 @@ const guestCounts = reactive({
 })
 
 const minimumDepartureDate = computed(() =>
-  toInputDate(addDays(fromInputDate(arrivalDate.value), MIN_STAY_NIGHTS))
+  toInputDate(addDays(fromInputDate(arrivalDate.value), minStayNights.value))
 )
 
 const maximumDepartureDate = computed(() =>
-  toInputDate(addDays(fromInputDate(arrivalDate.value), MAX_STAY_NIGHTS))
+  toInputDate(addDays(fromInputDate(arrivalDate.value), maxStayNights.value))
 )
 
 const visibleCalendarMonths = computed(() => [
@@ -207,7 +317,7 @@ const visibleCalendarMonths = computed(() => [
 const canGoToPreviousCalendarMonth = computed(() => {
   const previousMonth = addMonths(visibleCalendarMonth.value, -1)
 
-  return previousMonth >= startOfMonth(fromInputDate(minimumArrivalDate))
+  return previousMonth >= startOfMonth(fromInputDate(minimumArrivalDate.value))
 })
 
 const stayNights = computed(() => {
@@ -216,7 +326,7 @@ const stayNights = computed(() => {
   const millisecondsPerDay = 1000 * 60 * 60 * 24
 
   return Math.max(
-    MIN_STAY_NIGHTS,
+    minStayNights.value,
     Math.round((departure.getTime() - arrival.getTime()) / millisecondsPerDay)
   )
 })
@@ -226,7 +336,7 @@ const bookingDateSummary = computed(
 )
 
 const bookingDateMeta = computed(() =>
-  `${pluralize(stayNights.value, "nuit", "nuits")} · séjour max ${MAX_STAY_NIGHTS} nuits`
+  `${pluralize(stayNights.value, "nuit", "nuits")} · séjour max ${maxStayNights.value} nuits`
 )
 
 const totalMainGuests = computed(() => guestCounts.adults + guestCounts.children)
@@ -250,7 +360,7 @@ const guestMeta = computed(
 )
 
 const bookingModalPriceEstimate = computed(() =>
-  computeBookingPriceEstimate(stayNights.value, totalMainGuests.value, bookingConfig)
+  computeBookingPriceEstimate(stayNights.value, totalMainGuests.value, bookingConfig.value)
 )
 
 const bookingModalDiscountAmountEur = computed(() => {
@@ -259,8 +369,10 @@ const bookingModalDiscountAmountEur = computed(() => {
   return Math.max(0, e.baseLodgingEur - e.lodgingAfterDiscountEur)
 })
 
-const bookingModalPriceRecapNote = copy.booking.price_recap_note
-const bookingModalPriceRecapNotePayment = copy.booking.price_recap_note_payment
+const bookingModalPriceRecapNote = computed(() => copy.value.booking.price_recap_note)
+const bookingModalPriceRecapNotePayment = computed(
+  () => copy.value.booking.price_recap_note_payment
+)
 
 watch(departureDate, () => {
   if (bookingModalErrors.dates && isBookingModalOpen.value) {
@@ -313,10 +425,10 @@ watch(arrivalDate, (nextArrivalDate) => {
   }
 
   const nextMinimumDeparture = toInputDate(
-    addDays(fromInputDate(nextArrivalDate), MIN_STAY_NIGHTS)
+    addDays(fromInputDate(nextArrivalDate), minStayNights.value)
   )
   const nextMaximumDeparture = toInputDate(
-    addDays(fromInputDate(nextArrivalDate), MAX_STAY_NIGHTS)
+    addDays(fromInputDate(nextArrivalDate), maxStayNights.value)
   )
 
   if (departureDate.value < nextMinimumDeparture) {
@@ -548,6 +660,10 @@ function restoreBookingContactFromStorage() {
 }
 
 function openBookingModal() {
+  if (props.livePreview) {
+    return
+  }
+
   closeBookingPopover()
   closeAmenitiesModal()
   closeSpacesModal()
@@ -601,7 +717,7 @@ const runtimeConfig = useRuntimeConfig()
 const isStripeConfigured = computed(() =>
   Boolean(String(runtimeConfig.public.stripePublishableKey || "").trim())
 )
-const isStripePaymentsReady = computed(() => Boolean(site.stripe_payments_ready))
+const isStripePaymentsReady = computed(() => Boolean(site.value.stripe_payments_ready))
 
 async function goToBookingPayment() {
   bookingSubmitError.value = null
@@ -726,10 +842,10 @@ function getModalPopoverContainer(popover: Exclude<BookingPopover, null>) {
 
 function canIncrementGuest(type: GuestType) {
   if (type === "babies") {
-    return guestCounts.babies < MAX_BABIES
+    return guestCounts.babies < maxBabies.value
   }
 
-  return totalMainGuests.value < MAX_TRAVELERS
+  return totalMainGuests.value < maxTravelers.value
 }
 
 function canDecrementGuest(type: GuestType) {
@@ -750,14 +866,14 @@ function updateGuests(type: GuestType, delta: 1 | -1) {
   }
 
   if (type === "babies") {
-    guestCounts.babies = Math.max(0, Math.min(MAX_BABIES, guestCounts.babies + delta))
+    guestCounts.babies = Math.max(0, Math.min(maxBabies.value, guestCounts.babies + delta))
     return
   }
 
   const nextValue = guestCounts[type] + delta
   const projectedMainGuests = totalMainGuests.value + delta
 
-  if (projectedMainGuests < 1 || projectedMainGuests > MAX_TRAVELERS) {
+  if (projectedMainGuests < 1 || projectedMainGuests > maxTravelers.value) {
     return
   }
 
@@ -773,7 +889,7 @@ function shiftCalendarMonths(offset: number) {
 }
 
 function minimumDepartureForArrival(arrival: string) {
-  return toInputDate(addDays(fromInputDate(arrival), MIN_STAY_NIGHTS))
+  return toInputDate(addDays(fromInputDate(arrival), minStayNights.value))
 }
 
 /** Jours du séjour (arrivée → départ inclus) qui chevauchent une nuit réservée. */
@@ -806,7 +922,7 @@ function ensureSelectableBookingDates() {
 
   arrivalDate.value = minimumArrivalDate
   departureDate.value = toInputDate(
-    addDays(fromInputDate(minimumArrivalDate), MIN_STAY_NIGHTS)
+    addDays(fromInputDate(minimumArrivalDate.value), minStayNights.value)
   )
   activeCalendarStep.value = "arrival"
 }
@@ -1042,7 +1158,20 @@ function handleGlobalKeydown(event: KeyboardEvent) {
       return
     }
 
+    if (mobileNavOpen.value) {
+      closeMobileNav()
+      return
+    }
+
     closeBookingPopover()
+  }
+}
+
+function onWindowResize() {
+  scheduleHeroParallaxUpdate()
+
+  if (typeof window !== "undefined" && window.innerWidth > 900) {
+    closeMobileNav()
   }
 }
 
@@ -1092,7 +1221,7 @@ onMounted(() => {
   window.addEventListener("mousedown", handleGlobalPointerdown)
   window.addEventListener("keydown", handleGlobalKeydown)
   window.addEventListener("scroll", scheduleHeroParallaxUpdate, { passive: true })
-  window.addEventListener("resize", scheduleHeroParallaxUpdate)
+  window.addEventListener("resize", onWindowResize)
   updateHeroParallax()
   updateStickyBookingStripVisibility()
 
@@ -1105,7 +1234,7 @@ onBeforeUnmount(() => {
   window.removeEventListener("mousedown", handleGlobalPointerdown)
   window.removeEventListener("keydown", handleGlobalKeydown)
   window.removeEventListener("scroll", scheduleHeroParallaxUpdate)
-  window.removeEventListener("resize", scheduleHeroParallaxUpdate)
+  window.removeEventListener("resize", onWindowResize)
 
   if (typeof document !== "undefined") {
     document.body.style.overflow = ""
@@ -1116,28 +1245,38 @@ onBeforeUnmount(() => {
   }
 })
 
+function isPublishedFeaturedSpace(space: {
+  title?: string
+  image?: string
+} | null | undefined) {
+  return Boolean(space?.title?.trim() && space?.image?.trim())
+}
+
 const featuredSpaces = computed(() =>
-  site.content.featured_spaces.map((space) => ({
-    title: space.title,
-    text: space.text,
-    image: space.image,
-    tag: space.tag
-  }))
+  (site.value.content.featured_spaces ?? [])
+    .filter((space) => isPublishedFeaturedSpace(space))
+    .map((space) => ({
+      title: space?.title ?? "",
+      text: space?.text ?? "",
+      image: space?.image ?? "",
+      tag: space?.tag ?? "",
+      galleryCategoryId: space?.gallery_category_id ?? ""
+    }))
 )
 
 const spaceGalleryCategories = computed(
-  () => site.content.space_gallery_categories as PropertyGalleryCategory[]
+  () => site.value.content.space_gallery_categories as PropertyGalleryCategory[]
 )
 
 type SpaceGalleryCategory = PropertyGalleryCategory
 
 const spaceGalleryFlatItems = computed(() =>
   spaceGalleryCategories.value.flatMap((category) =>
-    category.images.map((src, photoIndexInCategory) => ({
+    (category?.images ?? []).map((src, photoIndexInCategory) => ({
       src,
-      categoryId: category.id,
-      categoryTitle: category.title,
-      description: category.description,
+      categoryId: category?.id ?? "",
+      categoryTitle: category?.title ?? "",
+      description: category?.description ?? "",
       photoIndexInCategory
     }))
   )
@@ -1355,44 +1494,149 @@ watch(isBookingModalOpen, (open) => {
   closeBookingPopover()
 })
 
-const hostPhoto = computed(() => site.host_photo_path)
-const benefitCards = computed(() => site.content.benefit_cards)
+const hostPhoto = computed(() => site.value.host_photo_path)
+const benefitCards = computed(() => site.value.content.benefit_cards ?? [])
+function isPublishedVisualCard(card: { title?: string; image?: string } | null | undefined) {
+  return Boolean(card?.title?.trim() && card?.image?.trim())
+}
+
 const visualCards = computed(() =>
-  site.content.visual_cards.map((card) => ({
-    title: card.title,
-    text: card.text,
-    image: card.image
-  }))
+  (site.value.content.visual_cards ?? [])
+    .filter((card) => isPublishedVisualCard(card))
+    .map((card) => ({
+      title: card?.title ?? "",
+      text: card?.text ?? "",
+      image: card?.image ?? ""
+    }))
 )
+
+const visualGalleryCta = VISUAL_GALLERY_CTA
+const hasPublishedLocation = computed(() => Boolean(site.value.location?.address?.trim()))
+
 const propertyLocation = computed(() => ({
-  address: site.location.address,
-  latitude: site.location.latitude,
-  longitude: site.location.longitude,
-  radiusMeters: site.location.radius_meters
+  address: site.value.location.address,
+  latitude: site.value.location.latitude,
+  longitude: site.value.location.longitude,
+  radiusMeters: site.value.location.radius_meters
 }))
-const neighborhoodHighlights = computed(() => site.content.neighborhood_highlights)
-const houseRules = computed(() => site.content.house_rules)
-const pricingCards = computed(() => buildPricingDisplayCards(bookingConfig))
-const platformLinks = computed(() =>
-  visiblePlatformLinks(site.content.platform_links).map((link) => ({
-    ...link,
-    stars: ratingToStars(link.rating) || link.stars
-  }))
+
+function isPublishedAmenityItem(item: { name?: string } | null | undefined) {
+  return Boolean(item?.name?.trim())
+}
+
+function isPublishedAmenitySection(
+  section: { title?: string; items?: { name?: string }[] } | null | undefined
+) {
+  if (!section?.title?.trim()) {
+    return false
+  }
+
+  return (section.items ?? []).some((item) => isPublishedAmenityItem(item))
+}
+
+function isPublishedReview(
+  review: { author?: string; quote?: string } | null | undefined
+) {
+  return Boolean(review?.author?.trim() && review?.quote?.trim())
+}
+
+const neighborhoodHighlights = computed(() => site.value.content.neighborhood_highlights)
+
+function isPublishedHouseRule(rule: { title?: string; text?: string } | null | undefined) {
+  return Boolean(rule?.title?.trim() && rule?.text?.trim())
+}
+
+const publishedHouseRules = computed(() =>
+  (site.value.content.house_rules ?? []).filter((rule) => isPublishedHouseRule(rule))
 )
-const reviews = computed(() => site.content.reviews)
-const amenityCatalog = computed(() => site.content.amenity_catalog)
-const amenityPreviewSections = computed(() => site.content.amenity_preview_sections)
+
+const rulesCheckInTime = computed(() => formatHouseRuleTimeDisplay(copy.value.rules.check_in_time))
+const rulesCheckOutTime = computed(() => formatHouseRuleTimeDisplay(copy.value.rules.check_out_time))
+const hasRulesCheckInTime = computed(() => hasValidHouseRuleTime(copy.value.rules.check_in_time))
+const hasRulesCheckOutTime = computed(() => hasValidHouseRuleTime(copy.value.rules.check_out_time))
+const showRulesSchedule = computed(
+  () => hasRulesCheckInTime.value || hasRulesCheckOutTime.value
+)
+
+const showRulesSection = computed(
+  () =>
+    (hasRulesCheckInTime.value && hasRulesCheckOutTime.value) ||
+    publishedHouseRules.value.length > 0
+)
+
+const rulesScheduleLabels = HOUSE_RULES_SCHEDULE_LABELS
+const pricingCards = computed(() => buildPricingDisplayCards(bookingConfig.value))
+const platformLinks = computed(() =>
+  visiblePlatformLinks(site.value.content.platform_links).map((link) => {
+    const isPreset = isPresetPlatformId(link.id)
+
+    return {
+      ...link,
+      logo: isPreset ? resolvePlatformLogoPath(link.logo, link.id) : "",
+      icon: isPreset ? undefined : normalizePlatformCustomIconId(link.icon),
+      icon_bg: isPreset ? undefined : normalizePlatformIconBg(link.icon_bg),
+      stars: ratingToStars(link.rating) || link.stars
+    }
+  })
+)
+const reviews = computed(() =>
+  (site.value.content.reviews ?? []).filter((review) => isPublishedReview(review))
+)
+
+const showReviewsSection = computed(() => reviews.value.length > 0)
+
+const amenityCatalog = computed(() => site.value.content.amenity_catalog)
+
+const amenityPreviewSections = computed(() =>
+  (site.value.content.amenity_preview_sections ?? []).filter((section) =>
+    isPublishedAmenitySection(section)
+  )
+)
+
+const showAmenitiesSection = computed(() => amenityPreviewSections.value.length > 0)
+
+const siteNavLinks = computed(() =>
+  SITE_NAV_LINKS.filter((link) => {
+    if (link.href === "#quartier") {
+      return hasPublishedLocation.value
+    }
+
+    if (link.href === "#equipements") {
+      return showAmenitiesSection.value
+    }
+
+    if (link.href === "#avis") {
+      return showReviewsSection.value
+    }
+
+    if (link.href === "#reglement") {
+      return showRulesSection.value
+    }
+
+    return true
+  })
+)
 
 const reviewMarqueeItems = computed(() => [...reviews.value, ...reviews.value])
 
 provide(
   BOOKING_RESERVATION_KEY,
   reactive({
-  MIN_BOOKING_NOTICE_DAYS,
-  MIN_STAY_NIGHTS,
-  MAX_STAY_NIGHTS,
-  MAX_TRAVELERS,
-  MAX_BABIES,
+  get MIN_BOOKING_NOTICE_DAYS() {
+    return minBookingNoticeDays.value
+  },
+  get MIN_STAY_NIGHTS() {
+    return minStayNights.value
+  },
+  get MAX_STAY_NIGHTS() {
+    return maxStayNights.value
+  },
+  get MAX_TRAVELERS() {
+    return maxTravelers.value
+  },
+  get MAX_BABIES() {
+    return maxBabies.value
+  },
   calendarWeekdayLabels,
   arrivalDate,
   departureDate,
@@ -1430,6 +1674,33 @@ function updateReviewQuoteFade(el: HTMLElement) {
   el.classList.toggle("review-quote-wrap--fade", overflows)
 }
 
+function scrollToLivePreviewAnchor(anchor: string | null | undefined) {
+  if (!props.livePreview || !anchor || typeof document === "undefined") {
+    return
+  }
+
+  nextTick(() => {
+    const root = document.querySelector(".property-site-page-view--live-preview")
+
+    if (!(root instanceof HTMLElement)) {
+      return
+    }
+
+    const target = root.querySelector(`[data-live-section="${anchor}"]`)
+
+    if (target instanceof HTMLElement) {
+      target.scrollIntoView({ behavior: "smooth", block: "start" })
+    }
+  })
+}
+
+watch(
+  () => props.previewScrollAnchor,
+  (anchor) => {
+    scrollToLivePreviewAnchor(anchor)
+  }
+)
+
 const vReviewQuoteFade: Directive<HTMLElement> = {
   getSSRProps() {
     return {}
@@ -1461,8 +1732,15 @@ const vReviewQuoteFade: Directive<HTMLElement> = {
 </script>
 
 <template>
-  <div :class="siteTemplateClass">
-    <header class="site-header">
+  <div
+    :class="[siteTemplateClass, { 'property-site-page-view--live-preview': livePreview }]"
+    data-live-section="site-top"
+  >
+    <header
+      class="site-header"
+      :class="{ 'site-header--nav-open': mobileNavOpen }"
+      data-live-section="site-header"
+    >
       <div class="topbar">
         <div class="brand-block">
           <img
@@ -1476,21 +1754,48 @@ const vReviewQuoteFade: Directive<HTMLElement> = {
           </div>
         </div>
 
-        <nav class="topnav">
-          <a href="#resume">À propos</a>
-          <a href="#espaces">Espaces</a>
-          <a href="#quartier">Quartier</a>
-          <a href="#tarifs">Tarifs</a>
-          <a href="#equipements">Équipements</a>
-          <a href="#avis">Avis</a>
-          <a href="#reglement">Règles</a>
+        <button
+          type="button"
+          class="site-nav-toggle"
+          :aria-expanded="mobileNavOpen"
+          aria-controls="site-mobile-nav"
+          @click="toggleMobileNav"
+        >
+          <span class="sr-only">{{ mobileNavOpen ? "Fermer le menu" : "Ouvrir le menu" }}</span>
+          <X v-if="mobileNavOpen" :size="22" stroke-width="2" />
+          <Menu v-else :size="22" stroke-width="2" />
+        </button>
+
+        <nav class="topnav topnav--desktop" aria-label="Navigation principale">
+          <a v-for="link in siteNavLinks" :key="link.href" :href="link.href">{{ link.label }}</a>
           <button type="button" class="nav-cta" @click="openBookingModal">Réserver</button>
         </nav>
       </div>
+
+      <Transition name="site-nav-mobile">
+        <nav
+          v-if="mobileNavOpen"
+          id="site-mobile-nav"
+          class="site-nav-mobile"
+          aria-label="Navigation mobile"
+        >
+          <a
+            v-for="link in siteNavLinks"
+            :key="link.href"
+            :href="link.href"
+            @click="onMobileNavLinkClick"
+          >
+            {{ link.label }}
+          </a>
+          <button type="button" class="nav-cta site-nav-mobile__cta" @click="onMobileNavReserve">
+            Réserver
+          </button>
+        </nav>
+      </Transition>
     </header>
 
   <div class="page-shell">
-    <section ref="heroCardRef" class="hero-card">
+    <section ref="heroCardRef" class="hero-card" data-live-section="site-hero">
       <div class="hero-media">
         <img
           :src="propertyAsset(heroImage)"
@@ -1536,7 +1841,7 @@ const vReviewQuoteFade: Directive<HTMLElement> = {
                   <div>
                     <strong>Sélectionnez vos dates</strong>
                     <span
-                      >Réservez au moins {{ MIN_BOOKING_NOTICE_DAYS }} jours à
+                      >Réservez au moins {{ minBookingNoticeDays }} jours à
                       l’avance.</span
                     >
                   </div>
@@ -1632,7 +1937,7 @@ const vReviewQuoteFade: Directive<HTMLElement> = {
 
                 <p class="booking-popover-note">
                   {{ pluralize(stayNights, "nuit", "nuits") }} sélectionnée(s).
-                  Séjour autorisé : de {{ MIN_STAY_NIGHTS }} à {{ MAX_STAY_NIGHTS }} nuits.
+                  Séjour autorisé : de {{ minStayNights }} à {{ maxStayNights }} nuits.
                 </p>
               </div>
             </div>
@@ -1662,7 +1967,7 @@ const vReviewQuoteFade: Directive<HTMLElement> = {
                 <div class="booking-popover-header">
                   <strong>Choisissez vos voyageurs</strong>
                   <span
-                    >Adultes + enfants limités à {{ MAX_TRAVELERS }}. 1 bébé maximum.</span
+                    >Adultes + enfants limités à {{ maxTravelers }}. 1 bébé maximum.</span
                   >
                 </div>
 
@@ -1786,7 +2091,7 @@ const vReviewQuoteFade: Directive<HTMLElement> = {
                   <div>
                     <strong>Sélectionnez vos dates</strong>
                     <span
-                      >Réservez au moins {{ MIN_BOOKING_NOTICE_DAYS }} jours à
+                      >Réservez au moins {{ minBookingNoticeDays }} jours à
                       l’avance.</span
                     >
                   </div>
@@ -1882,7 +2187,7 @@ const vReviewQuoteFade: Directive<HTMLElement> = {
 
                 <p class="booking-popover-note">
                   {{ pluralize(stayNights, "nuit", "nuits") }} sélectionnée(s).
-                  Séjour autorisé : de {{ MIN_STAY_NIGHTS }} à {{ MAX_STAY_NIGHTS }} nuits.
+                  Séjour autorisé : de {{ minStayNights }} à {{ maxStayNights }} nuits.
                 </p>
               </div>
             </div>
@@ -1912,7 +2217,7 @@ const vReviewQuoteFade: Directive<HTMLElement> = {
                 <div class="booking-popover-header">
                   <strong>Choisissez vos voyageurs</strong>
                   <span
-                    >Adultes + enfants limités à {{ MAX_TRAVELERS }}. 1 bébé maximum.</span
+                    >Adultes + enfants limités à {{ maxTravelers }}. 1 bébé maximum.</span
                   >
                 </div>
 
@@ -2012,6 +2317,7 @@ const vReviewQuoteFade: Directive<HTMLElement> = {
       v-if="platformLinks.length"
       v-scroll-reveal
       class="page-band section platform-stats-section"
+      data-live-section="site-platforms"
       aria-label="Notes des plateformes"
     >
       <div class="page-band__inner">
@@ -2029,11 +2335,30 @@ const vReviewQuoteFade: Directive<HTMLElement> = {
             rel="noreferrer"
             class="stat-card platform-stat-card"
           >
-            <span class="platform-logo" :class="`platform-logo-${platform.id}`">
+            <span
+              class="platform-logo"
+              :class="
+                isPresetPlatformId(platform.id)
+                  ? `platform-logo-${platform.id}`
+                  : 'platform-logo--custom'
+              "
+              :style="
+                !isPresetPlatformId(platform.id) && platform.icon_bg
+                  ? { backgroundColor: platform.icon_bg }
+                  : undefined
+              "
+            >
               <img
+                v-if="isPresetPlatformId(platform.id)"
                 :src="propertyAsset(platform.logo)"
                 :alt="`${platform.name} logo`"
                 class="platform-logo-image"
+              />
+              <AdminIcon
+                v-else
+                :name="platform.icon ?? 'star'"
+                :size="22"
+                class="platform-logo-icon"
               />
             </span>
 
@@ -2049,7 +2374,12 @@ const vReviewQuoteFade: Directive<HTMLElement> = {
       </div>
     </section>
 
-    <section id="resume" v-scroll-reveal class="page-band page-band--sand section summary-section">
+    <section
+      id="resume"
+      v-scroll-reveal
+      class="page-band page-band--sand section summary-section"
+      data-live-section="site-host"
+    >
       <div class="page-band__inner">
         <div class="summary-layout">
           <div class="summary-media">
@@ -2074,7 +2404,13 @@ const vReviewQuoteFade: Directive<HTMLElement> = {
       </div>
     </section>
 
-    <section id="espaces" v-scroll-reveal class="page-band page-band--light section">
+    <section
+      v-if="featuredSpaces.length"
+      id="espaces"
+      v-scroll-reveal
+      class="page-band page-band--light section"
+      data-live-section="site-featured"
+    >
       <div class="page-band__inner">
         <div class="section-head">
           <p class="eyebrow">{{ copy.spaces.eyebrow }}</p>
@@ -2089,29 +2425,29 @@ const vReviewQuoteFade: Directive<HTMLElement> = {
             class="featured-card featured-card-large featured-card--interactive"
             role="button"
             tabindex="0"
-            :aria-label="`Voir tous les espaces de vie — ${featuredSpaces[0].title}`"
-            @click="openSpacesModal(featuredSpaces[0].galleryCategoryId)"
-            @keydown.enter.prevent="openSpacesModal(featuredSpaces[0].galleryCategoryId)"
-            @keydown.space.prevent="openSpacesModal(featuredSpaces[0].galleryCategoryId)"
+            :aria-label="`Voir tous les espaces de vie — ${featuredSpaces[0]?.title || 'Espace'}`"
+            @click="openSpacesModal(featuredSpaces[0]?.galleryCategoryId)"
+            @keydown.enter.prevent="openSpacesModal(featuredSpaces[0]?.galleryCategoryId)"
+            @keydown.space.prevent="openSpacesModal(featuredSpaces[0]?.galleryCategoryId)"
           >
             <img
-              :src="propertyAsset(featuredSpaces[0].image)"
-              :alt="featuredSpaces[0].title"
+              :src="propertyAsset(featuredSpaces[0]?.image)"
+              :alt="featuredSpaces[0]?.title"
               class="featured-image"
             />
             <div class="featured-overlay" />
             <div class="featured-content">
-              <span class="featured-tag">{{ featuredSpaces[0].tag }}</span>
-              <h3>{{ featuredSpaces[0].title }}</h3>
-              <p>{{ featuredSpaces[0].text }}</p>
+              <span class="featured-tag">{{ featuredSpaces[0]?.tag }}</span>
+              <h3>{{ featuredSpaces[0]?.title }}</h3>
+              <p>{{ featuredSpaces[0]?.text }}</p>
               <span class="featured-cta">Voir tous les espaces de vie ▸</span>
             </div>
           </article>
 
-          <div class="featured-stack">
+          <div v-if="featuredSpaces.length > 1" class="featured-stack">
             <article
               v-for="space in featuredSpaces.slice(1)"
-              :key="space.title"
+              :key="space.title || space.image"
               class="featured-card featured-card--interactive"
               role="button"
               tabindex="0"
@@ -2134,7 +2470,11 @@ const vReviewQuoteFade: Directive<HTMLElement> = {
       </div>
     </section>
 
-    <section v-scroll-reveal class="page-band page-band--sand section">
+    <section
+      v-scroll-reveal
+      class="page-band page-band--sand section"
+      data-live-section="site-benefits"
+    >
       <div class="page-band__inner">
         <div class="section-head compact">
           <p class="eyebrow">{{ copy.benefits.eyebrow }}</p>
@@ -2153,7 +2493,13 @@ const vReviewQuoteFade: Directive<HTMLElement> = {
       </div>
       </section>
 
-    <section id="quartier" v-scroll-reveal class="page-band page-band--light section location-section">
+    <section
+      v-if="hasPublishedLocation"
+      id="quartier"
+      v-scroll-reveal
+      class="page-band page-band--light section location-section"
+      data-live-section="site-location"
+    >
       <div class="page-band__inner">
         <div class="section-head">
           <p class="eyebrow">{{ copy.location.eyebrow }}</p>
@@ -2202,7 +2548,12 @@ const vReviewQuoteFade: Directive<HTMLElement> = {
       </div>
       </section>
 
-    <section id="espaces-de-vie" v-scroll-reveal class="page-band page-band--sand section">
+    <section
+      id="espaces-de-vie"
+      v-scroll-reveal
+      class="page-band page-band--sand section"
+      data-live-section="site-media"
+    >
       <div class="page-band__inner">
         <div class="section-head">
           <p class="eyebrow">{{ copy.visual.eyebrow }}</p>
@@ -2232,23 +2583,29 @@ const vReviewQuoteFade: Directive<HTMLElement> = {
           </article>
 
           <button
+            v-if="visualCards.length"
             type="button"
             class="visual-card visual-card--cta"
             aria-label="Voir tous les espaces de vie en photos"
             @click="openSpacesModal"
           >
             <div class="visual-card-cta-body">
-              <span class="visual-card-cta-eyebrow">{{ copy.visual.gallery_cta_eyebrow }}</span>
-              <h3>{{ copy.visual.gallery_cta_title }}</h3>
-              <p>{{ copy.visual.gallery_cta_text }}</p>
-              <span class="visual-card-cta-action">{{ copy.visual.gallery_cta_action }}</span>
+              <span class="visual-card-cta-eyebrow">{{ visualGalleryCta.eyebrow }}</span>
+              <h3>{{ visualGalleryCta.title }}</h3>
+              <p>{{ visualGalleryCta.text }}</p>
+              <span class="visual-card-cta-action">{{ visualGalleryCta.action }}</span>
             </div>
           </button>
         </div>
       </div>
       </section>
 
-    <section id="tarifs" v-scroll-reveal class="page-band page-band--light section">
+    <section
+      id="tarifs"
+      v-scroll-reveal
+      class="page-band page-band--light section"
+      data-live-section="site-pricing"
+    >
       <div class="page-band__inner">
         <div class="section-head">
           <p class="eyebrow">{{ copy.pricing.eyebrow }}</p>
@@ -2306,7 +2663,13 @@ const vReviewQuoteFade: Directive<HTMLElement> = {
       </div>
       </section>
 
-    <section id="equipements" v-scroll-reveal class="page-band page-band--sand section">
+    <section
+      v-if="showAmenitiesSection"
+      id="equipements"
+      v-scroll-reveal
+      class="page-band page-band--sand section"
+      data-live-section="site-amenities"
+    >
       <div class="page-band__inner">
         <div class="section-head">
           <p class="eyebrow">{{ copy.amenities.eyebrow }}</p>
@@ -2345,9 +2708,11 @@ const vReviewQuoteFade: Directive<HTMLElement> = {
       </section>
 
     <section
+      v-if="showReviewsSection"
       id="avis"
       v-scroll-reveal
       class="page-band page-band--dark section testimonials-section"
+      data-live-section="site-reviews"
       :style="{ '--testimonials-section-bg': testimonialsSectionBg }"
     >
       <div class="page-band__inner">
@@ -2384,7 +2749,13 @@ const vReviewQuoteFade: Directive<HTMLElement> = {
         </div>
       </div>
       </section>
-    <section id="reglement" v-scroll-reveal class="page-band page-band--light section">
+    <section
+      v-if="showRulesSection"
+      id="reglement"
+      v-scroll-reveal
+      class="page-band page-band--light section"
+      data-live-section="site-rules"
+    >
       <div class="page-band__inner">
         <div class="section-head">
           <p class="eyebrow">{{ copy.rules.eyebrow }}</p>
@@ -2394,19 +2765,23 @@ const vReviewQuoteFade: Directive<HTMLElement> = {
           </div>
         </div>
 
-        <div class="house-rules-schedule">
-          <div class="house-rules-schedule-item">
-            <span>{{ copy.rules.check_in_label }}</span>
-            <strong>{{ copy.rules.check_in_time }}</strong>
+        <div v-if="showRulesSchedule" class="house-rules-schedule">
+          <div v-if="hasRulesCheckInTime" class="house-rules-schedule-item">
+            <span>{{ rulesScheduleLabels.checkIn }}</span>
+            <strong>{{ rulesCheckInTime }}</strong>
           </div>
-          <div class="house-rules-schedule-item">
-            <span>{{ copy.rules.check_out_label }}</span>
-            <strong>{{ copy.rules.check_out_time }}</strong>
+          <div v-if="hasRulesCheckOutTime" class="house-rules-schedule-item">
+            <span>{{ rulesScheduleLabels.checkOut }}</span>
+            <strong>{{ rulesCheckOutTime }}</strong>
           </div>
         </div>
 
-        <div class="house-rules-grid">
-          <article v-for="rule in houseRules" :key="rule.title" class="house-rule-card">
+        <div v-if="publishedHouseRules.length" class="house-rules-grid">
+          <article
+            v-for="rule in publishedHouseRules"
+            :key="rule.title"
+            class="house-rule-card"
+          >
             <h3>{{ rule.title }}</h3>
             <p>{{ rule.text }}</p>
           </article>
@@ -3004,4 +3379,12 @@ const vReviewQuoteFade: Directive<HTMLElement> = {
 <style scoped src="../../../assets/css/pages/index/responsive.css"></style>
 <style>
 @import "../../../assets/css/pages/index/hero.css";
+
+/* Non-scoped : garantit le header sticky (y compris aperçu live dans iframe). */
+.site-template > .site-header {
+  position: -webkit-sticky;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
 </style>

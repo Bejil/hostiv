@@ -1,46 +1,41 @@
 <script setup lang="ts">
-import AdminField from "./AdminField.vue"
 import AdminIcon from "./AdminIcon.vue"
-import AdminPlatformStatsPreview from "./AdminPlatformStatsPreview.vue"
-import AdminToggle from "./AdminToggle.vue"
+import AdminPlatformLinkDeleteModal from "./AdminPlatformLinkDeleteModal.vue"
+import AdminPlatformLinkEditModal from "./AdminPlatformLinkEditModal.vue"
 import {
   ADMIN_PRESET_PLATFORMS,
   getPresetPlatform,
   isPresetPlatformId
 } from "../../data/admin-platform-tabs"
+import {
+  DEFAULT_PLATFORM_CUSTOM_ICON,
+  DEFAULT_PLATFORM_ICON_BG,
+  normalizePlatformCustomIconId,
+  normalizePlatformIconBg
+} from "../../data/platform-custom-icons"
 import type { PropertyPlatformLink } from "../../types/property-site"
 import { isPlatformLinkHidden } from "../../utils/platform-links"
-import { ratingToStars } from "../../utils/platform-rating-stars"
+import { resolvePlatformLogoPath } from "../../utils/platform-logo"
+import { usePublicAsset } from "../../composables/usePublicAsset"
+import type { AdminIconName } from "./admin-icon-types"
 
 const props = defineProps<{
   modelValue: PropertyPlatformLink[]
-  previewUrl: (path: string) => string
-  platformStatsEyebrow: string
-  platformStatsTitle: string
-  platformStatsIntro: string
 }>()
 
 const emit = defineEmits<{
   "update:modelValue": [value: PropertyPlatformLink[]]
 }>()
 
-const activeTabId = ref<AdminPresetPlatformId | string>(ADMIN_PRESET_PLATFORMS[0].id)
+const { publicAsset } = usePublicAsset()
 
-const tabs = computed(() => {
-  const preset = ADMIN_PRESET_PLATFORMS.map((item) => ({
-    id: item.id,
-    label: item.label
-  }))
-
-  const custom = props.modelValue
-    .filter((link) => !isPresetPlatformId(link.id))
-    .map((link) => ({
-      id: link.id,
-      label: link.name.trim() || "Nouvelle plateforme"
-    }))
-
-  return [...preset, ...custom]
-})
+const editModalOpen = ref(false)
+const deleteModalOpen = ref(false)
+const editingId = ref<string | null>(null)
+const deletingId = ref<string | null>(null)
+const isCreatingNew = ref(false)
+const dragIndex = ref<number | null>(null)
+const dragOverIndex = ref<number | null>(null)
 
 function createEmptyLink(id: string): PropertyPlatformLink {
   const preset = getPresetPlatform(id)
@@ -52,196 +47,334 @@ function createEmptyLink(id: string): PropertyPlatformLink {
     stars: "",
     label: "",
     logo: preset?.defaultLogo ?? "",
+    icon: preset ? undefined : DEFAULT_PLATFORM_CUSTOM_ICON,
+    icon_bg: preset ? undefined : DEFAULT_PLATFORM_ICON_BG,
     url: "",
-    hidden: false
+    hidden: Boolean(preset)
   }
 }
 
-function isTabHidden(tabId: string): boolean {
-  const link = props.modelValue.find((item) => item.id === tabId)
-
-  return link ? isPlatformLinkHidden(link) : false
+function linkForId(id: string): PropertyPlatformLink {
+  return props.modelValue.find((link) => link.id === id) ?? createEmptyLink(id)
 }
 
-function linkForTab(tabId: string): PropertyPlatformLink {
-  return props.modelValue.find((link) => link.id === tabId) ?? createEmptyLink(tabId)
+const platformItems = computed(() => {
+  const items: Array<{ id: string; label: string; isPreset: boolean }> = []
+  const seen = new Set<string>()
+
+  for (const link of props.modelValue) {
+    const isPreset = isPresetPlatformId(link.id)
+
+    items.push({
+      id: link.id,
+      label: isPreset
+        ? (getPresetPlatform(link.id)?.label ?? (link.name.trim() || link.id))
+        : link.name.trim() || "Nouvelle plateforme",
+      isPreset
+    })
+    seen.add(link.id)
+  }
+
+  for (const preset of ADMIN_PRESET_PLATFORMS) {
+    if (!seen.has(preset.id)) {
+      items.push({
+        id: preset.id,
+        label: preset.label,
+        isPreset: true
+      })
+    }
+  }
+
+  return items
+})
+
+const editingLink = computed(() => {
+  if (!editingId.value) {
+    return null
+  }
+
+  return linkForId(editingId.value)
+})
+
+const editingIsPreset = computed(() => (editingId.value ? isPresetPlatformId(editingId.value) : false))
+const editingIsNew = computed(() => isCreatingNew.value)
+
+const deletingLink = computed(() => (deletingId.value ? linkForId(deletingId.value) : null))
+
+function platformLogoSrc(id: string) {
+  const link = linkForId(id)
+  const path = resolvePlatformLogoPath(link.logo, id)
+
+  return path ? publicAsset(path) : ""
 }
 
-const activeLink = computed(() => linkForTab(activeTabId.value))
+function platformCustomIcon(id: string): AdminIconName {
+  return normalizePlatformCustomIconId(linkForId(id).icon)
+}
 
-const isPresetTab = computed(() => isPresetPlatformId(activeTabId.value))
-const isCustomTab = computed(() => !isPresetTab.value)
+function platformCustomIconBg(id: string) {
+  return normalizePlatformIconBg(linkForId(id).icon_bg)
+}
 
-const activeStars = computed(() => ratingToStars(activeLink.value.rating))
+function platformRatingText(id: string) {
+  return linkForId(id).rating.trim()
+}
 
-function updateActiveLink(partial: Partial<PropertyPlatformLink>) {
-  const tabId = activeTabId.value
+function platformRatingStatus(id: string) {
+  const link = linkForId(id)
+  const saved = props.modelValue.some((item) => item.id === id)
+
+  if (!saved && !isPresetPlatformId(id)) {
+    return ""
+  }
+
+  if (isPlatformLinkHidden(link)) {
+    return "Masquée sur le site"
+  }
+
+  return ""
+}
+
+function isPlatformLinkValid(link: PropertyPlatformLink) {
+  return Boolean(link.name.trim() && link.rating.trim())
+}
+
+function updateLink(id: string, value: PropertyPlatformLink) {
+  if (!isPlatformLinkValid(value)) {
+    return
+  }
+
   const links = [...props.modelValue]
-  const index = links.findIndex((link) => link.id === tabId)
-  const next: Partial<PropertyPlatformLink> = { ...partial }
-
-  if ("rating" in partial) {
-    next.stars = ratingToStars(String(partial.rating ?? ""))
-  }
+  const index = links.findIndex((link) => link.id === id)
 
   if (index >= 0) {
-    links[index] = { ...links[index], ...next }
+    links[index] = value
   } else {
-    links.push({ ...createEmptyLink(tabId), ...next })
+    links.push(value)
   }
 
   emit("update:modelValue", links)
 }
 
-function updateRating(value: string) {
-  updateActiveLink({ rating: value })
+function openEdit(id: string) {
+  isCreatingNew.value = false
+  editingId.value = id
+  editModalOpen.value = true
 }
 
-function selectTab(tabId: string) {
-  activeTabId.value = tabId
+function closeEdit() {
+  editModalOpen.value = false
+  editingId.value = null
+  isCreatingNew.value = false
+}
+
+function saveEdit(value: PropertyPlatformLink) {
+  if (!isPlatformLinkValid(value)) {
+    return
+  }
+
+  updateLink(value.id, value)
+  closeEdit()
+}
+
+function openDelete(id: string) {
+  deletingId.value = id
+  deleteModalOpen.value = true
+}
+
+function closeDelete() {
+  deleteModalOpen.value = false
+  deletingId.value = null
+}
+
+function confirmDelete() {
+  if (!deletingId.value || isPresetPlatformId(deletingId.value)) {
+    return
+  }
+
+  const links = props.modelValue.filter((link) => link.id !== deletingId.value)
+
+  emit("update:modelValue", links)
+  closeDelete()
 }
 
 function addCustomPlatform() {
   const id = `platform-${Date.now()}`
-  const links = [...props.modelValue, createEmptyLink(id)]
 
-  emit("update:modelValue", links)
-  activeTabId.value = id
+  isCreatingNew.value = true
+  editingId.value = id
+  editModalOpen.value = true
 }
 
-function removeCustomPlatform() {
-  if (isPresetPlatformId(activeTabId.value)) {
+function applyPlatformOrder(orderedIds: string[]) {
+  const links = orderedIds.map((id) => {
+    const saved = props.modelValue.find((link) => link.id === id)
+
+    return saved ?? createEmptyLink(id)
+  })
+
+  emit("update:modelValue", links)
+}
+
+function onDragStart(index: number, event: DragEvent) {
+  dragIndex.value = index
+  dragOverIndex.value = index
+
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = "move"
+    event.dataTransfer.setData("text/plain", String(index))
+  }
+}
+
+function onDragEnd() {
+  dragIndex.value = null
+  dragOverIndex.value = null
+}
+
+function onDragOver(index: number, event: DragEvent) {
+  event.preventDefault()
+
+  if (event.dataTransfer) {
+    event.dataTransfer.dropEffect = "move"
+  }
+
+  dragOverIndex.value = index
+}
+
+function onDrop(index: number, event: DragEvent) {
+  event.preventDefault()
+
+  const from =
+    dragIndex.value ?? Number.parseInt(event.dataTransfer?.getData("text/plain") ?? "", 10)
+
+  if (!Number.isFinite(from) || from === index) {
+    onDragEnd()
     return
   }
 
-  const removedId = activeTabId.value
-  const links = props.modelValue.filter((link) => link.id !== removedId)
+  const items = [...platformItems.value]
+  const [moved] = items.splice(from, 1)
 
-  emit("update:modelValue", links)
-  activeTabId.value = ADMIN_PRESET_PLATFORMS[0].id
+  if (!moved) {
+    onDragEnd()
+    return
+  }
+
+  items.splice(index, 0, moved)
+  applyPlatformOrder(items.map((item) => item.id))
+  onDragEnd()
 }
-
-watch(
-  tabs,
-  (items) => {
-    if (items.some((tab) => tab.id === activeTabId.value)) {
-      return
-    }
-
-    activeTabId.value = items[0]?.id ?? ADMIN_PRESET_PLATFORMS[0].id
-  },
-  { immediate: true }
-)
 </script>
 
 <template>
   <div class="admin-platform-links">
     <div class="admin-subpanel__head admin-platform-links__head">
-      <h3>Liens plateformes</h3>
+      <h3>Plateformes</h3>
       <button type="button" class="admin-btn admin-btn--secondary admin-btn--sm" @click="addCustomPlatform">
         <AdminIcon name="plus" :size="16" />
         Ajouter une plateforme
       </button>
     </div>
 
-    <div class="admin-tabs-shell">
-      <div class="admin-tabs" role="tablist" aria-label="Plateformes">
+    <!-- Note textuelle uniquement (pas d’étoiles dans la liste) -->
+    <ul class="admin-platform-links__list">
+      <li
+        v-for="(item, index) in platformItems"
+        :key="item.id"
+        class="admin-platform-links__item"
+        :class="{
+          'admin-platform-links__item--hidden': isPlatformLinkHidden(linkForId(item.id)),
+          'admin-platform-links__item--dragging': dragIndex === index,
+          'admin-platform-links__item--drag-over': dragOverIndex === index && dragIndex !== index
+        }"
+        @dragover="onDragOver(index, $event)"
+        @drop="onDrop(index, $event)"
+      >
         <button
-          v-for="tab in tabs"
-          :key="tab.id"
           type="button"
-          role="tab"
-          class="admin-tabs__btn"
-          :class="{
-            'admin-tabs__btn--active': activeTabId === tab.id,
-            'admin-tabs__btn--hidden': isTabHidden(tab.id)
-          }"
-          :aria-selected="activeTabId === tab.id"
-          @click="selectTab(tab.id)"
-        >
-          {{ tab.label }}
-        </button>
-      </div>
-    </div>
+          class="admin-sortable-list__drag-handle"
+          aria-label="Glisser pour réordonner"
+          draggable="true"
+          @dragstart="onDragStart(index, $event)"
+          @dragend="onDragEnd"
+        />
 
-    <div class="admin-platform-links__panel" role="tabpanel">
-      <header class="admin-platform-links__panel-top">
-        <div>
-          <p class="admin-platform-links__panel-kicker">
-            {{ isPresetTab ? "Plateforme" : "Plateforme personnalisée" }}
-          </p>
-          <h4 class="admin-platform-links__panel-title">
-            {{ activeLink.name || "Sans nom" }}
-          </h4>
-        </div>
-        <div class="admin-platform-links__panel-actions">
-          <AdminToggle
-            v-if="isPresetTab"
-            :model-value="!activeLink.hidden"
-            label="Afficher sur le site"
-            hint="Désactivez si votre annonce n’est pas sur cette plateforme"
-            @update:model-value="updateActiveLink({ hidden: !$event })"
+        <div
+          v-if="item.isPreset"
+          class="admin-platform-links__item-icon"
+          :class="`admin-platform-links__item-icon--${item.id}`"
+          aria-hidden="true"
+        >
+          <img
+            :src="platformLogoSrc(item.id)"
+            :alt="''"
+            class="admin-platform-links__item-logo"
           />
+        </div>
+        <div
+          v-else
+          class="admin-platform-links__item-icon admin-platform-links__item-icon--custom"
+          :style="{ '--admin-platform-icon-bg': platformCustomIconBg(item.id) }"
+          aria-hidden="true"
+        >
+          <AdminIcon :name="platformCustomIcon(item.id)" :size="16" />
+        </div>
+
+        <p class="admin-platform-links__item-name">{{ linkForId(item.id).name || item.label }}</p>
+
+        <div class="admin-platform-links__item-rating">
+          <span
+            v-if="platformRatingStatus(item.id)"
+            class="admin-platform-links__item-rating-status"
+          >
+            {{ platformRatingStatus(item.id) }}
+          </span>
+          <span
+            v-else-if="platformRatingText(item.id)"
+            class="admin-platform-links__item-rating-text"
+          >
+            {{ platformRatingText(item.id) }}
+          </span>
+          <span v-else class="admin-platform-links__item-rating-placeholder" aria-hidden="true">—</span>
+        </div>
+
+        <div class="admin-platform-links__item-actions">
           <button
-            v-if="isCustomTab"
             type="button"
-            class="admin-btn admin-btn--ghost admin-btn--danger-ghost admin-btn--sm"
-            @click="removeCustomPlatform"
+            class="admin-btn admin-btn--secondary admin-btn--sm admin-btn--icon-only"
+            aria-label="Modifier"
+            @click="openEdit(item.id)"
+          >
+            <AdminIcon name="pencil" :size="16" />
+          </button>
+          <button
+            v-if="!item.isPreset"
+            type="button"
+            class="admin-btn admin-btn--ghost admin-btn--danger-ghost admin-btn--sm admin-btn--icon-only"
+            aria-label="Supprimer"
+            @click="openDelete(item.id)"
           >
             <AdminIcon name="trash" :size="16" />
-            Supprimer
           </button>
         </div>
-      </header>
+      </li>
+    </ul>
 
-      <div class="admin-platform-links__fields">
-        <AdminField
-          label="Nom"
-          :model-value="activeLink.name"
-          full-width
-          @update:model-value="updateActiveLink({ name: $event as string })"
-        />
-        <div class="admin-platform-links__rating-row">
-          <div class="admin-platform-links__rating-field">
-            <AdminField
-              label="Note"
-              hint="Toute note au format score / max (ex. 4,97/5, 9/10, 18/40) est convertie sur 5 étoiles"
-              :model-value="activeLink.rating"
-              @update:model-value="updateRating($event as string)"
-            />
-            <p
-              class="admin-platform-links__stars-display"
-              :class="{ 'admin-platform-links__stars-display--empty': !activeStars }"
-              aria-label="Aperçu des étoiles"
-            >
-              {{ activeStars || "☆☆☆☆☆" }}
-            </p>
-          </div>
-        </div>
-        <AdminField
-          v-if="isCustomTab"
-          label="Logo"
-          :model-value="activeLink.logo"
-          hint="Chemin Storage, ex. /platforms/ma-plateforme.svg"
-          full-width
-          @update:model-value="updateActiveLink({ logo: $event as string })"
-        />
-        <AdminField
-          label="URL"
-          :model-value="activeLink.url"
-          type="url"
-          full-width
-          @update:model-value="updateActiveLink({ url: $event as string })"
-        />
-      </div>
-    </div>
+    <AdminPlatformLinkEditModal
+      v-if="editingLink && editModalOpen"
+      :open="editModalOpen"
+      :link="editingLink"
+      :is-preset="editingIsPreset"
+      :is-new="editingIsNew"
+      @close="closeEdit"
+      @save="saveEdit"
+    />
 
-    <AdminPlatformStatsPreview
-      :links="modelValue"
-      :eyebrow="platformStatsEyebrow"
-      :title="platformStatsTitle"
-      :intro="platformStatsIntro"
-      :preview-url="previewUrl"
+    <AdminPlatformLinkDeleteModal
+      :open="deleteModalOpen"
+      :platform-name="deletingLink?.name?.trim() || 'Cette plateforme'"
+      @cancel="closeDelete"
+      @confirm="confirmDelete"
     />
   </div>
 </template>

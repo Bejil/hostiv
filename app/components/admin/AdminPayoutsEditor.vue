@@ -1,11 +1,15 @@
 <script setup lang="ts">
 import AdminAlert from "./AdminAlert.vue"
+import AdminBookingConfigEditor from "./AdminBookingConfigEditor.vue"
 import AdminIcon from "./AdminIcon.vue"
+import { useAdminEditorContext } from "../../composables/admin-editor-context"
 import type { StripeConnectStatus } from "../../types/stripe-connect"
 
 const props = defineProps<{
   slug: string
 }>()
+
+const ctx = useAdminEditorContext()
 
 const route = useRoute()
 const router = useRouter()
@@ -214,6 +218,11 @@ watch(
 
 <template>
   <div class="admin-payouts">
+    <AdminBookingConfigEditor
+      :model-value="ctx.record.value.booking_config"
+      @update:model-value="ctx.patch({ booking_config: $event })"
+    />
+
     <div class="admin-subpanel admin-general-card admin-payouts__card">
       <div class="admin-subpanel__head admin-general-card__head">
         <div>

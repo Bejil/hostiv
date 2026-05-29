@@ -5,7 +5,7 @@ import { hostivNavLinks } from "../../data/hostivLanding"
 const route = useRoute()
 const { scrollToTop } = useHostivScrollToTop()
 const { openLogin, openSignup } = useHostivAccountModal()
-const { ready, isLoggedIn, adminPath, accountPath, sitePath, logout } = useHostivNavAuth()
+const { ready, isLoggedIn, adminPath, sitePath, logout } = useHostivNavAuth()
 const isOpen = ref(false)
 
 function closeMenu() {
@@ -57,13 +57,6 @@ async function onLogout() {
             rel="noopener noreferrer"
           >
             Mon site
-          </NuxtLink>
-          <NuxtLink
-            v-if="accountPath"
-            :to="accountPath"
-            class="hostiv-btn hostiv-btn--ghost hostiv-btn--sm"
-          >
-            Mon compte
           </NuxtLink>
           <NuxtLink
             v-if="adminPath"
@@ -118,14 +111,6 @@ async function onLogout() {
           @click="closeMenu"
         >
           Mon site
-        </NuxtLink>
-        <NuxtLink
-          v-if="accountPath"
-          :to="accountPath"
-          class="hostiv-btn hostiv-btn--ghost"
-          @click="closeMenu"
-        >
-          Mon compte
         </NuxtLink>
         <NuxtLink v-if="adminPath" :to="adminPath" class="hostiv-btn hostiv-btn--primary" @click="closeMenu">
           Mon backoffice

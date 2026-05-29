@@ -26,10 +26,12 @@ Redémarrer `npm run dev` après modification.
 8. `migrations/20260520100000_properties_stripe_connect.sql` — Stripe Connect Express
 9. `migrations/20260521100000_booking_reservations_refund.sql`
 10. `migrations/20260521120000_hostiv_subscription_plan.sql` — forfait Starter / Pro (`hostiv_accounts` + `properties.subscription_plan`)
+11. `migrations/20260528120000_drop_properties_booking_notify_email.sql` — notifications réservation via l’e-mail du compte propriétaire
+12. `migrations/20260528130000_drop_properties_favicon_path.sql` — favicon = logo du site (`logo_path`)
 
 ## 3. Données initiales
 
-SQL Editor → exécuter une fois `seed-thegrandappartement.sql`, puis renseigner `booking_notify_email` pour chaque site.
+SQL Editor → exécuter une fois `seed-thegrandappartement.sql`.
 
 Les chemins d’images en base restent relatifs (`/gallery/...`, `/branding/...`). L’app les résout vers Storage : `{slug}/gallery/...`.
 
@@ -64,19 +66,18 @@ Les images des sites passent uniquement par Storage (`SUPABASE_URL` requis).
 
 | Colonne / donnée | Usage |
 |------------------|--------|
-| `booking_notify_email` | E-mail hôte (réservations) |
 | `booking_config` | Tarifs et règles |
-| `owner_user_id` | UID Supabase Auth du propriétaire (backoffice) |
+| `owner_user_id` | UID Supabase Auth du propriétaire (backoffice + e-mail des réservations) |
 | `subscription_plan` | Forfait Hostiv du site : `starter` ou `pro` (sync depuis `hostiv_accounts` à la liaison) |
 | `hostiv_accounts` | Forfait choisi à l’inscription (trigger sur `auth.users`, champ `user_metadata.subscription_plan`) |
 | `stripe_account_id`, `stripe_charges_enabled` | Compte Connect Express et activation des paiements |
-| `favicon_path` | Favicon du site (ex. `/branding/favicon.png` → Storage) |
+| `logo_path` | Logo en-tête et favicon du site (onglet navigateur) |
 | `content` | Textes, galeries, avis (chemins `/gallery/...`) |
-| Storage `{slug}/…` | Fichiers binaires (logo, favicon, galerie…) |
+| Storage `{slug}/…` | Fichiers binaires (logo, galerie…) |
 
 **Favicon Hostiv** (`/`) : fichiers locaux dans `public/hostiv/` (hors Storage).
 
-**Favicon d’un site** (`/:slug`) : colonne `favicon_path` + fichier dans Storage `{slug}/branding/`.
+**Favicon d’un site** (`/:slug`) : même fichier que `logo_path` (ex. `/branding/header-logo.png`).
 
 ## 6. Backoffice (`/:slug/admin`)
 
@@ -98,5 +99,7 @@ Seul l’utilisateur dont l’UID correspond à `owner_user_id` peut modifier le
 ## 7. Vérifier
 
 ```sql
-select slug, brand_name, booking_notify_email from public.properties;
+select p.slug, p.brand_name, u.email as owner_email
+from public.properties p
+left join auth.users u on u.id = p.owner_user_id;
 ```

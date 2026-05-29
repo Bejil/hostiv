@@ -2,7 +2,6 @@ import type { PropertyCalendarConfig, PropertySiteContent, PropertySiteRecord } 
 import type { HostivSubscriptionAccess } from "../utils/hostiv-subscription-access"
 
 export type PropertyAdminRecord = PropertySiteRecord & {
-  booking_notify_email: string
   calendar_config: PropertyCalendarConfig
   /** Présent sur GET admin uniquement — non persisté */
   subscription_access?: HostivSubscriptionAccess

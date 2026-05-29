@@ -3,7 +3,7 @@ const props = withDefaults(
   defineProps<{
     label: string
     modelValue: string | number | boolean
-    type?: "text" | "number" | "email" | "url" | "password" | "textarea" | "checkbox" | "date"
+    type?: "text" | "number" | "email" | "url" | "password" | "textarea" | "checkbox" | "date" | "time"
     step?: string | number
     min?: string | number
     max?: string | number

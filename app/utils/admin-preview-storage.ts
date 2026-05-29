@@ -14,7 +14,6 @@ export function applyAdminPreviewToSite(
   const mergedRaw: PropertyAdminRecord = {
     ...base,
     ...draft,
-    booking_notify_email: draft.booking_notify_email ?? "",
     booking_config: { ...base.booking_config, ...(draft.booking_config ?? {}) },
     location: { ...base.location, ...(draft.location ?? {}) },
     content: {
@@ -27,10 +26,7 @@ export function applyAdminPreviewToSite(
     }
   }
 
-  const normalized = normalizePropertyAdminRecord(mergedRaw)
-  const { booking_notify_email: _ignored, ...site } = normalized
-
-  return site
+  return normalizePropertyAdminRecord(mergedRaw)
 }
 
 export function saveAdminPreviewDraft(
@@ -77,8 +73,7 @@ export function loadAdminPreviewDraft(
 
     return applyAdminPreviewToSite(baseSite, {
       ...baseSite,
-      ...stored,
-      booking_notify_email: ""
+      ...stored
     })
   } catch {
     return null

@@ -6,6 +6,12 @@ const appBaseURL = process.env.NUXT_APP_BASE_URL || "/"
 export default defineNuxtConfig({
   compatibilityDate: "2025-07-15",
   devtools: { enabled: true },
+  modules: ["@nuxt/ui"],
+  css: ["~/assets/css/nuxt-ui-admin.css"],
+  ui: {
+    colorMode: false,
+    fonts: false
+  },
   vite: {
     ssr: {
       external: ["leaflet"]

@@ -3,19 +3,19 @@ export const ADMIN_PRESET_PLATFORMS = [
     id: "airbnb",
     label: "Airbnb",
     defaultName: "Airbnb",
-    defaultLogo: "/platforms/airbnb.svg"
+    defaultLogo: "/platforms/airbnb.png"
   },
   {
     id: "booking",
     label: "Booking",
     defaultName: "Booking.com",
-    defaultLogo: "/platforms/booking.svg"
+    defaultLogo: "/platforms/booking.png"
   },
   {
     id: "abritel",
     label: "Abritel",
     defaultName: "Abritel",
-    defaultLogo: "/platforms/abritel.svg"
+    defaultLogo: "/platforms/abritel.png"
   }
 ] as const
 

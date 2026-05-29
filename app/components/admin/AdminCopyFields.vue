@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import AdminField from "./AdminField.vue"
 import { adminCopySections } from "../../data/admin-copy-sections"
+import { fromTimeInputValue, toTimeInputValue } from "../../utils/house-rules-time"
 
 const props = defineProps<{
   sectionId: string
@@ -26,13 +27,32 @@ const visibleFields = computed(() => {
     .map((key) => section.value!.fields.find((field) => field.key === key))
     .filter((field): field is NonNullable<typeof field> => Boolean(field))
 })
+
+function fieldModelValue(field: { key: string; type?: string }) {
+  const raw = props.getCopyField(props.sectionId, field.key)
+
+  if (field.type === "time") {
+    return toTimeInputValue(raw)
+  }
+
+  return raw
+}
+
+function onFieldUpdate(field: { key: string; type?: string }, value: string) {
+  const next = field.type === "time" ? fromTimeInputValue(value) : value
+
+  props.patchCopySection(props.sectionId, field.key, next)
+}
 </script>
 
 <template>
   <div
     v-if="section"
     class="admin-copy-block"
-    :class="{ 'admin-copy-block--cols-2': columns === 2 }"
+    :class="{
+      'admin-copy-block--cols-2': columns === 2,
+      'admin-copy-block--cols-1': columns === 1
+    }"
   >
     <div class="admin-grid">
       <AdminField
@@ -41,9 +61,12 @@ const visibleFields = computed(() => {
         :label="field.label"
         :required="required"
         :type="field.type || 'text'"
-        :full-width="columns === 2 ? false : field.fullWidth"
-        :model-value="getCopyField(sectionId, field.key)"
-        @update:model-value="patchCopySection(sectionId, field.key, $event as string)"
+        :hint="field.hint"
+        :rows="field.type === 'textarea' ? 3 : undefined"
+        :step="field.type === 'time' ? 60 : undefined"
+        :full-width="columns === 2 ? false : true"
+        :model-value="fieldModelValue(field)"
+        @update:model-value="onFieldUpdate(field, $event as string)"
       />
     </div>
   </div>

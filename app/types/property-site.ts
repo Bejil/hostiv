@@ -85,6 +85,10 @@ export type PropertyPlatformLink = {
   label: string
   logo: string
   url: string
+  /** Icône (plateformes personnalisées uniquement). */
+  icon?: string
+  /** Couleur de fond de l’icône (plateformes personnalisées). */
+  icon_bg?: string
   /** Plateforme preset masquée sur le site public (Airbnb, Booking, Abritel). */
   hidden?: boolean
 }
@@ -207,9 +211,14 @@ export type PropertySiteRecord = {
   brand_name: string
   brand_meta: string
   logo_path: string
-  favicon_path: string
   seo_title: string
   seo_description: string
+  seo_keywords: string
+  seo_og_title: string
+  seo_og_description: string
+  seo_og_image_path: string
+  seo_twitter_card: "summary" | "summary_large_image"
+  seo_noindex: boolean
   hero_image_path: string
   hero_image_alt: string
   testimonials_bg_path: string
@@ -231,9 +240,14 @@ export type PropertySiteRow = {
   brand_name: string
   brand_meta: string | null
   logo_path: string
-  favicon_path: string | null
   seo_title: string
   seo_description: string
+  seo_keywords: string
+  seo_og_title: string
+  seo_og_description: string
+  seo_og_image_path: string
+  seo_twitter_card: "summary" | "summary_large_image"
+  seo_noindex: boolean
   hero_image_path: string
   hero_image_alt: string | null
   testimonials_bg_path: string
@@ -246,11 +260,6 @@ export type PropertySiteRow = {
   content: PropertySiteContent
   created_at?: string
   updated_at?: string
-}
-
-/** Champs serveur uniquement (jamais renvoyés par GET /api/sites/:slug). */
-export type PropertySiteBookingRow = PropertySiteRow & {
-  booking_notify_email: string | null
 }
 
 export type PropertySiteInsert = Omit<PropertySiteRecord, "id"> & { id?: string }

@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from "vue"
-import LocationMap from "../LocationMap.vue"
+import { ref, watch } from "vue"
 import AdminField from "./AdminField.vue"
 import AdminOnboardingFieldExamples from "./AdminOnboardingFieldExamples.vue"
 import { useAdminGeocode } from "../../composables/useAdminGeocode"
@@ -29,21 +28,8 @@ const { geocodeAddress } = useAdminGeocode(props.slug)
 const geocodeStatus = ref<"idle" | "loading" | "ok" | "error">("idle")
 const geocodeMessage = ref("")
 const geocodedAddress = ref(props.modelValue.address.trim())
-const mapMountKey = ref(0)
 let geocodeTimer: ReturnType<typeof setTimeout> | null = null
 let geocodeRequestId = 0
-
-const hasValidCoords = computed(() => {
-  const lat = Number(props.modelValue.latitude)
-  const lng = Number(props.modelValue.longitude)
-
-  return Number.isFinite(lat) && Number.isFinite(lng)
-})
-
-const mapRenderKey = computed(
-  () =>
-    `${mapMountKey.value}:${Number(props.modelValue.latitude)}:${Number(props.modelValue.longitude)}:${Number(props.modelValue.radius_meters)}`
-)
 
 function patchLocation(partial: Partial<PropertyLocation>) {
   emit("update:modelValue", { ...props.modelValue, ...partial })
@@ -91,7 +77,6 @@ async function runGeocode(address: string) {
       longitude: result.longitude,
       radius_meters: result.radius_meters
     })
-    mapMountKey.value += 1
     geocodeStatus.value = "ok"
     geocodeMessage.value = "Position et zone mises à jour automatiquement."
   } catch (error: unknown) {
@@ -130,8 +115,16 @@ watch(
 <template>
   <div class="admin-location-map">
     <div class="admin-subpanel">
-      <div class="admin-subpanel__head">
-        <h3>Carte</h3>
+      <div class="admin-location-map__fields">
+        <AdminField
+          label="Adresse"
+          type="text"
+          full-width
+          :required="markRequired"
+          hint="La position et la zone sur le site public sont calculées automatiquement à partir de cette adresse."
+          :model-value="modelValue.address"
+          @update:model-value="onAddressInput"
+        />
         <p
           v-if="geocodeMessage"
           class="admin-location-map__status"
@@ -139,62 +132,20 @@ watch(
         >
           {{ geocodeMessage }}
         </p>
-      </div>
-
-      <div class="admin-location-map__row">
-        <div class="admin-location-map__preview-card">
-          <div class="admin-location-map__map-host">
-            <div v-if="hasValidCoords" class="admin-location-map__leaflet-shell">
-              <LocationMap
-                :key="mapRenderKey"
-                :latitude="Number(modelValue.latitude)"
-                :longitude="Number(modelValue.longitude)"
-                :radius-meters="Number(modelValue.radius_meters) || 400"
-                :address="modelValue.address"
-              />
-            </div>
-            <div
-              v-else
-              class="admin-location-map__placeholder admin-location-map__placeholder--hint"
-            >
-              Saisissez une adresse pour afficher la carte.
-            </div>
-            <div
-              v-if="geocodeStatus === 'loading'"
-              class="admin-location-map__loading"
-              aria-live="polite"
-            >
-              Mise à jour…
-            </div>
-          </div>
-        </div>
-
-        <div class="admin-location-map__fields">
+        <div class="admin-onboarding-fields__field-block">
           <AdminField
-            label="Adresse"
+            label="Chapô"
             type="textarea"
-            :rows="3"
+            :rows="4"
             full-width
             :required="markRequired"
-            hint="La position et la zone sur la carte sont calculées automatiquement à partir de cette adresse."
-            :model-value="modelValue.address"
-            @update:model-value="onAddressInput"
+            :model-value="lead"
+            @update:model-value="emit('update:lead', $event as string)"
           />
-          <div class="admin-onboarding-fields__field-block">
-            <AdminField
-              label="Chapô"
-              type="textarea"
-              :rows="4"
-              full-width
-              :required="markRequired"
-              :model-value="lead"
-              @update:model-value="emit('update:lead', $event as string)"
-            />
-            <AdminOnboardingFieldExamples
-              v-if="showFieldExamples"
-              :examples="leadExamples"
-            />
-          </div>
+          <AdminOnboardingFieldExamples
+            v-if="showFieldExamples"
+            :examples="leadExamples"
+          />
         </div>
       </div>
     </div>

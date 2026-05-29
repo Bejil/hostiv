@@ -157,6 +157,15 @@
   background: #7cb3f0;
 }
 
+.platform-logo--custom {
+  color: #fff;
+}
+
+.platform-logo-icon {
+  display: block;
+  flex-shrink: 0;
+}
+
 .platform-stat-main {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;

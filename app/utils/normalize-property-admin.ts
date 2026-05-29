@@ -4,6 +4,7 @@ import type {
   PropertyBenefitCard,
   PropertyBookingConfig,
   PropertyLocation,
+  PropertyNeighborhoodHighlight,
   PropertyPlatformLink,
   PropertyReview,
   PropertySiteContent,
@@ -14,7 +15,16 @@ import { normalizeBenefitIconId } from "../data/benefit-icons"
 import { normalizeLocationHighlightIconId } from "../data/location-highlight-icons"
 import { parseSiteTemplateId } from "../data/site-templates"
 import { normalizeReviewRatingValue, ratingToStars } from "./platform-rating-stars"
+import { isPresetPlatformId } from "../data/admin-platform-tabs"
+import {
+  DEFAULT_PLATFORM_CUSTOM_ICON,
+  DEFAULT_PLATFORM_ICON_BG,
+  normalizePlatformCustomIconId,
+  normalizePlatformIconBg
+} from "../data/platform-custom-icons"
+import { resolvePlatformLogoPath } from "./platform-logo"
 import { withAmenityPreviewHasMore } from "./amenity-preview"
+import { fromTimeInputValue } from "./house-rules-time"
 import { normalizeBookingConfig } from "./booking-config"
 import { normalizeCalendarConfig } from "./calendar-config"
 
@@ -78,15 +88,23 @@ function normalizeCopy(copy: PropertySiteCopy | undefined, brandName: string, br
     pricing: base.pricing ?? { eyebrow: "", title: "", intro: "" },
     amenities: base.amenities ?? { eyebrow: "", title: "", intro: "" },
     reviews: base.reviews ?? { eyebrow: "", title: "" },
-    rules: base.rules ?? {
-      eyebrow: "",
-      title: "",
-      intro: "",
-      check_in_label: "",
-      check_in_time: "",
-      check_out_label: "",
-      check_out_time: ""
-    },
+    rules: (() => {
+      const rules = base.rules ?? {
+        eyebrow: "",
+        title: "",
+        intro: "",
+        check_in_label: "",
+        check_in_time: "",
+        check_out_label: "",
+        check_out_time: ""
+      }
+
+      return {
+        ...rules,
+        check_in_time: fromTimeInputValue(rules.check_in_time ?? ""),
+        check_out_time: fromTimeInputValue(rules.check_out_time ?? "")
+      }
+    })(),
     booking: base.booking ?? {
       price_recap_note: "",
       price_recap_note_payment: ""
@@ -97,42 +115,61 @@ function normalizeCopy(copy: PropertySiteCopy | undefined, brandName: string, br
 function normalizeNeighborhoodHighlights(
   items: PropertyNeighborhoodHighlight[] | undefined
 ): PropertyNeighborhoodHighlight[] {
-  return (items ?? []).map((item) => ({
-    icon: normalizeLocationHighlightIconId(item.icon),
-    title: String(item.title ?? ""),
-    text: String(item.text ?? "")
-  }))
+  return (items ?? [])
+    .filter((item): item is PropertyNeighborhoodHighlight => Boolean(item))
+    .map((item) => ({
+      icon: normalizeLocationHighlightIconId(item.icon),
+      title: String(item.title ?? ""),
+      text: String(item.text ?? "")
+    }))
 }
 
 function normalizeBenefitCards(cards: PropertyBenefitCard[] | undefined): PropertyBenefitCard[] {
-  return (cards ?? []).map((card) => ({
-    ...card,
-    icon: normalizeBenefitIconId(String(card.icon ?? ""))
-  }))
+  return (cards ?? [])
+    .filter((card): card is PropertyBenefitCard => Boolean(card))
+    .map((card) => ({
+      ...card,
+      title: String(card.title ?? ""),
+      text: String(card.text ?? ""),
+      icon: normalizeBenefitIconId(String(card.icon ?? ""))
+    }))
 }
 
 function normalizeVisualCards(cards: PropertyVisualCard[] | undefined): PropertyVisualCard[] {
-  return (cards ?? []).map((card) => ({
-    title: String(card.title ?? ""),
-    text: String(card.text ?? ""),
-    image: String(card.image ?? "")
-  }))
+  return (cards ?? [])
+    .filter((card): card is PropertyVisualCard => Boolean(card))
+    .map((card) => ({
+      title: String(card.title ?? ""),
+      text: String(card.text ?? ""),
+      image: String(card.image ?? "")
+    }))
 }
 
 function normalizeReviews(reviews: PropertyReview[] | undefined): PropertyReview[] {
-  return (reviews ?? []).map((review) => ({
-    ...review,
-    rating: normalizeReviewRatingValue(review.rating)
-  }))
+  return (reviews ?? [])
+    .filter((review): review is PropertyReview => Boolean(review))
+    .map((review) => ({
+      ...review,
+      rating: normalizeReviewRatingValue(review.rating)
+    }))
 }
 
 function normalizePlatformLinks(links: PropertyPlatformLink[] | undefined): PropertyPlatformLink[] {
-  return (links ?? []).map((link) => ({
-    ...link,
-    hidden: Boolean(link.hidden),
-    stars: ratingToStars(link.rating),
-    label: ""
-  }))
+  return (links ?? [])
+    .filter((link): link is PropertyPlatformLink => Boolean(link))
+    .map((link) => {
+      const isPreset = isPresetPlatformId(link.id)
+
+      return {
+        ...link,
+        logo: isPreset ? resolvePlatformLogoPath(String(link.logo ?? ""), link.id) : "",
+        icon: isPreset ? undefined : normalizePlatformCustomIconId(link.icon ?? DEFAULT_PLATFORM_CUSTOM_ICON),
+        icon_bg: isPreset ? undefined : normalizePlatformIconBg(link.icon_bg ?? DEFAULT_PLATFORM_ICON_BG),
+        hidden: Boolean(link.hidden),
+        stars: ratingToStars(link.rating),
+        label: ""
+      }
+    })
 }
 
 function normalizeContent(
@@ -161,6 +198,10 @@ function normalizeContent(
   }
 }
 
+function normalizeSeoTwitterCard(value: unknown): "summary" | "summary_large_image" {
+  return value === "summary" ? "summary" : "summary_large_image"
+}
+
 export function normalizePropertyAdminRecord(raw: PropertyAdminRecord): PropertyAdminRecord {
   const brandName = String(raw.brand_name ?? "")
   const brandMeta = String(raw.brand_meta ?? "")
@@ -174,15 +215,19 @@ export function normalizePropertyAdminRecord(raw: PropertyAdminRecord): Property
     brand_name: brandName,
     brand_meta: brandMeta,
     logo_path: String(raw.logo_path ?? ""),
-    favicon_path: String(raw.favicon_path || raw.logo_path || ""),
     seo_title: String(raw.seo_title ?? ""),
     seo_description: String(raw.seo_description ?? ""),
+    seo_keywords: String(raw.seo_keywords ?? ""),
+    seo_og_title: String(raw.seo_og_title ?? ""),
+    seo_og_description: String(raw.seo_og_description ?? ""),
+    seo_og_image_path: String(raw.seo_og_image_path ?? ""),
+    seo_twitter_card: normalizeSeoTwitterCard(raw.seo_twitter_card),
+    seo_noindex: Boolean(raw.seo_noindex),
     hero_image_path: String(raw.hero_image_path ?? ""),
     hero_image_alt: heroTitle,
     testimonials_bg_path: String(raw.testimonials_bg_path ?? ""),
     host_photo_path: String(raw.host_photo_path ?? ""),
     subscription_plan: normalizeHostivSubscriptionPlan(raw.subscription_plan),
-    booking_notify_email: String(raw.booking_notify_email ?? ""),
     booking_config: normalizeBookingConfig(raw.booking_config),
     calendar_config: normalizeCalendarConfig(raw.calendar_config),
     location: {

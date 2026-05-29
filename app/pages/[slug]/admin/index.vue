@@ -1,8 +1,12 @@
 <script setup lang="ts">
 import AdminAlert from "../../../components/admin/AdminAlert.vue"
+import AdminAccountSettingsModal from "../../../components/admin/AdminAccountSettingsModal.vue"
 import AdminIcon from "../../../components/admin/AdminIcon.vue"
 import AdminLoginModal from "../../../components/admin/AdminLoginModal.vue"
-import PropertyAdminEditor from "../../../components/admin/PropertyAdminEditor.vue"
+import AdminLiveEditor from "../../../components/admin/AdminLiveEditor.vue"
+import AdminMainTabs from "../../../components/admin/AdminMainTabs.vue"
+import { adminSectionNavKey } from "../../../composables/admin-section-nav-context"
+import { useAdminSectionNavigation } from "../../../composables/useAdminSectionNavigation"
 import type { PropertyAdminRecord } from "../../../types/property-admin"
 import type { PropertySiteRecord } from "../../../types/property-site"
 import { faviconMimeType } from "../../../utils/favicon-mime"
@@ -29,7 +33,15 @@ definePageMeta({
 
 const route = useRoute()
 const slug = computed(() => String(route.params.slug))
-const editorRef = ref<InstanceType<typeof PropertyAdminEditor> | null>(null)
+const sectionNav = useAdminSectionNavigation(slug)
+
+provide(adminSectionNavKey, sectionNav)
+
+const editorRef = ref<InstanceType<typeof AdminLiveEditor> | null>(null)
+const accountMenuOpen = ref(false)
+const accountMenuRef = ref<HTMLElement | null>(null)
+const accountModalOpen = ref(false)
+let closeAccountMenuTimer: ReturnType<typeof setTimeout> | null = null
 
 const {
   authenticated,
@@ -117,7 +129,6 @@ const loginChecking = computed(() => loading.value && !loginSubmitting.value)
 const publicBranding = ref<{
   brand_name: string
   logo_path: string
-  favicon_path: string
   logo_alt: string
 } | null>(null)
 
@@ -129,18 +140,7 @@ const logoPath = computed(
   () => draft.value?.logo_path || site.value?.logo_path || publicBranding.value?.logo_path || ""
 )
 
-const faviconPath = computed(() => {
-  const paths = [
-    draft.value?.favicon_path,
-    draft.value?.logo_path,
-    site.value?.favicon_path,
-    site.value?.logo_path,
-    publicBranding.value?.favicon_path,
-    publicBranding.value?.logo_path
-  ]
-
-  return paths.find((path) => Boolean(path?.trim())) || ""
-})
+const faviconPath = computed(() => logoPath.value.trim())
 
 const headerLogoUrl = computed(() => {
   const path = logoPath.value
@@ -163,7 +163,6 @@ async function loadPublicBranding() {
     publicBranding.value = {
       brand_name: data.brand_name,
       logo_path: data.logo_path,
-      favicon_path: data.favicon_path || data.logo_path,
       logo_alt: data.content.copy.header?.logo_alt || data.brand_name
     }
   } catch {
@@ -230,6 +229,12 @@ async function syncDraftFromSite() {
 
 watch(site, syncDraftFromSite, { immediate: true })
 
+watch(showEditor, (show) => {
+  if (show) {
+    renderError.value = null
+  }
+})
+
 watch(
   () => [showEditor.value, route.query.onboarding] as const,
   ([show, onboarding]) => {
@@ -244,8 +249,29 @@ watch(
   { flush: "post" }
 )
 
+function formatRenderError(err: unknown): string {
+  if (err instanceof Error) {
+    return err.message
+  }
+
+  if (typeof err === "string" && err.trim()) {
+    return err
+  }
+
+  if (err && typeof err === "object" && "message" in err) {
+    const message = (err as { message: unknown }).message
+
+    if (typeof message === "string" && message.trim()) {
+      return message
+    }
+  }
+
+  return "Erreur d’affichage de l’éditeur."
+}
+
 onErrorCaptured((err) => {
-  renderError.value = err instanceof Error ? err.message : "Erreur d’affichage de l’éditeur."
+  console.error("[admin] render error:", err)
+  renderError.value = formatRenderError(err)
   return false
 })
 
@@ -269,6 +295,11 @@ onMounted(() => {
   }
 
   const onKeydown = (event: KeyboardEvent) => {
+    if (event.key === "Escape" && accountMenuOpen.value) {
+      accountMenuOpen.value = false
+      return
+    }
+
     if ((event.metaKey || event.ctrlKey) && event.key === "s") {
       event.preventDefault()
       if (showEditor.value && isDirty.value && !saving.value) {
@@ -277,10 +308,32 @@ onMounted(() => {
     }
   }
 
+  const onClickOutside = (event: MouseEvent) => {
+    if (!accountMenuOpen.value) {
+      return
+    }
+
+    const target = event.target
+
+    if (!(target instanceof Node)) {
+      return
+    }
+
+    if (!accountMenuRef.value?.contains(target)) {
+      accountMenuOpen.value = false
+    }
+  }
+
   window.addEventListener("keydown", onKeydown)
+  window.addEventListener("click", onClickOutside)
 
   onUnmounted(() => {
     window.removeEventListener("keydown", onKeydown)
+    window.removeEventListener("click", onClickOutside)
+    if (closeAccountMenuTimer) {
+      clearTimeout(closeAccountMenuTimer)
+      closeAccountMenuTimer = null
+    }
   })
 })
 
@@ -299,6 +352,7 @@ async function onLogin() {
 function onDraftUpdate(value: PropertyAdminRecord) {
   draft.value = value
   isDirty.value = true
+  renderError.value = null
 }
 
 async function persistDraft(): Promise<boolean> {
@@ -327,6 +381,35 @@ async function onSave() {
   await persistDraft()
 }
 
+function openAccountMenu() {
+  if (closeAccountMenuTimer) {
+    clearTimeout(closeAccountMenuTimer)
+    closeAccountMenuTimer = null
+  }
+
+  accountMenuOpen.value = true
+}
+
+function closeAccountMenuSoon() {
+  if (closeAccountMenuTimer) {
+    clearTimeout(closeAccountMenuTimer)
+  }
+
+  closeAccountMenuTimer = setTimeout(() => {
+    accountMenuOpen.value = false
+    closeAccountMenuTimer = null
+  }, 140)
+}
+
+function openAccountSettings() {
+  accountMenuOpen.value = false
+  accountModalOpen.value = true
+}
+
+function closeAccountSettings() {
+  accountModalOpen.value = false
+}
+
 function previewUrl(path: string) {
   return propertyAsset(path)
 }
@@ -344,66 +427,73 @@ useHead({
 </script>
 
 <template>
+  <UApp>
   <div class="admin-page">
     <header class="admin-page__header">
-      <div class="admin-page__brand">
-        <div class="admin-page__logo">
-          <img
-            v-if="headerLogoUrl"
-            :src="headerLogoUrl"
-            :alt="logoAlt"
-            class="admin-page__logo-img"
-          />
+      <div class="admin-page__header-inner">
+        <div class="admin-page__brand">
+          <div class="admin-page__logo">
+            <img
+              v-if="headerLogoUrl"
+              :src="headerLogoUrl"
+              :alt="logoAlt"
+              class="admin-page__logo-img"
+            />
+          </div>
+          <div>
+            <h1 class="admin-page__title">{{ brandLabel }}</h1>
+            <p class="admin-page__meta">
+              <span class="admin-page__slug">/{{ slug }}</span>
+            </p>
+          </div>
         </div>
-        <div>
-          <h1 class="admin-page__title">{{ brandLabel }}</h1>
-          <p class="admin-page__meta">
-            <span class="admin-page__slug">/{{ slug }}</span>
-            <span v-if="userEmail" class="admin-page__email">{{ userEmail }}</span>
-          </p>
-        </div>
-      </div>
 
-      <div v-if="userEmail || authenticated" class="admin-page__actions">
-        <span v-if="showEditor && isDirty" class="admin-page__dirty">
-          <span class="admin-page__dirty-dot" aria-hidden="true" />
-          Non enregistré
-        </span>
-        <button
-          v-if="showEditor"
-          type="button"
-          class="admin-btn admin-btn--secondary"
-          title="Reprendre le parcours guidé"
-          @click="editorRef?.reopenOnboarding?.()"
-        >
-          <AdminIcon name="layout" :size="16" />
-          <span class="admin-btn__label">Guide</span>
-        </button>
-        <a
-          v-if="showEditor"
-          :href="`/${slug}/preview`"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="admin-btn admin-btn--secondary"
-          title="Aperçu du site (brouillon visible si vous êtes connecté)"
-        >
-          <AdminIcon name="eye" :size="16" />
-          <span class="admin-btn__label">Aperçu</span>
-        </a>
-        <button type="button" class="admin-btn admin-btn--secondary" :disabled="saving" @click="logout">
-          <AdminIcon name="logout" :size="16" />
-          <span class="admin-btn__label">Déconnexion</span>
-        </button>
-        <button
-          v-if="showEditor"
-          type="button"
-          class="admin-btn admin-btn--primary"
-          :disabled="saving || !isDirty"
-          @click="onSave"
-        >
-          <AdminIcon name="save" :size="16" />
-          {{ saving ? "Enregistrement…" : "Enregistrer" }}
-        </button>
+        <div v-if="userEmail || authenticated" class="admin-page__actions">
+          <span v-if="showEditor && isDirty" class="admin-page__dirty">
+            <span class="admin-page__dirty-dot" aria-hidden="true" />
+            Non enregistré
+          </span>
+          <div
+            ref="accountMenuRef"
+            class="admin-account-menu"
+            @mouseenter="openAccountMenu"
+            @mouseleave="closeAccountMenuSoon"
+          >
+            <button
+              type="button"
+              class="admin-btn admin-btn--secondary"
+              :aria-expanded="accountMenuOpen"
+              aria-haspopup="menu"
+              @focus="openAccountMenu"
+              @click.stop="accountMenuOpen = !accountMenuOpen"
+            >
+              <AdminIcon name="user" :size="16" />
+              <span class="admin-btn__label">Mon compte</span>
+            </button>
+
+            <div
+              v-if="accountMenuOpen"
+              class="admin-account-menu__dropdown"
+              role="menu"
+              @mouseenter="openAccountMenu"
+              @mouseleave="closeAccountMenuSoon"
+            >
+              <button type="button" class="admin-account-menu__item" role="menuitem" @click="openAccountSettings">
+                <AdminIcon name="settings" :size="14" />
+                Paramètres
+              </button>
+              <button
+                type="button"
+                class="admin-account-menu__item admin-account-menu__item--danger"
+                role="menuitem"
+                @click="logout"
+              >
+                <AdminIcon name="logout" :size="14" />
+                Déconnexion
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </header>
 
@@ -432,7 +522,7 @@ useHead({
         <p>Vérification du backoffice…</p>
       </div>
 
-      <section v-else-if="!configError && propertyExists" class="admin-workspace">
+      <template v-else-if="!configError && propertyExists">
         <div v-if="authenticated && loading" class="admin-loading">
           <div class="admin-loading__spinner" aria-hidden="true" />
           <p>Chargement de {{ brandLabel }}…</p>
@@ -447,34 +537,38 @@ useHead({
             <AdminAlert v-if="saveMessage" variant="success" :message="saveMessage" />
           </div>
 
-          <div v-if="!showEditor" class="admin-empty">
-            <h2 class="admin-empty__title">Impossible d’afficher l’éditeur</h2>
-            <p>
-              {{
-                authenticated
-                  ? "Les données du site n’ont pas pu être chargées. Vérifiez votre connexion ou vos droits."
-                  : "Session expirée ou accès refusé pour ce site."
-              }}
-            </p>
-            <button type="button" class="admin-btn admin-btn--secondary" @click="fetchSite({ forceLoading: true })">
-              Réessayer
-            </button>
-          </div>
+          <AdminMainTabs v-if="showEditor && draft" :slug="slug" />
 
-          <PropertyAdminEditor
-            v-if="draft"
-            :key="draft.id"
-            ref="editorRef"
-            :model-value="draft"
-            :slug="slug"
-            :upload="uploadAsset"
-            :preview-url="previewUrl"
-            :save-draft="persistDraft"
-            :save-error="error"
-            @update:model-value="onDraftUpdate"
-          />
+          <section class="admin-workspace">
+            <div v-if="!showEditor" class="admin-empty">
+              <h2 class="admin-empty__title">Impossible d’afficher l’éditeur</h2>
+              <p>
+                {{
+                  authenticated
+                    ? "Les données du site n’ont pas pu être chargées. Vérifiez votre connexion ou vos droits."
+                    : "Session expirée ou accès refusé pour ce site."
+                }}
+              </p>
+              <button type="button" class="admin-btn admin-btn--secondary" @click="fetchSite({ forceLoading: true })">
+                Réessayer
+              </button>
+            </div>
+
+            <AdminLiveEditor
+              v-if="draft"
+              :key="draft.id"
+              ref="editorRef"
+              :model-value="draft"
+              :slug="slug"
+              :upload="uploadAsset"
+              :preview-url="previewUrl"
+              :save-draft="persistDraft"
+              :save-error="error"
+              @update:model-value="onDraftUpdate"
+            />
+          </section>
         </template>
-      </section>
+      </template>
     </main>
 
     <footer v-if="showEditor && isDirty" class="admin-savebar">
@@ -484,7 +578,14 @@ useHead({
         {{ saving ? "Enregistrement…" : "Enregistrer" }}
       </button>
     </footer>
+
+    <AdminAccountSettingsModal
+      :open="accountModalOpen"
+      :slug="slug"
+      @close="closeAccountSettings"
+    />
   </div>
+  </UApp>
 </template>
 
 <style src="../../../../assets/css/pages/admin/admin.css"></style>

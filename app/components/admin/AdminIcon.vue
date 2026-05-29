@@ -1,30 +1,8 @@
 <script setup lang="ts">
+import type { AdminIconName } from "./admin-icon-types"
+
 const props = defineProps<{
-  name:
-    | "settings"
-    | "image"
-    | "calendar"
-    | "card"
-    | "map"
-    | "text"
-    | "layout"
-    | "list"
-    | "mail"
-    | "external"
-    | "logout"
-    | "save"
-    | "check"
-    | "alert"
-    | "plus"
-    | "trash"
-    | "upload"
-    | "eye"
-    | "hestia"
-    | "search"
-    | "heart"
-    | "star"
-    | "user"
-    | "quote"
+  name: AdminIconName
   size?: number
 }>()
 
@@ -103,6 +81,10 @@ const size = computed(() => props.size ?? 18)
     <template v-else-if="name === 'trash'">
       <path d="M3 6h18M8 6V4h8v2M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
     </template>
+    <template v-else-if="name === 'pencil'">
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z" />
+    </template>
     <template v-else-if="name === 'upload'">
       <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12" />
     </template>
@@ -134,6 +116,46 @@ const size = computed(() => props.size ?? 18)
     </template>
     <template v-else-if="name === 'quote'">
       <path d="M7.5 12H4a4 4 0 0 1 0-8h1.5M16.5 12H13a4 4 0 0 1 0-8h1.5M7.5 20H6a4 4 0 0 1 0-8h1.5M16.5 20H15a4 4 0 0 1 0-8h1.5" />
+    </template>
+    <template v-else-if="name === 'key'">
+      <path d="m15.5 7.5 2.3 2.3a1 1 0 0 0 1.4 0l2.1-2.1a1 1 0 0 0 0-1.4l-2.3-2.3" />
+      <path d="m9 11 2 2" />
+      <path d="M7.5 15.5 4 19a2 2 0 1 0 2.8 2.8l3.5-3.5" />
+    </template>
+    <template v-else-if="name === 'home'">
+      <path d="M3 10.5 12 3l9 7.5" />
+      <path d="M5 10v10h5v-5h4v5h5V10" />
+    </template>
+    <template v-else-if="name === 'arrow-right'">
+      <path d="M5 12h14" />
+      <path d="m12 5 7 7-7 7" />
+    </template>
+    <template v-else-if="name === 'hand'">
+      <path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0" />
+      <path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2" />
+      <path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8" />
+      <path d="M18 11a2 2 0 1 1-4 0v-1a2 2 0 0 1 4 0v1Z" />
+    </template>
+    <template v-else-if="name === 'thumbs-up'">
+      <path d="M7 10v12" />
+      <path
+        d="M15 5.88 14.26V22h4.74a2 2 0 0 0 1.98-1.68l1.14-7A2 2 0 0 0 20.9 11H15V5.88a1 1 0 0 0-1.84-.73l-2.55 4.31"
+      />
+    </template>
+    <template v-else-if="name === 'message'">
+      <path
+        d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"
+      />
+    </template>
+    <template v-else-if="name === 'clock'">
+      <circle cx="12" cy="12" r="10" />
+      <path d="M12 6v6l4 2" />
+    </template>
+    <template v-else-if="name === 'map-pin'">
+      <path
+        d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"
+      />
+      <circle cx="12" cy="10" r="3" />
     </template>
   </svg>
 </template>

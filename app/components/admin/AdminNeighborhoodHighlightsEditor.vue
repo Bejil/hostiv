@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import AdminField from "./AdminField.vue"
 import AdminIcon from "./AdminIcon.vue"
-import AdminLocationHighlightIconPicker from "./AdminLocationHighlightIconPicker.vue"
+import AdminNeighborhoodHighlightDeleteModal from "./AdminNeighborhoodHighlightDeleteModal.vue"
+import AdminNeighborhoodHighlightEditModal from "./AdminNeighborhoodHighlightEditModal.vue"
+import LocationHighlightIcon from "../LocationHighlightIcon.vue"
 import { DEFAULT_LOCATION_HIGHLIGHT_ICON } from "../../data/location-highlight-icons"
 import type { PropertyNeighborhoodHighlight } from "../../types/property-site"
 
@@ -13,18 +14,13 @@ const emit = defineEmits<{
   "update:modelValue": [value: PropertyNeighborhoodHighlight[]]
 }>()
 
-const activeIndex = ref(0)
-
-const tabs = computed(() =>
-  props.modelValue.map((item, index) => ({
-    id: index,
-    label: item.title.trim() || `Point ${index + 1}`
-  }))
-)
-
-const activeItem = computed(() => props.modelValue[activeIndex.value])
-
-const canRemoveActiveItem = computed(() => props.modelValue.length > 1)
+const editModalOpen = ref(false)
+const deleteModalOpen = ref(false)
+const editingIndex = ref(0)
+const deletingIndex = ref<number | null>(null)
+const isCreatingNew = ref(false)
+const dragIndex = ref<number | null>(null)
+const dragOverIndex = ref<number | null>(null)
 
 function createEmptyItem(): PropertyNeighborhoodHighlight {
   return {
@@ -34,128 +30,211 @@ function createEmptyItem(): PropertyNeighborhoodHighlight {
   }
 }
 
-function updateItem(index: number, partial: Partial<PropertyNeighborhoodHighlight>) {
+const editingItem = computed(() => {
+  if (isCreatingNew.value) {
+    return createEmptyItem()
+  }
+
+  return props.modelValue[editingIndex.value] ?? createEmptyItem()
+})
+
+const deletingItem = computed(() =>
+  deletingIndex.value === null ? null : props.modelValue[deletingIndex.value]
+)
+
+function itemTitle(item: PropertyNeighborhoodHighlight, index: number) {
+  return item.title.trim() || `Point ${index + 1}`
+}
+
+function itemDescriptionPreview(item: PropertyNeighborhoodHighlight) {
+  return item.text.trim() || "Aucune description"
+}
+
+function openAdd() {
+  isCreatingNew.value = true
+  editingIndex.value = props.modelValue.length
+  editModalOpen.value = true
+}
+
+function openEdit(index: number) {
+  isCreatingNew.value = false
+  editingIndex.value = index
+  editModalOpen.value = true
+}
+
+function closeEdit() {
+  editModalOpen.value = false
+  isCreatingNew.value = false
+}
+
+function saveEdit(value: PropertyNeighborhoodHighlight) {
+  if (!value.title.trim()) {
+    return
+  }
+
   const items = [...props.modelValue]
 
-  if (!items[index]) {
+  if (isCreatingNew.value) {
+    items.push(value)
+  } else if (items[editingIndex.value]) {
+    items[editingIndex.value] = value
+  }
+
+  emit("update:modelValue", items)
+  closeEdit()
+}
+
+function openDelete(index: number) {
+  deletingIndex.value = index
+  deleteModalOpen.value = true
+}
+
+function closeDelete() {
+  deleteModalOpen.value = false
+  deletingIndex.value = null
+}
+
+function confirmDelete() {
+  if (deletingIndex.value === null) {
     return
   }
 
-  items[index] = { ...items[index], ...partial }
-  emit("update:modelValue", items)
-}
-
-function selectTab(index: number) {
-  activeIndex.value = index
-}
-
-function addItem() {
-  const items = [...props.modelValue, createEmptyItem()]
+  const items = props.modelValue.filter((_, index) => index !== deletingIndex.value)
 
   emit("update:modelValue", items)
-  activeIndex.value = items.length - 1
+  closeDelete()
 }
 
-function removeActiveItem() {
-  if (!canRemoveActiveItem.value) {
+function onDragStart(index: number, event: DragEvent) {
+  dragIndex.value = index
+  dragOverIndex.value = index
+
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = "move"
+    event.dataTransfer.setData("text/plain", String(index))
+  }
+}
+
+function onDragEnd() {
+  dragIndex.value = null
+  dragOverIndex.value = null
+}
+
+function onDragOver(index: number, event: DragEvent) {
+  event.preventDefault()
+
+  if (event.dataTransfer) {
+    event.dataTransfer.dropEffect = "move"
+  }
+
+  dragOverIndex.value = index
+}
+
+function onDrop(index: number, event: DragEvent) {
+  event.preventDefault()
+
+  const from =
+    dragIndex.value ?? Number.parseInt(event.dataTransfer?.getData("text/plain") ?? "", 10)
+
+  if (!Number.isFinite(from) || from === index) {
+    onDragEnd()
     return
   }
 
-  const items = props.modelValue.filter((_, index) => index !== activeIndex.value)
+  const items = [...props.modelValue]
+  const [moved] = items.splice(from, 1)
 
+  if (!moved) {
+    onDragEnd()
+    return
+  }
+
+  items.splice(index, 0, moved)
   emit("update:modelValue", items)
-  activeIndex.value = Math.min(activeIndex.value, items.length - 1)
+  onDragEnd()
 }
-
-watch(
-  tabs,
-  (items) => {
-    if (activeIndex.value < items.length) {
-      return
-    }
-
-    activeIndex.value = Math.max(0, items.length - 1)
-  },
-  { immediate: true }
-)
 </script>
 
 <template>
   <div class="admin-neighborhood-highlights">
-    <div class="admin-subpanel">
-      <div class="admin-subpanel__head">
-        <h3>Points du quartier</h3>
-        <button type="button" class="admin-btn admin-btn--secondary admin-btn--sm" @click="addItem">
-          <AdminIcon name="plus" :size="16" />
-          Ajouter un point
-        </button>
-      </div>
-
-      <p v-if="!modelValue.length" class="admin-neighborhood-highlights__empty">
-        Aucun point. Ajoutez au moins un point pour l’afficher sur le site.
-      </p>
-
-      <template v-else>
-        <div class="admin-tabs-shell">
-          <div class="admin-tabs" role="tablist" aria-label="Points du quartier">
-            <button
-              v-for="tab in tabs"
-              :key="tab.id"
-              type="button"
-              role="tab"
-              class="admin-tabs__btn"
-              :class="{ 'admin-tabs__btn--active': activeIndex === tab.id }"
-              :aria-selected="activeIndex === tab.id"
-              @click="selectTab(tab.id)"
-            >
-              {{ tab.label }}
-            </button>
-          </div>
-        </div>
-
-        <div v-if="activeItem" class="admin-neighborhood-highlights__panel" role="tabpanel">
-          <header class="admin-neighborhood-highlights__panel-top">
-            <div>
-              <p class="admin-neighborhood-highlights__panel-kicker">Point du quartier</p>
-              <h4 class="admin-neighborhood-highlights__panel-title">
-                {{ activeItem.title.trim() || "Sans titre" }}
-              </h4>
-            </div>
-            <button
-              v-if="canRemoveActiveItem"
-              type="button"
-              class="admin-btn admin-btn--ghost admin-btn--danger-ghost admin-btn--sm"
-              @click="removeActiveItem"
-            >
-              <AdminIcon name="trash" :size="16" />
-              Supprimer
-            </button>
-          </header>
-
-          <div class="admin-benefit-card-row">
-            <AdminLocationHighlightIconPicker
-              :model-value="activeItem.icon"
-              @update:model-value="updateItem(activeIndex, { icon: $event })"
-            />
-            <div class="admin-benefit-card-row__fields">
-              <AdminField
-                label="Titre"
-                full-width
-                :model-value="activeItem.title"
-                @update:model-value="updateItem(activeIndex, { title: $event as string })"
-              />
-              <AdminField
-                label="Texte"
-                type="textarea"
-                :rows="3"
-                full-width
-                :model-value="activeItem.text"
-                @update:model-value="updateItem(activeIndex, { text: $event as string })"
-              />
-            </div>
-          </div>
-        </div>
-      </template>
+    <div class="admin-subpanel__head admin-neighborhood-highlights__head">
+      <h3>Points du quartier</h3>
+      <button type="button" class="admin-btn admin-btn--secondary admin-btn--sm" @click="openAdd">
+        <AdminIcon name="plus" :size="16" />
+        Ajouter un point
+      </button>
     </div>
+
+    <p v-if="!modelValue.length" class="admin-neighborhood-highlights__empty">
+      Aucun point. Utilisez « Ajouter un point » pour en créer un.
+    </p>
+
+    <ul v-else class="admin-neighborhood-highlights__list">
+      <li
+        v-for="(item, index) in modelValue"
+        :key="`${index}-${item.title}-${item.icon}`"
+        class="admin-neighborhood-highlights__item"
+        :class="{
+          'admin-neighborhood-highlights__item--dragging': dragIndex === index,
+          'admin-neighborhood-highlights__item--drag-over':
+            dragOverIndex === index && dragIndex !== index
+        }"
+        @dragover="onDragOver(index, $event)"
+        @drop="onDrop(index, $event)"
+      >
+        <button
+          type="button"
+          class="admin-sortable-list__drag-handle"
+          aria-label="Glisser pour réordonner"
+          draggable="true"
+          @dragstart="onDragStart(index, $event)"
+          @dragend="onDragEnd"
+        />
+
+        <div class="admin-neighborhood-highlights__item-icon" aria-hidden="true">
+          <LocationHighlightIcon :name="item.icon" />
+        </div>
+
+        <div class="admin-neighborhood-highlights__item-body">
+          <p class="admin-neighborhood-highlights__item-title">{{ itemTitle(item, index) }}</p>
+          <p class="admin-neighborhood-highlights__item-text">{{ itemDescriptionPreview(item) }}</p>
+        </div>
+
+        <div class="admin-neighborhood-highlights__item-actions">
+          <button
+            type="button"
+            class="admin-btn admin-btn--secondary admin-btn--sm admin-btn--icon-only"
+            aria-label="Modifier"
+            @click="openEdit(index)"
+          >
+            <AdminIcon name="pencil" :size="16" />
+          </button>
+          <button
+            type="button"
+            class="admin-btn admin-btn--ghost admin-btn--danger-ghost admin-btn--sm admin-btn--icon-only"
+            aria-label="Supprimer"
+            @click="openDelete(index)"
+          >
+            <AdminIcon name="trash" :size="16" />
+          </button>
+        </div>
+      </li>
+    </ul>
+
+    <AdminNeighborhoodHighlightEditModal
+      v-if="editModalOpen"
+      :open="editModalOpen"
+      :item="editingItem"
+      :is-new="isCreatingNew"
+      @close="closeEdit"
+      @save="saveEdit"
+    />
+
+    <AdminNeighborhoodHighlightDeleteModal
+      :open="deleteModalOpen"
+      :point-title="deletingItem ? itemTitle(deletingItem, deletingIndex ?? 0) : 'Ce point'"
+      @cancel="closeDelete"
+      @confirm="confirmDelete"
+    />
   </div>
 </template>

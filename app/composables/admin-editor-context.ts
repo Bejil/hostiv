@@ -19,9 +19,6 @@ export type AdminEditorContext = {
   patchHostCaption: (value: string) => void
   getCopyField: (sectionId: string, fieldKey: string) => string
   patchCopySection: (sectionId: string, fieldKey: string, value: string) => void
-  logoPreviewRevision: Ref<number>
-  heroPreviewRevision: Ref<number>
-  hostPreviewRevision: Ref<number>
   subscriptionAccess: Ref<HostivSubscriptionAccess>
   onPublishedChange: (value: boolean) => void
 }

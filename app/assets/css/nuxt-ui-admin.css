@@ -1,0 +1,7 @@
+@import "tailwindcss";
+@import "@nuxt/ui";
+
+/* Tokens Nuxt UI alignés sur le backoffice */
+.admin-page {
+  --ui-radius: 0.65rem;
+}

@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import AdminField from "./AdminField.vue"
+import AdminFeaturedSpaceDeleteModal from "./AdminFeaturedSpaceDeleteModal.vue"
+import AdminFeaturedSpaceEditModal from "./AdminFeaturedSpaceEditModal.vue"
 import AdminIcon from "./AdminIcon.vue"
-import AdminImageUpload from "./AdminImageUpload.vue"
 import type { PropertyFeaturedSpace } from "../../types/property-site"
 
 const props = defineProps<{
@@ -14,23 +14,13 @@ const emit = defineEmits<{
   "update:modelValue": [value: PropertyFeaturedSpace[]]
 }>()
 
-/** Les 3 premières cartes (principale + 2 secondaires) ne peuvent pas être supprimées. */
-const PROTECTED_FEATURED_COUNT = 3
-
-const activeIndex = ref(0)
-
-const tabs = computed(() =>
-  props.modelValue.map((space, index) => ({
-    id: index,
-    label: space.tag.trim() || `Carte ${index + 1}`
-  }))
-)
-
-const activeSpace = computed(() => props.modelValue[activeIndex.value])
-
-const isMainCard = computed(() => activeIndex.value === 0)
-
-const canRemoveActiveSpace = computed(() => activeIndex.value >= PROTECTED_FEATURED_COUNT)
+const editModalOpen = ref(false)
+const deleteModalOpen = ref(false)
+const editingIndex = ref(0)
+const deletingIndex = ref<number | null>(null)
+const isCreatingNew = ref(false)
+const dragIndex = ref<number | null>(null)
+const dragOverIndex = ref<number | null>(null)
 
 function createEmptySpace(): PropertyFeaturedSpace {
   return {
@@ -42,38 +32,17 @@ function createEmptySpace(): PropertyFeaturedSpace {
   }
 }
 
-function updateSpace(index: number, partial: Partial<PropertyFeaturedSpace>) {
-  const spaces = [...props.modelValue]
-
-  if (!spaces[index]) {
-    return
+const editingSpace = computed(() => {
+  if (isCreatingNew.value) {
+    return createEmptySpace()
   }
 
-  spaces[index] = { ...spaces[index], ...partial }
-  emit("update:modelValue", spaces)
-}
+  return props.modelValue[editingIndex.value] ?? createEmptySpace()
+})
 
-function selectTab(index: number) {
-  activeIndex.value = index
-}
-
-function addSpace() {
-  const spaces = [...props.modelValue, createEmptySpace()]
-
-  emit("update:modelValue", spaces)
-  activeIndex.value = spaces.length - 1
-}
-
-function removeActiveSpace() {
-  if (!canRemoveActiveSpace.value) {
-    return
-  }
-
-  const spaces = props.modelValue.filter((_, index) => index !== activeIndex.value)
-
-  emit("update:modelValue", spaces)
-  activeIndex.value = Math.min(activeIndex.value, spaces.length - 1)
-}
+const deletingSpace = computed(() =>
+  deletingIndex.value === null ? null : props.modelValue[deletingIndex.value]
+)
 
 function defaultImagePath(index: number, current: string) {
   const trimmed = current.trim().replace(/^\/+/, "")
@@ -85,108 +54,213 @@ function defaultImagePath(index: number, current: string) {
   return `gallery/featured-${index + 1}.jpeg`
 }
 
-watch(
-  tabs,
-  (items) => {
-    if (activeIndex.value < items.length) {
-      return
-    }
+function cardImageSrc(space: PropertyFeaturedSpace, index: number) {
+  const path = defaultImagePath(index, space.image)
 
-    activeIndex.value = Math.max(0, items.length - 1)
-  },
-  { immediate: true }
-)
+  return path ? props.previewUrl(path) : ""
+}
+
+function cardTitle(space: PropertyFeaturedSpace, index: number) {
+  return space.title.trim() || `Carte ${index + 1}`
+}
+
+function cardDescriptionPreview(space: PropertyFeaturedSpace) {
+  return space.text.trim() || "Aucune description"
+}
+
+function openAdd() {
+  isCreatingNew.value = true
+  editingIndex.value = props.modelValue.length
+  editModalOpen.value = true
+}
+
+function openEdit(index: number) {
+  isCreatingNew.value = false
+  editingIndex.value = index
+  editModalOpen.value = true
+}
+
+function closeEdit() {
+  editModalOpen.value = false
+  isCreatingNew.value = false
+}
+
+function saveEdit(value: PropertyFeaturedSpace) {
+  if (!value.title.trim() || !value.image.trim()) {
+    return
+  }
+
+  const spaces = [...props.modelValue]
+
+  if (isCreatingNew.value) {
+    spaces.push(value)
+  } else if (spaces[editingIndex.value]) {
+    spaces[editingIndex.value] = value
+  }
+
+  emit("update:modelValue", spaces)
+  closeEdit()
+}
+
+function openDelete(index: number) {
+  deletingIndex.value = index
+  deleteModalOpen.value = true
+}
+
+function closeDelete() {
+  deleteModalOpen.value = false
+  deletingIndex.value = null
+}
+
+function confirmDelete() {
+  if (deletingIndex.value === null) {
+    return
+  }
+
+  const spaces = props.modelValue.filter((_, index) => index !== deletingIndex.value)
+
+  emit("update:modelValue", spaces)
+  closeDelete()
+}
+
+function onDragStart(index: number, event: DragEvent) {
+  dragIndex.value = index
+  dragOverIndex.value = index
+
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = "move"
+    event.dataTransfer.setData("text/plain", String(index))
+  }
+}
+
+function onDragEnd() {
+  dragIndex.value = null
+  dragOverIndex.value = null
+}
+
+function onDragOver(index: number, event: DragEvent) {
+  event.preventDefault()
+
+  if (event.dataTransfer) {
+    event.dataTransfer.dropEffect = "move"
+  }
+
+  dragOverIndex.value = index
+}
+
+function onDrop(index: number, event: DragEvent) {
+  event.preventDefault()
+
+  const from =
+    dragIndex.value ?? Number.parseInt(event.dataTransfer?.getData("text/plain") ?? "", 10)
+
+  if (!Number.isFinite(from) || from === index) {
+    onDragEnd()
+    return
+  }
+
+  const spaces = [...props.modelValue]
+  const [moved] = spaces.splice(from, 1)
+
+  if (!moved) {
+    onDragEnd()
+    return
+  }
+
+  spaces.splice(index, 0, moved)
+  emit("update:modelValue", spaces)
+  onDragEnd()
+}
 </script>
 
 <template>
   <div class="admin-featured-spaces">
-    <div class="admin-subpanel">
-      <div class="admin-subpanel__head">
-        <h3>Espaces mis en avant</h3>
-        <button type="button" class="admin-btn admin-btn--secondary admin-btn--sm" @click="addSpace">
-          <AdminIcon name="plus" :size="16" />
-          Ajouter une carte
-        </button>
-      </div>
-
-      <div v-if="!modelValue.length" class="admin-featured-spaces__empty">
-        Aucune carte. Ajoutez au moins un espace pour l’afficher sur le site.
-      </div>
-
-      <template v-else>
-        <div class="admin-tabs-shell">
-          <div class="admin-tabs" role="tablist" aria-label="Cartes espaces">
-            <button
-              v-for="tab in tabs"
-              :key="tab.id"
-              type="button"
-              role="tab"
-              class="admin-tabs__btn"
-              :class="{ 'admin-tabs__btn--active': activeIndex === tab.id }"
-              :aria-selected="activeIndex === tab.id"
-              @click="selectTab(tab.id)"
-            >
-              {{ tab.label }}
-            </button>
-          </div>
-        </div>
-
-        <div v-if="activeSpace" class="admin-featured-spaces__panel" role="tabpanel">
-          <header class="admin-featured-spaces__panel-top">
-            <div>
-              <p class="admin-featured-spaces__panel-kicker">
-                {{ isMainCard ? "Grande carte" : "Carte secondaire" }}
-              </p>
-              <h4 class="admin-featured-spaces__panel-title">
-                {{ activeSpace.title.trim() || "Sans titre" }}
-              </h4>
-            </div>
-            <button
-              v-if="canRemoveActiveSpace"
-              type="button"
-              class="admin-btn admin-btn--ghost admin-btn--danger-ghost admin-btn--sm"
-              @click="removeActiveSpace"
-            >
-              <AdminIcon name="trash" :size="16" />
-              Supprimer
-            </button>
-          </header>
-
-          <div class="admin-featured-space-row">
-            <AdminImageUpload
-              cover
-              label="Image"
-              :model-value="activeSpace.image"
-              :default-path="defaultImagePath(activeIndex, activeSpace.image)"
-              :upload="upload"
-              :preview-url="previewUrl"
-              @update:model-value="updateSpace(activeIndex, { image: $event as string })"
-            />
-            <div class="admin-featured-space-row__fields">
-              <div class="admin-grid admin-grid--2 admin-featured-space-row__pair">
-                <AdminField
-                  label="Tag"
-                  :model-value="activeSpace.tag"
-                  @update:model-value="updateSpace(activeIndex, { tag: $event as string })"
-                />
-                <AdminField
-                  label="Titre"
-                  :model-value="activeSpace.title"
-                  @update:model-value="updateSpace(activeIndex, { title: $event as string })"
-                />
-              </div>
-              <AdminField
-                label="Texte"
-                type="textarea"
-                :rows="3"
-                full-width
-                :model-value="activeSpace.text"
-                @update:model-value="updateSpace(activeIndex, { text: $event as string })"
-              />
-            </div>
-          </div>
-        </div>
-      </template>
+    <div class="admin-subpanel__head admin-featured-spaces__head">
+      <h3>Espaces mis en avant</h3>
+      <button type="button" class="admin-btn admin-btn--secondary admin-btn--sm" @click="openAdd">
+        <AdminIcon name="plus" :size="16" />
+        Ajouter une carte
+      </button>
     </div>
+
+    <p v-if="!modelValue.length" class="admin-featured-spaces__empty">
+      Aucune carte. Utilisez « Ajouter une carte » pour en créer une.
+    </p>
+
+    <ul v-else class="admin-featured-spaces__list">
+      <li
+        v-for="(space, index) in modelValue"
+        :key="`${index}-${space.title}-${space.image}`"
+        class="admin-featured-spaces__item"
+        :class="{
+          'admin-featured-spaces__item--dragging': dragIndex === index,
+          'admin-featured-spaces__item--drag-over': dragOverIndex === index && dragIndex !== index
+        }"
+        @dragover="onDragOver(index, $event)"
+        @drop="onDrop(index, $event)"
+      >
+        <button
+          type="button"
+          class="admin-sortable-list__drag-handle"
+          aria-label="Glisser pour réordonner"
+          draggable="true"
+          @dragstart="onDragStart(index, $event)"
+          @dragend="onDragEnd"
+        />
+
+        <div class="admin-featured-spaces__item-thumb" aria-hidden="true">
+          <img
+            v-if="cardImageSrc(space, index)"
+            :src="cardImageSrc(space, index)"
+            :alt="''"
+            class="admin-featured-spaces__item-image"
+          />
+          <div v-else class="admin-featured-spaces__item-image admin-featured-spaces__item-image--empty" />
+        </div>
+
+        <div class="admin-featured-spaces__item-body">
+          <p class="admin-featured-spaces__item-title">{{ cardTitle(space, index) }}</p>
+          <p class="admin-featured-spaces__item-text">{{ cardDescriptionPreview(space) }}</p>
+        </div>
+
+        <div class="admin-featured-spaces__item-actions">
+          <button
+            type="button"
+            class="admin-btn admin-btn--secondary admin-btn--sm admin-btn--icon-only"
+            aria-label="Modifier"
+            @click="openEdit(index)"
+          >
+            <AdminIcon name="pencil" :size="16" />
+          </button>
+          <button
+            type="button"
+            class="admin-btn admin-btn--ghost admin-btn--danger-ghost admin-btn--sm admin-btn--icon-only"
+            aria-label="Supprimer"
+            @click="openDelete(index)"
+          >
+            <AdminIcon name="trash" :size="16" />
+          </button>
+        </div>
+      </li>
+    </ul>
+
+    <AdminFeaturedSpaceEditModal
+      v-if="editModalOpen"
+      :open="editModalOpen"
+      :space="editingSpace"
+      :card-index="editingIndex"
+      :is-new="isCreatingNew"
+      :upload="upload"
+      :preview-url="previewUrl"
+      @close="closeEdit"
+      @save="saveEdit"
+    />
+
+    <AdminFeaturedSpaceDeleteModal
+      :open="deleteModalOpen"
+      :card-title="deletingSpace ? cardTitle(deletingSpace, deletingIndex ?? 0) : 'Cette carte'"
+      @cancel="closeDelete"
+      @confirm="confirmDelete"
+    />
   </div>
 </template>
