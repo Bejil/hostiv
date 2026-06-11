@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { Check, Star } from "@lucide/vue"
-import { hostivPricing, type HostivPricingPlanId } from "../../data/hostivLanding"
-import { getHostivPricingPlan } from "../../utils/hostiv-subscription-pricing"
+import type { HostivPricingPlanId } from "../../data/hostivLanding"
 
 const props = defineProps<{
   planId: HostivPricingPlanId
@@ -13,8 +12,12 @@ const emit = defineEmits<{
   select: []
 }>()
 
-const plan = computed(() => getHostivPricingPlan(props.planId))
-const starterFeatures = hostivPricing.plans[0].features
+const { landing } = useHostivLocale()
+
+const plan = computed(
+  () => landing.value.pricing.plans.find((entry) => entry.id === props.planId) ?? landing.value.pricing.plans[1]
+)
+const starterFeatures = computed(() => landing.value.pricing.plans[0].features)
 </script>
 
 <template>

@@ -4,7 +4,6 @@ import { adminUiFormat } from "../data/admin-ui"
 import {
   evaluateHostivPassword,
   HOSTIV_PASSWORD_MIN_LENGTH,
-  hostivPasswordRuleLabels,
   type HostivPasswordRuleKey
 } from "../utils/hostiv-password-rules"
 
@@ -32,14 +31,16 @@ const passwordRuleKeys: HostivPasswordRuleKey[] = [
 const passwordRules = computed(() => evaluateHostivPassword(props.password))
 
 const { ui } = useAdminUi()
+const { landing: hostivLanding } = useHostivLocale()
 const adminPasswordRules = computed(() => ui.value.extended.account.passwordRules)
+const hostivPasswordRules = computed(() => hostivLanding.value.accountModal.passwordRules)
 
 const introText = computed(() => {
   if (props.variant === "admin" && adminPasswordRules.value) {
     return adminPasswordRules.value.intro
   }
 
-  return "Votre mot de passe doit être suffisamment long et complexe en intégrant des lettres (majuscules et minuscules), des chiffres, de la ponctuation et des caractères spéciaux :"
+  return hostivPasswordRules.value.intro
 })
 
 function ruleLabel(key: HostivPasswordRuleKey) {
@@ -51,7 +52,7 @@ function ruleLabel(key: HostivPasswordRuleKey) {
     return adminPasswordRules.value[key]
   }
 
-  return hostivPasswordRuleLabels[key]
+  return hostivPasswordRules.value[key]
 }
 
 const rootClass = computed(() =>

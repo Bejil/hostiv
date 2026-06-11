@@ -324,6 +324,119 @@ export const hostivNotFoundUi = {
   }
 } as const
 
+export const hostivAccountModalUi = {
+  close: "Fermer",
+  tabsAria: "Type de compte",
+  signupTab: "Inscription",
+  loginTab: "Connexion",
+  titles: {
+    signup: "Créer votre compte",
+    login: "Bon retour"
+  },
+  subtitles: {
+    signup:
+      "Choisissez votre forfait, renseignez vos informations puis payez en ligne. Votre compte et votre site sont créés après le paiement.",
+    login: "Connectez-vous pour gérer votre site et vos réservations."
+  },
+  plans: {
+    legend: "Forfait",
+    chooseAria: "Choisir un forfait",
+    note:
+      "Paiement unique par carte via Stripe. Aucun compte ni site n’est créé tant que le paiement n’est pas confirmé."
+  },
+  fields: {
+    fullName: "Nom complet",
+    fullNamePlaceholder: "Marie Dupont",
+    propertyName: "Nom du bien",
+    propertyPlaceholder: "Villa des Oliviers",
+    email: "E-mail",
+    emailPlaceholder: "vous@exemple.com",
+    password: "Mot de passe",
+    passwordPlaceholderSignup: "Créez un mot de passe sécurisé",
+    passwordPlaceholderLogin: "Votre mot de passe"
+  },
+  slugStatus: {
+    checking: "Vérification de la disponibilité…",
+    available: "Nom disponible — votre site sera accessible sur /{slug}",
+    taken: "Ce nom est déjà utilisé. Choisissez un autre nom de bien.",
+    tooShort: "Nom trop court (au moins 3 caractères une fois converti en adresse web).",
+    reserved: "Ce nom est réservé et ne peut pas être utilisé.",
+    invalidFormat: "Le nom ne peut contenir que des lettres et des chiffres.",
+    invalid: "Nom invalide pour l’adresse de votre site.",
+    error: "Impossible de vérifier ce nom pour le moment.",
+    preview: "Adresse prévue : /{slug}",
+    hint: "Saisissez un nom pour générer l’adresse de votre site."
+  },
+  passwordRules: {
+    intro:
+      "Votre mot de passe doit être suffisamment long et complexe en intégrant des lettres (majuscules et minuscules), des chiffres, de la ponctuation et des caractères spéciaux :",
+    length: "Au moins 8 caractères",
+    lowercase: "Une lettre minuscule",
+    uppercase: "Une lettre majuscule",
+    digit: "Un chiffre",
+    special: "Un caractère spécial ou de ponctuation"
+  },
+  errors: {
+    paymentCancelled: "Paiement annulé. Aucun compte n’a été créé — vous pouvez réessayer.",
+    nameAndEmail: "Renseignez votre nom et un e-mail valide.",
+    passwordInvalid: "Choisissez un mot de passe qui respecte tous les critères de sécurité.",
+    propertyRequired: "Indiquez le nom de votre bien pour créer votre site.",
+    propertyTaken: "Ce nom de bien est déjà utilisé. Modifiez-le pour continuer.",
+    propertyInvalid: "Choisissez un nom de bien valide et disponible.",
+    checkoutFailed: "Impossible d’ouvrir le paiement. Réessayez plus tard.",
+    loginCredentials: "Indiquez votre e-mail et votre mot de passe.",
+    supabaseUnavailable: "Connexion indisponible : Supabase n’est pas configuré sur cet environnement.",
+    noSite:
+      "Connexion réussie, mais aucun site n’est associé à ce compte. Contactez-nous si le problème persiste.",
+    loginFailed: "Connexion impossible. Vérifiez vos identifiants."
+  },
+  buttons: {
+    payLoading: "Redirection vers Stripe…",
+    pay: "Payer {price}€ / {period} — {name}",
+    loginLoading: "Connexion…",
+    login: "Se connecter"
+  },
+  forgotPasswordLink: "Mot de passe oublié ?",
+  forgotPassword: {
+    title: "Mot de passe oublié",
+    subtitle:
+      "Saisissez l’e-mail de votre compte Hostiv. Si un compte existe, vous recevrez un lien valable 24 h.",
+    submit: "Envoyer le lien",
+    submitting: "Envoi…",
+    backToLogin: "Retour à la connexion",
+    success:
+      "Si un compte est associé à cette adresse, un e-mail vient de vous être envoyé avec un lien de réinitialisation.",
+    errors: {
+      invalidEmail: "Adresse e-mail invalide.",
+      sendFailed: "Impossible d’envoyer l’e-mail pour le moment."
+    }
+  }
+} as const
+
+export const hostivPasswordResetPageUi = {
+  loading: "Vérification du lien…",
+  title: "Nouveau mot de passe",
+  subtitle: "Choisissez un mot de passe sécurisé. Ce lien est valable 24 h.",
+  confirmPassword: "Confirmer le mot de passe",
+  confirmPasswordPlaceholder: "Retapez votre mot de passe",
+  submit: "Enregistrer le mot de passe",
+  submitting: "Enregistrement…",
+  successTitle: "Mot de passe mis à jour",
+  successLead: "Vous pouvez vous connecter avec votre nouveau mot de passe.",
+  openLogin: "Se connecter",
+  backHome: "Retour à l’accueil",
+  errors: {
+    incompleteLink: "Lien incomplet. Utilisez le lien reçu par e-mail.",
+    invalidLink: "Lien invalide ou déjà utilisé.",
+    expiredLink: "Ce lien a expiré. Demandez un nouveau lien depuis la page de connexion.",
+    loadFailed: "Impossible de vérifier ce lien.",
+    passwordMismatch: "Les mots de passe ne correspondent pas.",
+    passwordInvalid: "Choisissez un mot de passe qui respecte tous les critères de sécurité.",
+    saveFailed: "Impossible de mettre à jour le mot de passe."
+  },
+  seoTitle: "Réinitialiser votre mot de passe | Hostiv"
+} as const
+
 export const hostivFooter = {
   baseline: "Réservation directe pour les hôtes de locations saisonnières.",
   columns: [

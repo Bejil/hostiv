@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Check, CheckCircle2, Loader2, X } from "@lucide/vue"
 import type { HostivAccountModalMode } from "../../composables/useHostivAccountModal"
-import { hostivPricing, type HostivPricingPlanId } from "../../data/hostivLanding"
+import type { HostivPricingPlanId } from "../../data/hostivLanding"
 import { useHostivPropertySlugCheck } from "../../composables/useHostivPropertySlugCheck"
 import { startHostivSignupCheckout } from "../../composables/useHostivSubscriptionCheckout"
 import { clearHostivSignupLoginCredentials } from "../../utils/hostiv-signup-session"
@@ -10,11 +10,13 @@ import HostivPasswordRulesChecklist from "../HostivPasswordRulesChecklist.vue"
 import HostivSignupPlanCard from "./HostivSignupPlanCard.vue"
 
 const { open, mode, close, selectedPlan, setSelectedPlan } = useHostivAccountModal()
+const { landing, locale } = useHostivLocale()
+const modal = computed(() => landing.value.accountModal)
 
-const pricingPlans = hostivPricing.plans
+const pricingPlans = computed(() => landing.value.pricing.plans)
 
-const activePricingPlan = computed(() =>
-  pricingPlans.find((plan) => plan.id === selectedPlan.value) ?? pricingPlans[1]
+const activePricingPlan = computed(
+  () => pricingPlans.value.find((plan) => plan.id === selectedPlan.value) ?? pricingPlans.value[1]
 )
 
 const fullName = ref("")
@@ -41,70 +43,104 @@ const showPasswordRules = computed(
 
 const error = ref("")
 const success = ref("")
+const showForgotPassword = ref(false)
+const forgotSuccess = ref(false)
 
-const title = computed(() =>
-  mode.value === "signup" ? "Créer votre compte" : "Bon retour"
-)
+const title = computed(() => {
+  if (showForgotPassword.value) {
+    return modal.value.forgotPassword.title
+  }
 
-const subtitle = computed(() =>
-  mode.value === "signup"
-    ? "Choisissez votre forfait, renseignez vos informations puis payez en ligne. Votre compte et votre site sont créés après le paiement."
-    : "Connectez-vous pour gérer votre site et vos réservations."
-)
+  return mode.value === "signup" ? modal.value.titles.signup : modal.value.titles.login
+})
+
+const subtitle = computed(() => {
+  if (showForgotPassword.value) {
+    return forgotSuccess.value ? modal.value.forgotPassword.success : modal.value.forgotPassword.subtitle
+  }
+
+  return mode.value === "signup" ? modal.value.subtitles.signup : modal.value.subtitles.login
+})
 
 const route = useRoute()
 const router = useRouter()
 
 const showPropertySlugStatus = computed(() => Boolean(propertyName.value.trim()))
 
+function formatModalCopy(template: string, vars: Record<string, string | number>) {
+  return Object.entries(vars).reduce(
+    (result, [key, value]) => result.replaceAll(`{${key}}`, String(value)),
+    template
+  )
+}
+
 const propertySlugStatusMessage = computed(() => {
   if (!propertyName.value.trim()) {
     return ""
   }
 
+  const slug = propertySlug.value
+  const status = modal.value.slugStatus
+
   switch (propertySlugStatus.value) {
     case "checking":
-      return "Vérification de la disponibilité…"
+      return status.checking
     case "available":
-      return `Nom disponible — votre site sera accessible sur /${propertySlug.value}`
+      return formatModalCopy(status.available, { slug })
     case "taken":
-      return "Ce nom est déjà utilisé. Choisissez un autre nom de bien."
+      return status.taken
     case "invalid": {
       const reason = propertySlugValidity.value.valid ? "" : propertySlugValidity.value.reason
 
       if (reason === "too_short") {
-        return "Nom trop court (au moins 3 caractères une fois converti en adresse web)."
+        return status.tooShort
       }
 
       if (reason === "reserved") {
-        return "Ce nom est réservé et ne peut pas être utilisé."
+        return status.reserved
       }
 
       if (reason === "invalid_format") {
-        return "Le nom ne peut contenir que des lettres et des chiffres."
+        return status.invalidFormat
       }
 
-      return "Nom invalide pour l’adresse de votre site."
+      return status.invalid
     }
     case "error":
-      return "Impossible de vérifier ce nom pour le moment."
+      return status.error
     default:
-      return propertySlug.value
-        ? `Adresse prévue : /${propertySlug.value}`
-        : "Saisissez un nom pour générer l’adresse de votre site."
+      return slug ? formatModalCopy(status.preview, { slug }) : status.hint
   }
+})
+
+const payButtonLabel = computed(() => {
+  if (loading.value) {
+    return modal.value.buttons.payLoading
+  }
+
+  const plan = activePricingPlan.value
+
+  return formatModalCopy(modal.value.buttons.pay, {
+    price: plan.price,
+    period: plan.period,
+    name: plan.name
+  })
 })
 
 watch(open, (isOpen) => {
   if (isOpen) {
     error.value = ""
     success.value = ""
+    showForgotPassword.value = false
+    forgotSuccess.value = false
     passwordFieldFocused.value = false
     propertyFieldFocused.value = false
     document.body.style.overflow = "hidden"
     return
   }
 
+  showForgotPassword.value = false
+  forgotSuccess.value = false
   passwordFieldFocused.value = false
   propertyFieldFocused.value = false
   document.body.style.overflow = ""
@@ -119,7 +155,7 @@ watch(
 
     mode.value = "signup"
     open.value = true
-    error.value = "Paiement annulé. Aucun compte n’a été créé — vous pouvez réessayer."
+    error.value = modal.value.errors.paymentCancelled
     clearHostivSignupLoginCredentials()
 
     const query = { ...route.query }
@@ -140,10 +176,29 @@ function switchMode(next: HostivAccountModalMode) {
   }
 
   mode.value = next
+  showForgotPassword.value = false
+  forgotSuccess.value = false
   error.value = ""
   success.value = ""
   passwordFieldFocused.value = false
   propertyFieldFocused.value = false
+}
+
+function openForgotPasswordView() {
+  if (loading.value) {
+    return
+  }
+
+  mode.value = "login"
+  showForgotPassword.value = true
+  forgotSuccess.value = false
+  error.value = ""
+}
+
+function backToLoginView() {
+  showForgotPassword.value = false
+  forgotSuccess.value = false
+  error.value = ""
 }
 
 function onBackdropClick(event: MouseEvent) {
@@ -169,14 +224,15 @@ async function onSignupSubmit() {
   const name = fullName.value.trim()
   const mail = email.value.trim()
   const pass = password.value
+  const errors = modal.value.errors
 
   if (!name || !mail) {
-    error.value = "Renseignez votre nom et un e-mail valide."
+    error.value = errors.nameAndEmail
     return
   }
 
   if (!isHostivPasswordValid(pass)) {
-    error.value = "Choisissez un mot de passe qui respecte tous les critères de sécurité."
+    error.value = errors.passwordInvalid
     passwordFieldFocused.value = true
     return
   }
@@ -184,7 +240,7 @@ async function onSignupSubmit() {
   const trimmedProperty = propertyName.value.trim()
 
   if (!trimmedProperty) {
-    error.value = "Indiquez le nom de votre bien pour créer votre site."
+    error.value = errors.propertyRequired
     propertyFieldFocused.value = true
     return
   }
@@ -195,9 +251,7 @@ async function onSignupSubmit() {
 
   if (!isSlugReady.value) {
     error.value =
-      propertySlugStatus.value === "taken"
-        ? "Ce nom de bien est déjà utilisé. Modifiez-le pour continuer."
-        : "Choisissez un nom de bien valide et disponible."
+      propertySlugStatus.value === "taken" ? errors.propertyTaken : errors.propertyInvalid
     propertyFieldFocused.value = true
     return
   }
@@ -218,7 +272,40 @@ async function onSignupSubmit() {
 
     error.value =
       err.data?.message ||
-      (cause instanceof Error ? cause.message : "Impossible d’ouvrir le paiement. Réessayez plus tard.")
+      (cause instanceof Error ? cause.message : errors.checkoutFailed)
+  } finally {
+    loading.value = false
+  }
+}
+
+async function onForgotPasswordSubmit() {
+  error.value = ""
+
+  const mail = email.value.trim()
+  const forgot = modal.value.forgotPassword
+
+  if (!mail) {
+    error.value = forgot.errors.invalidEmail
+    return
+  }
+
+  loading.value = true
+
+  try {
+    await $fetch("/api/hostiv/password-reset/request", {
+      method: "POST",
+      body: {
+        email: mail,
+        locale: locale.value
+      }
+    })
+
+    forgotSuccess.value = true
+    error.value = ""
+  } catch (err: unknown) {
+    const e = err as { data?: { message?: string }; message?: string }
+
+    error.value = e.data?.message || e.message || forgot.errors.sendFailed
   } finally {
     loading.value = false
   }
@@ -230,9 +317,10 @@ async function onLoginSubmit() {
 
   const mail = email.value.trim()
   const pass = password.value
+  const errors = modal.value.errors
 
   if (!mail || !pass) {
-    error.value = "Indiquez votre e-mail et votre mot de passe."
+    error.value = errors.loginCredentials
     return
   }
 
@@ -244,7 +332,7 @@ async function onLoginSubmit() {
     try {
       supabase = useSupabaseClient()
     } catch {
-      throw new Error("Connexion indisponible : Supabase n’est pas configuré sur cet environnement.")
+      throw new Error(errors.supabaseUnavailable)
     }
 
     const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
@@ -259,16 +347,13 @@ async function onLoginSubmit() {
     const adminPath = await resolveHostivAdminPath(signInData.session)
 
     if (!adminPath) {
-      throw new Error(
-        "Connexion réussie, mais aucun site n’est associé à ce compte. Contactez-nous si le problème persiste."
-      )
+      throw new Error(errors.noSite)
     }
 
     close()
     await navigateTo(adminPath)
   } catch (cause) {
-    error.value =
-      cause instanceof Error ? cause.message : "Connexion impossible. Vérifiez vos identifiants."
+    error.value = cause instanceof Error ? cause.message : errors.loginFailed
   } finally {
     loading.value = false
   }
@@ -298,7 +383,7 @@ async function onLoginSubmit() {
             <span class="hostiv-modal__glow" aria-hidden="true" />
 
             <button type="button" class="hostiv-modal__close" :disabled="loading" @click="close">
-              <span class="sr-only">Fermer</span>
+              <span class="sr-only">{{ modal.close }}</span>
               <X :size="18" stroke-width="2" />
             </button>
 
@@ -312,7 +397,12 @@ async function onLoginSubmit() {
               </div>
             </header>
 
-            <div v-if="!success" class="hostiv-modal__tabs" role="tablist" aria-label="Type de compte">
+            <div
+              v-if="!success && !showForgotPassword"
+              class="hostiv-modal__tabs"
+              role="tablist"
+              :aria-label="modal.tabsAria"
+            >
               <button
                 type="button"
                 role="tab"
@@ -321,7 +411,7 @@ async function onLoginSubmit() {
                 :aria-selected="mode === 'signup'"
                 @click="switchMode('signup')"
               >
-                Inscription
+                {{ modal.signupTab }}
               </button>
               <button
                 type="button"
@@ -331,7 +421,7 @@ async function onLoginSubmit() {
                 :aria-selected="mode === 'login'"
                 @click="switchMode('login')"
               >
-                Connexion
+                {{ modal.loginTab }}
               </button>
             </div>
 
@@ -341,21 +431,21 @@ async function onLoginSubmit() {
               </span>
               <p class="hostiv-modal__success">{{ success }}</p>
               <button type="button" class="hostiv-btn hostiv-btn--primary hostiv-modal__submit" @click="close">
-                Fermer
+                {{ modal.close }}
               </button>
             </div>
 
             <form
-              v-else-if="mode === 'signup'"
+              v-else-if="mode === 'signup' && !showForgotPassword"
               class="hostiv-modal__form"
               @submit.prevent="onSignupSubmit"
             >
               <fieldset class="hostiv-modal__plans">
-                <legend class="hostiv-modal__plans-legend">Forfait</legend>
+                <legend class="hostiv-modal__plans-legend">{{ modal.plans.legend }}</legend>
                 <div
                   class="hostiv-modal__plans-grid hostiv-modal__plans-grid--detailed"
                   role="radiogroup"
-                  aria-label="Choisir un forfait"
+                  :aria-label="modal.plans.chooseAria"
                 >
                   <HostivSignupPlanCard
                     v-for="plan in pricingPlans"
@@ -367,23 +457,30 @@ async function onLoginSubmit() {
                   />
                 </div>
                 <p class="hostiv-modal__plans-note">
-                  Paiement unique par carte via Stripe. Aucun compte ni site n’est créé tant que le paiement
-                  n’est pas confirmé.
+                  {{ modal.plans.note }}
                 </p>
               </fieldset>
 
               <label class="hostiv-modal__field">
-                <span>Nom complet</span>
-                <input v-model="fullName" type="text" autocomplete="name" placeholder="Marie Dupont" required />
+                <span>{{ modal.fields.fullName }}</span>
+                <input
+                  v-model="fullName"
+                  type="text"
+                  autocomplete="name"
+                  :placeholder="modal.fields.fullNamePlaceholder"
+                  required
+                />
               </label>
               <div class="hostiv-modal__field hostiv-modal__field--property">
-                <label class="hostiv-modal__field-label" for="hostiv-signup-property">Nom du bien</label>
+                <label class="hostiv-modal__field-label" for="hostiv-signup-property">
+                  {{ modal.fields.propertyName }}
+                </label>
                 <input
                   id="hostiv-signup-property"
                   v-model="propertyName"
                   type="text"
                   autocomplete="organization"
-                  placeholder="Villa des Oliviers"
+                  :placeholder="modal.fields.propertyPlaceholder"
                   required
                   aria-describedby="hostiv-property-slug-status"
                   @focus="propertyFieldFocused = true"
@@ -432,23 +529,25 @@ async function onLoginSubmit() {
                 </div>
               </div>
               <label class="hostiv-modal__field">
-                <span>E-mail</span>
+                <span>{{ modal.fields.email }}</span>
                 <input
                   v-model="email"
                   type="email"
                   autocomplete="email"
-                  placeholder="vous@exemple.com"
+                  :placeholder="modal.fields.emailPlaceholder"
                   required
                 />
               </label>
               <div class="hostiv-modal__field hostiv-modal__field--password">
-                <label class="hostiv-modal__field-label" for="hostiv-signup-password">Mot de passe</label>
+                <label class="hostiv-modal__field-label" for="hostiv-signup-password">
+                  {{ modal.fields.password }}
+                </label>
                 <input
                   id="hostiv-signup-password"
                   v-model="password"
                   type="password"
                   autocomplete="new-password"
-                  placeholder="Créez un mot de passe sécurisé"
+                  :placeholder="modal.fields.passwordPlaceholderSignup"
                   required
                   aria-describedby="hostiv-password-rules"
                   @focus="passwordFieldFocused = true"
@@ -470,35 +569,74 @@ async function onLoginSubmit() {
                 :disabled="loading"
                 @mousedown.prevent
               >
-                {{
-                  loading
-                    ? "Redirection vers Stripe…"
-                    : `Payer ${activePricingPlan.price}€ / an — ${activePricingPlan.name}`
-                }}
+                {{ payButtonLabel }}
+              </button>
+            </form>
+
+            <form
+              v-else-if="showForgotPassword"
+              class="hostiv-modal__form"
+              @submit.prevent="onForgotPasswordSubmit"
+            >
+              <template v-if="!forgotSuccess">
+                <label class="hostiv-modal__field">
+                  <span>{{ modal.fields.email }}</span>
+                  <input
+                    v-model="email"
+                    type="email"
+                    autocomplete="email"
+                    :placeholder="modal.fields.emailPlaceholder"
+                    required
+                  />
+                </label>
+
+                <p v-if="error" class="hostiv-modal__error" role="alert">{{ error }}</p>
+
+                <button
+                  type="submit"
+                  class="hostiv-btn hostiv-btn--primary hostiv-modal__submit"
+                  :disabled="loading"
+                >
+                  {{ loading ? modal.forgotPassword.submitting : modal.forgotPassword.submit }}
+                </button>
+              </template>
+
+              <button
+                type="button"
+                class="hostiv-btn hostiv-btn--secondary hostiv-modal__submit"
+                @click="backToLoginView"
+              >
+                {{ modal.forgotPassword.backToLogin }}
               </button>
             </form>
 
             <form v-else class="hostiv-modal__form" @submit.prevent="onLoginSubmit">
               <label class="hostiv-modal__field">
-                <span>E-mail</span>
+                <span>{{ modal.fields.email }}</span>
                 <input
                   v-model="email"
                   type="email"
                   autocomplete="email"
-                  placeholder="vous@exemple.com"
+                  :placeholder="modal.fields.emailPlaceholder"
                   required
                 />
               </label>
               <label class="hostiv-modal__field">
-                <span>Mot de passe</span>
+                <span>{{ modal.fields.password }}</span>
                 <input
                   v-model="password"
                   type="password"
                   autocomplete="current-password"
-                  placeholder="Votre mot de passe"
+                  :placeholder="modal.fields.passwordPlaceholderLogin"
                   required
                 />
               </label>
+
+              <p class="hostiv-modal__forgot-wrap">
+                <button type="button" class="hostiv-modal__forgot-link" @click="openForgotPasswordView">
+                  {{ modal.forgotPasswordLink }}
+                </button>
+              </p>
 
               <p v-if="error" class="hostiv-modal__error" role="alert">{{ error }}</p>
 
@@ -507,7 +645,7 @@ async function onLoginSubmit() {
                 class="hostiv-btn hostiv-btn--primary hostiv-modal__submit"
                 :disabled="loading"
               >
-                {{ loading ? "Connexion…" : "Se connecter" }}
+                {{ loading ? modal.buttons.loginLoading : modal.buttons.login }}
               </button>
             </form>
           </div>

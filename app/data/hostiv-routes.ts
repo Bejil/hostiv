@@ -6,6 +6,30 @@ export const HOSTIV_HOME_PATHS: Record<HostivLocale, string> = {
   en: "/en"
 }
 
+export const HOSTIV_PASSWORD_RESET_PATHS: Record<HostivLocale, string> = {
+  fr: "/mot-de-passe/reinitialiser",
+  en: "/en/reset-password"
+}
+
+const PASSWORD_RESET_PATHS = new Set(Object.values(HOSTIV_PASSWORD_RESET_PATHS))
+
+/** Ancienne URL produite avant le mapping dédié FR ↔ EN. */
+export const HOSTIV_PASSWORD_RESET_LEGACY_EN_PATH = "/en/mot-de-passe/reinitialiser"
+
+export function normalizeHostivMarketingPath(path: string) {
+  const withoutQuery = (path.split("?")[0]?.split("#")[0] || "/").trim() || "/"
+
+  if (withoutQuery.length > 1 && withoutQuery.endsWith("/")) {
+    return withoutQuery.slice(0, -1)
+  }
+
+  return withoutQuery
+}
+
+export function isHostivPasswordResetRoute(path: string) {
+  return PASSWORD_RESET_PATHS.has(normalizeHostivMarketingPath(path))
+}
+
 export const HOSTIV_STATIC_PATHS: Record<HostivStaticPageId, Record<HostivLocale, string>> = {
   "a-propos": { fr: "/a-propos", en: "/en/about" },
   contact: { fr: "/contact", en: "/en/contact" },
@@ -33,7 +57,8 @@ const HOSTIV_MARKETING_PATHS_FR = new Set([
   "/mentions-legales",
   "/politique-de-confidentialite",
   "/conditions-generales",
-  "/inscription/confirmation"
+  "/inscription/confirmation",
+  "/mot-de-passe/reinitialiser"
 ])
 
 export function detectHostivLocaleFromPath(path: string): HostivLocale {
@@ -41,7 +66,11 @@ export function detectHostivLocaleFromPath(path: string): HostivLocale {
 }
 
 export function isHostivMarketingRoute(path: string) {
-  const normalized = (path.split("?")[0]?.split("#")[0] || "/").trim() || "/"
+  const normalized = normalizeHostivMarketingPath(path)
+
+  if (isHostivPasswordResetRoute(normalized)) {
+    return true
+  }
 
   if (normalized === "/en" || normalized.startsWith("/en/")) {
     return true
@@ -54,12 +83,16 @@ export function getHostivHomePath(locale: HostivLocale) {
   return HOSTIV_HOME_PATHS[locale]
 }
 
+export function getHostivPasswordResetPath(locale: HostivLocale) {
+  return HOSTIV_PASSWORD_RESET_PATHS[locale]
+}
+
 export function getHostivStaticPath(pageId: HostivStaticPageId, locale: HostivLocale) {
   return HOSTIV_STATIC_PATHS[pageId][locale]
 }
 
 export function switchHostivLocalePath(path: string, targetLocale: HostivLocale) {
-  const normalized = path.split("?")[0]?.split("#")[0] || "/"
+  const normalized = normalizeHostivMarketingPath(path)
   const currentLocale = detectHostivLocaleFromPath(normalized)
   const hash = path.includes("#") ? path.slice(path.indexOf("#")) : ""
   const query = path.includes("?") ? path.slice(path.indexOf("?"), path.includes("#") ? path.indexOf("#") : undefined) : ""
@@ -72,6 +105,13 @@ export function switchHostivLocalePath(path: string, targetLocale: HostivLocale)
 
   if (pageId) {
     return `${HOSTIV_STATIC_PATHS[pageId][targetLocale]}${query}${hash}`
+  }
+
+  if (
+    PASSWORD_RESET_PATHS.has(normalized) ||
+    normalized === HOSTIV_PASSWORD_RESET_LEGACY_EN_PATH
+  ) {
+    return `${HOSTIV_PASSWORD_RESET_PATHS[targetLocale]}${query}${hash}`
   }
 
   if (targetLocale === "en") {

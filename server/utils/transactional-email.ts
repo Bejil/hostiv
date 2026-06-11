@@ -15,6 +15,7 @@ import {
   buildHostivAccountDeletedEmail,
   buildHostivEmailChangedEmail,
   buildHostivPasswordChangedEmail,
+  buildHostivPasswordResetEmail,
   buildHostivPlanPurchasedEmail,
   buildHostivPublishSiteReminderEmail,
   buildHostivSitePublishedEmail,
@@ -470,6 +471,47 @@ export async function sendHostivPasswordChangedEmail(options: { to: string }) {
     html: mail.html,
     logLabel: "password-changed"
   })
+}
+
+export async function sendHostivPasswordResetEmail(options: {
+  to: string
+  resetUrl: string
+  locale: "fr" | "en"
+}) {
+  const config = readTransactionalEmailConfig()
+  const to = options.to.trim()
+
+  if (!config || !to) {
+    throw createError({
+      statusCode: 503,
+      message: "Envoi d’e-mail non configuré."
+    })
+  }
+
+  const mail = buildHostivPasswordResetEmail({
+    resetUrl: options.resetUrl,
+    locale: options.locale
+  })
+
+  try {
+    await sendResendEmail({
+      resendApiKey: config.resendApiKey,
+      from: config.from,
+      to,
+      subject: mail.subject,
+      text: mail.text,
+      html: mail.html
+    })
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error)
+
+    console.error("[transactional-email] password-reset:", detail)
+
+    throw createError({
+      statusCode: 502,
+      message: "Impossible d’envoyer l’e-mail pour le moment."
+    })
+  }
 }
 
 export async function sendPlatformNewReservationAlert(options: {

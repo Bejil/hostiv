@@ -2,6 +2,8 @@ import {
   detectHostivLocaleFromPath,
   getHostivHomePath,
   isHostivMarketingRoute,
+  isHostivPasswordResetRoute,
+  normalizeHostivMarketingPath,
   switchHostivLocalePath
 } from "../data/hostiv-routes"
 import { getHostivLanding } from "../data/hostivLanding"
@@ -80,9 +82,13 @@ export function useHostivLocale() {
     storedLocale.value = targetLocale
     writeStoredHostivLocale(targetLocale)
 
-    if (isHostivMarketingRoute(route.path)) {
-      return navigateTo(switchHostivLocalePath(route.fullPath, targetLocale))
+    const path = normalizeHostivMarketingPath(route.path)
+
+    if (!isHostivMarketingRoute(path) && !isHostivPasswordResetRoute(path)) {
+      return
     }
+
+    return navigateTo(switchHostivLocalePath(route.fullPath, targetLocale))
   }
 
   return {

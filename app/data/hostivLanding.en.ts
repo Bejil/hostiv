@@ -315,6 +315,119 @@ export const hostivNotFoundUi = {
   }
 } as const
 
+export const hostivAccountModalUi = {
+  close: "Close",
+  tabsAria: "Account type",
+  signupTab: "Sign up",
+  loginTab: "Log in",
+  titles: {
+    signup: "Create your account",
+    login: "Welcome back"
+  },
+  subtitles: {
+    signup:
+      "Choose your plan, enter your details and pay online. Your account and site are created after payment.",
+    login: "Log in to manage your site and bookings."
+  },
+  plans: {
+    legend: "Plan",
+    chooseAria: "Choose a plan",
+    note:
+      "One-time card payment via Stripe. No account or site is created until payment is confirmed."
+  },
+  fields: {
+    fullName: "Full name",
+    fullNamePlaceholder: "Jane Smith",
+    propertyName: "Property name",
+    propertyPlaceholder: "Olive Tree Villa",
+    email: "Email",
+    emailPlaceholder: "you@example.com",
+    password: "Password",
+    passwordPlaceholderSignup: "Create a secure password",
+    passwordPlaceholderLogin: "Your password"
+  },
+  slugStatus: {
+    checking: "Checking availability…",
+    available: "Name available — your site will be at /{slug}",
+    taken: "This name is already taken. Choose another property name.",
+    tooShort: "Name too short (at least 3 characters once converted to a web address).",
+    reserved: "This name is reserved and cannot be used.",
+    invalidFormat: "The name can only contain letters and numbers.",
+    invalid: "Invalid name for your site address.",
+    error: "Unable to check this name right now.",
+    preview: "Planned address: /{slug}",
+    hint: "Enter a name to generate your site address."
+  },
+  passwordRules: {
+    intro:
+      "Your password must be long and complex enough, with letters (upper and lower case), numbers, punctuation and special characters:",
+    length: "At least 8 characters",
+    lowercase: "One lowercase letter",
+    uppercase: "One uppercase letter",
+    digit: "One digit",
+    special: "One special or punctuation character"
+  },
+  errors: {
+    paymentCancelled: "Payment cancelled. No account was created — you can try again.",
+    nameAndEmail: "Enter your name and a valid email.",
+    passwordInvalid: "Choose a password that meets all security requirements.",
+    propertyRequired: "Enter your property name to create your site.",
+    propertyTaken: "This property name is already taken. Change it to continue.",
+    propertyInvalid: "Choose a valid, available property name.",
+    checkoutFailed: "Unable to open checkout. Please try again later.",
+    loginCredentials: "Enter your email and password.",
+    supabaseUnavailable: "Sign-in unavailable: Supabase is not configured in this environment.",
+    noSite:
+      "Signed in successfully, but no site is linked to this account. Contact us if the issue persists.",
+    loginFailed: "Unable to sign in. Check your credentials."
+  },
+  buttons: {
+    payLoading: "Redirecting to Stripe…",
+    pay: "Pay €{price} / {period} — {name}",
+    loginLoading: "Signing in…",
+    login: "Sign in"
+  },
+  forgotPasswordLink: "Forgot password?",
+  forgotPassword: {
+    title: "Forgot password",
+    subtitle:
+      "Enter your Hostiv account email. If an account exists, you will receive a link valid for 24 hours.",
+    submit: "Send reset link",
+    submitting: "Sending…",
+    backToLogin: "Back to sign in",
+    success:
+      "If an account is linked to this address, an email with a reset link has just been sent.",
+    errors: {
+      invalidEmail: "Invalid email address.",
+      sendFailed: "Unable to send the email right now."
+    }
+  }
+} as const
+
+export const hostivPasswordResetPageUi = {
+  loading: "Checking link…",
+  title: "New password",
+  subtitle: "Choose a secure password. This link is valid for 24 hours.",
+  confirmPassword: "Confirm password",
+  confirmPasswordPlaceholder: "Re-enter your password",
+  submit: "Save password",
+  submitting: "Saving…",
+  successTitle: "Password updated",
+  successLead: "You can sign in with your new password.",
+  openLogin: "Sign in",
+  backHome: "Back to home",
+  errors: {
+    incompleteLink: "Incomplete link. Use the link from your email.",
+    invalidLink: "Invalid or already used link.",
+    expiredLink: "This link has expired. Request a new one from the sign-in page.",
+    loadFailed: "Unable to verify this link.",
+    passwordMismatch: "Passwords do not match.",
+    passwordInvalid: "Choose a password that meets all security requirements.",
+    saveFailed: "Unable to update your password."
+  },
+  seoTitle: "Reset your password | Hostiv"
+} as const
+
 export const hostivFooter = {
   baseline: "Direct booking for short-term rental hosts.",
   columns: [

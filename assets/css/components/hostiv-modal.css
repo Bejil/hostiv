@@ -871,6 +871,28 @@
   line-height: 1.45;
 }
 
+.hostiv-modal__forgot-wrap {
+  margin: -0.35rem 0 0;
+  text-align: right;
+}
+
+.hostiv-modal__forgot-link {
+  border: none;
+  background: transparent;
+  padding: 0;
+  color: var(--h-accent-deep);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+  cursor: pointer;
+}
+
+.hostiv-modal__forgot-link:hover {
+  color: var(--h-accent);
+}
+
 .hostiv-modal__success-box {
   display: flex;
   flex-direction: column;

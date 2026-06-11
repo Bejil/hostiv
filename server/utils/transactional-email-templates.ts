@@ -928,6 +928,59 @@ export function buildHostivEmailChangedEmail(options: {
   }
 }
 
+export function buildHostivPasswordResetEmail(options: {
+  resetUrl: string
+  locale: "fr" | "en"
+}) {
+  const isEn = options.locale === "en"
+
+  const bodyHtml = buildTransactionalBody({
+    eyebrow: isEn ? "Account security" : "Sécurité du compte",
+    title: isEn ? "Reset your password" : "Réinitialisez votre mot de passe",
+    paragraphs: isEn
+      ? [
+          "You requested a password reset for your Hostiv account.",
+          `This link is valid for <strong style="color:${C.ink};">24 hours</strong>. If you did not request this, you can ignore this email.`
+        ]
+      : [
+          "Vous avez demandé la réinitialisation du mot de passe de votre compte Hostiv.",
+          `Ce lien est valable <strong style="color:${C.ink};">24 heures</strong>. Si vous n’êtes pas à l’origine de cette demande, ignorez cet e-mail.`
+        ],
+    cta: {
+      label: isEn ? "Choose a new password" : "Choisir un nouveau mot de passe",
+      href: options.resetUrl
+    },
+    paddingBottom: "32px"
+  })
+
+  const text = isEn
+    ? [
+        "Reset your Hostiv password:",
+        "",
+        options.resetUrl,
+        "",
+        "This link expires in 24 hours."
+      ].join("\n")
+    : [
+        "Réinitialisez votre mot de passe Hostiv :",
+        "",
+        options.resetUrl,
+        "",
+        "Ce lien expire dans 24 heures."
+      ].join("\n")
+
+  return {
+    subject: isEn ? "Hostiv — Reset your password" : "Hostiv — Réinitialisation de mot de passe",
+    preheader: isEn ? "Valid for 24 hours." : "Valable 24 heures.",
+    html: buildTransactionalDocument({
+      title: isEn ? "Password reset" : "Réinitialisation",
+      preheader: isEn ? "Choose a new password." : "Choisissez un nouveau mot de passe.",
+      bodyHtml
+    }),
+    text
+  }
+}
+
 export function buildHostivPasswordChangedEmail(options: { email: string }) {
   const bodyHtml = buildTransactionalBody({
     eyebrow: "Sécurité du compte",

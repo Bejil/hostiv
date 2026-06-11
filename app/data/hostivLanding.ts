@@ -21,7 +21,9 @@ function normalizeHostivLanding(bundle: typeof hostivLandingFr) {
     pricing: bundle.hostivPricing,
     cta: bundle.hostivCta,
     footer: bundle.hostivFooter,
-    notFound: bundle.hostivNotFoundUi
+    notFound: bundle.hostivNotFoundUi,
+    accountModal: bundle.hostivAccountModalUi,
+    passwordResetPage: bundle.hostivPasswordResetPageUi
   }
 }
 
