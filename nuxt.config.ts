@@ -7,6 +7,11 @@ export default defineNuxtConfig({
   compatibilityDate: "2025-07-15",
   devtools: { enabled: true },
   modules: ["@nuxt/ui"],
+  nitro: {
+    externals: {
+      external: ["playwright-core"]
+    }
+  },
   css: ["~/assets/css/nuxt-ui-admin.css"],
   ui: {
     colorMode: false,
@@ -42,6 +47,10 @@ export default defineNuxtConfig({
       process.env.STRIPE_PAYMENT_METHOD_CONFIGURATION || "",
     /** Secret endpoint webhook Stripe (account.updated, etc.) */
     stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET || "",
+    /** Secret pour les tâches planifiées (Vercel Cron → /api/cron/subscription-reminders) */
+    cronSecret: process.env.CRON_SECRET || "",
+    /** Optionnel — clé dédiée au chiffrement des inscriptions en attente (sinon dérivée de la service role) */
+    hostivSignupEncryptionKey: process.env.HOSTIV_SIGNUP_ENCRYPTION_KEY || "",
     /** Commission plateforme sur chaque réservation (0–100 %, défaut 0) */
     hestiaPlatformFeePercent: process.env.HESTIA_PLATFORM_FEE_PERCENT || "0",
     public: {

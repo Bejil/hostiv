@@ -2,6 +2,7 @@
 import AdminAmenitySectionDeleteModal from "./AdminAmenitySectionDeleteModal.vue"
 import AdminAmenitySectionEditModal from "./AdminAmenitySectionEditModal.vue"
 import AdminIcon from "./AdminIcon.vue"
+import { adminUiFormat } from "../../data/admin-ui"
 import {
   AMENITY_CARD_VISIBLE_LIMIT,
   withAmenityPreviewHasMore
@@ -15,6 +16,8 @@ const props = defineProps<{
 const emit = defineEmits<{
   "update:modelValue": [value: AmenityPreviewSection[]]
 }>()
+
+const { ui } = useAdminUi()
 
 const editModalOpen = ref(false)
 const deleteModalOpen = ref(false)
@@ -54,17 +57,22 @@ function updateSections(sections: AmenityPreviewSection[]) {
 }
 
 function sectionTitle(section: AmenityPreviewSection, index: number) {
-  return section.title.trim() || `Carte ${index + 1}`
+  return (
+    section.title.trim() ||
+    adminUiFormat(ui.value.editors.shared.cardFallback, { index: index + 1 })
+  )
 }
 
 function sectionMeta(section: AmenityPreviewSection) {
   const count = section.items.filter((item) => item.name.trim()).length
 
   if (!count) {
-    return "Aucun équipement"
+    return ui.value.editors.amenities.noAmenities
   }
 
-  return count === 1 ? "1 équipement" : `${count} équipements`
+  return count === 1
+    ? ui.value.editors.amenities.amenityCountOne
+    : adminUiFormat(ui.value.editors.amenities.amenityCountMany, { count })
 }
 
 function openAdd() {
@@ -173,20 +181,23 @@ function onDrop(index: number, event: DragEvent) {
 <template>
   <div class="admin-amenities-sections">
     <div class="admin-subpanel__head admin-amenities-sections__head">
-      <h3>Cartes équipements</h3>
+      <h3>{{ ui.editors.amenities.title }}</h3>
       <button type="button" class="admin-btn admin-btn--secondary admin-btn--sm" @click="openAdd">
         <AdminIcon name="plus" :size="16" />
-        Ajouter une carte
+        {{ ui.editors.amenities.addButton }}
       </button>
     </div>
 
     <p class="admin-amenities-sections__lead">
-      Grille affichée sur la page (2 colonnes). « Voir la suite » s’affiche automatiquement à partir de
-      {{ AMENITY_CARD_VISIBLE_LIMIT + 1 }} équipements dans une carte.
+      {{
+        adminUiFormat(ui.editors.amenities.lead, {
+          limit: AMENITY_CARD_VISIBLE_LIMIT + 1
+        })
+      }}
     </p>
 
     <p v-if="!modelValue.length" class="admin-amenities-sections__empty">
-      Aucune carte. Utilisez « Ajouter une carte » pour en créer une.
+      {{ ui.editors.amenities.empty }}
     </p>
 
     <ul v-else class="admin-amenities-sections__list">
@@ -204,7 +215,7 @@ function onDrop(index: number, event: DragEvent) {
         <button
           type="button"
           class="admin-sortable-list__drag-handle"
-          aria-label="Glisser pour réordonner"
+          :aria-label="ui.editors.shared.dragToReorder"
           draggable="true"
           @dragstart="onDragStart(index, $event)"
           @dragend="onDragEnd"
@@ -219,7 +230,7 @@ function onDrop(index: number, event: DragEvent) {
           <button
             type="button"
             class="admin-btn admin-btn--secondary admin-btn--sm admin-btn--icon-only"
-            aria-label="Modifier"
+            :aria-label="ui.editors.shared.edit"
             @click="openEdit(index)"
           >
             <AdminIcon name="pencil" :size="16" />
@@ -227,7 +238,7 @@ function onDrop(index: number, event: DragEvent) {
           <button
             type="button"
             class="admin-btn admin-btn--ghost admin-btn--danger-ghost admin-btn--sm admin-btn--icon-only"
-            aria-label="Supprimer"
+            :aria-label="ui.common.delete"
             @click="openDelete(index)"
           >
             <AdminIcon name="trash" :size="16" />
@@ -248,7 +259,7 @@ function onDrop(index: number, event: DragEvent) {
     <AdminAmenitySectionDeleteModal
       :open="deleteModalOpen"
       :section-title="
-        deletingSection ? sectionTitle(deletingSection, deletingIndex ?? 0) : 'Cette carte'
+        deletingSection ? sectionTitle(deletingSection, deletingIndex ?? 0) : ui.editors.shared.thisCard
       "
       @cancel="closeDelete"
       @confirm="confirmDelete"

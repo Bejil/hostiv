@@ -3,6 +3,7 @@ import {
   deleteAdminBookingReservation,
   getAdminBookingReservationById
 } from "../../../../utils/booking-reservation-repository"
+import { sendReservationDeletedEmails } from "../../../../utils/transactional-email"
 
 export default defineEventHandler(async (event) => {
   const slug = getRouterParam(event, "slug")
@@ -19,6 +20,11 @@ export default defineEventHandler(async (event) => {
   if (!existing) {
     throw createError({ statusCode: 404, message: "Réservation introuvable." })
   }
+
+  void sendReservationDeletedEmails({
+    slug,
+    reservation: existing
+  })
 
   await deleteAdminBookingReservation(slug, id)
 

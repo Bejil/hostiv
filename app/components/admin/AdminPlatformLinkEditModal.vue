@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { X } from "@lucide/vue"
 import AdminField from "./AdminField.vue"
+import AdminFieldHelp from "./AdminFieldHelp.vue"
 import AdminPlatformCustomIconFields from "./AdminPlatformCustomIconFields.vue"
 import AdminToggle from "./AdminToggle.vue"
 import type { PropertyPlatformLink } from "../../types/property-site"
+import { getAdminCustomizationCardExamples } from "../../data/admin-customization-field-examples"
 import { ratingToStars } from "../../utils/platform-rating-stars"
 import type { AdminIconName } from "./admin-icon-types"
 
@@ -19,6 +21,10 @@ const emit = defineEmits<{
   save: [value: PropertyPlatformLink]
 }>()
 
+const { ui, locale } = useAdminUi()
+
+const cardExamples = computed(() => getAdminCustomizationCardExamples(locale.value))
+
 const draft = ref<PropertyPlatformLink>({ ...props.link })
 
 const draftStars = computed(() => ratingToStars(draft.value.rating))
@@ -27,9 +33,19 @@ const canSave = computed(() => Boolean(draft.value.name.trim() && draft.value.ra
 
 const visibilityHint = computed(() =>
   props.isPreset
-    ? "Activez lorsque votre annonce est publiée sur cette plateforme"
-    : "Désactivez pour masquer cette plateforme sur le site public"
+    ? ui.value.editors.platformLinks.modal.visibilityHintPreset
+    : ui.value.editors.platformLinks.modal.visibilityHintCustom
 )
+
+const modalTitle = computed(() => {
+  if (props.isNew) {
+    return ui.value.editors.platformLinks.modal.addTitle
+  }
+
+  return props.isPreset
+    ? ui.value.editors.platformLinks.modal.editPresetTitle
+    : ui.value.editors.platformLinks.modal.editCustomTitle
+})
 
 watch(
   () => [props.open, props.link] as const,
@@ -112,24 +128,18 @@ function save() {
             <span class="hostiv-modal__accent" aria-hidden="true" />
             <span class="hostiv-modal__glow" aria-hidden="true" />
 
-            <button type="button" class="hostiv-modal__close" aria-label="Fermer" @click="emit('close')">
-              <span class="sr-only">Fermer</span>
+            <button type="button" class="hostiv-modal__close" :aria-label="ui.common.close" @click="emit('close')">
+              <span class="sr-only">{{ ui.common.close }}</span>
               <X :size="18" stroke-width="2" />
             </button>
 
             <header class="hostiv-modal__head">
               <div class="hostiv-modal__head-text">
                 <h2 id="admin-platform-link-edit-title" class="hostiv-modal__title">
-                  {{
-                    isNew
-                      ? "Ajouter une plateforme"
-                      : isPreset
-                        ? "Modifier la plateforme"
-                        : "Modifier la plateforme personnalisée"
-                  }}
+                  {{ modalTitle }}
                 </h2>
                 <p class="hostiv-modal__subtitle">
-                  {{ draft.name || "Sans nom" }}
+                  {{ draft.name || ui.editors.shared.noName }}
                 </p>
               </div>
             </header>
@@ -137,20 +147,24 @@ function save() {
             <div class="admin-platform-link-modal__fields">
               <AdminToggle
                 :model-value="!draft.hidden"
-                label="Afficher sur le site"
+                :label="ui.editors.shared.showOnSite"
                 :hint="visibilityHint"
                 @update:model-value="patchDraft({ hidden: !$event })"
               />
               <AdminField
-                label="Nom"
+                :label="ui.editors.shared.name"
                 required
+                :examples="[...cardExamples.platformName]"
                 :model-value="draft.name"
                 full-width
                 @update:model-value="patchDraft({ name: $event as string })"
               />
               <div class="admin-platform-links__rating-field">
-                <span class="admin-field__label">
-                  Note<span class="admin-field__required" aria-hidden="true"> *</span>
+                <span class="admin-field__label-row">
+                  <span class="admin-field__label">
+                    {{ ui.editors.shared.rating }}<span class="admin-field__required" aria-hidden="true"> *</span>
+                  </span>
+                  <AdminFieldHelp :examples="[...cardExamples.platformRating]" />
                 </span>
                 <div class="admin-platform-links__rating-inline">
                   <input
@@ -162,13 +176,13 @@ function save() {
                   <p
                     class="admin-platform-links__stars-display"
                     :class="{ 'admin-platform-links__stars-display--empty': !draftStars }"
-                    aria-label="Aperçu des étoiles"
+                    :aria-label="ui.editors.shared.starsPreview"
                   >
-                    {{ draftStars || "☆☆☆☆☆" }}
+                    {{ draftStars || ui.editors.shared.emptyStars }}
                   </p>
                 </div>
                 <span class="admin-field__hint">
-                  Toute note au format score / max (ex. 4,97/5, 9/10) est convertie sur 5 étoiles
+                  {{ ui.editors.shared.ratingHint }}
                 </span>
               </div>
               <AdminPlatformCustomIconFields
@@ -179,7 +193,8 @@ function save() {
                 @update:icon-bg="patchDraft({ icon_bg: $event })"
               />
               <AdminField
-                label="URL"
+                :label="ui.editors.shared.url"
+                :examples="[...cardExamples.platformUrl]"
                 :model-value="draft.url"
                 type="url"
                 full-width
@@ -188,12 +203,12 @@ function save() {
             </div>
 
             <p v-if="!canSave" class="admin-platform-link-modal__hint">
-              Le nom et la note sont obligatoires pour enregistrer.
+              {{ ui.editors.platformLinks.modal.saveHint }}
             </p>
 
             <footer class="admin-platform-link-modal__footer">
               <button type="button" class="hostiv-btn hostiv-btn--secondary" @click="emit('close')">
-                Annuler
+                {{ ui.common.cancel }}
               </button>
               <button
                 type="button"
@@ -201,7 +216,7 @@ function save() {
                 :disabled="!canSave"
                 @click="save"
               >
-                Enregistrer
+                {{ ui.common.save }}
               </button>
             </footer>
           </div>

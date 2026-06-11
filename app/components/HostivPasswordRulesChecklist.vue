@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { Check } from "@lucide/vue"
+import { adminUiFormat } from "../data/admin-ui"
 import {
   evaluateHostivPassword,
+  HOSTIV_PASSWORD_MIN_LENGTH,
   hostivPasswordRuleLabels,
   type HostivPasswordRuleKey
 } from "../utils/hostiv-password-rules"
@@ -29,6 +31,29 @@ const passwordRuleKeys: HostivPasswordRuleKey[] = [
 
 const passwordRules = computed(() => evaluateHostivPassword(props.password))
 
+const { ui } = useAdminUi()
+const adminPasswordRules = computed(() => ui.value.extended.account.passwordRules)
+
+const introText = computed(() => {
+  if (props.variant === "admin" && adminPasswordRules.value) {
+    return adminPasswordRules.value.intro
+  }
+
+  return "Votre mot de passe doit être suffisamment long et complexe en intégrant des lettres (majuscules et minuscules), des chiffres, de la ponctuation et des caractères spéciaux :"
+})
+
+function ruleLabel(key: HostivPasswordRuleKey) {
+  if (props.variant === "admin" && adminPasswordRules.value) {
+    if (key === "length") {
+      return adminUiFormat(adminPasswordRules.value.length, { min: HOSTIV_PASSWORD_MIN_LENGTH })
+    }
+
+    return adminPasswordRules.value[key]
+  }
+
+  return hostivPasswordRuleLabels[key]
+}
+
 const rootClass = computed(() =>
   props.variant === "admin" ? "admin-password-rules" : "hostiv-modal__password-rules"
 )
@@ -43,8 +68,7 @@ const rootClass = computed(() =>
     aria-live="polite"
   >
     <p :class="variant === 'admin' ? 'admin-password-rules__intro' : 'hostiv-modal__password-rules-intro'">
-      Votre mot de passe doit être suffisamment long et complexe en intégrant des lettres (majuscules
-      et minuscules), des chiffres, de la ponctuation et des caractères spéciaux :
+      {{ introText }}
     </p>
     <ul
       :class="
@@ -73,7 +97,7 @@ const rootClass = computed(() =>
         >
           <Check v-if="passwordRules[key]" :size="12" stroke-width="2.5" />
         </span>
-        {{ hostivPasswordRuleLabels[key] }}
+        {{ ruleLabel(key) }}
       </li>
     </ul>
   </div>

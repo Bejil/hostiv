@@ -1,6 +1,8 @@
-import type { AdminSectionId } from "./admin-nav-sections"
+import type { HostivLocale } from "../types/hostiv-locale"
 import type { PropertyAdminRecord } from "../types/property-admin"
 import { parseSiteTemplateId } from "./site-templates"
+import { getAdminUi } from "./admin-ui"
+import type { AdminSectionId } from "./admin-nav-sections"
 
 export type AdminOnboardingStepId =
   | "welcome"
@@ -21,98 +23,52 @@ export type AdminOnboardingStep = {
   cta: string
 }
 
-export const adminOnboardingSteps: AdminOnboardingStep[] = [
-  {
-    id: "welcome",
-    section: null,
-    title: "Bienvenue dans votre backoffice",
-    subtitle: "Complétez les 7 étapes pour configurer votre site de réservation directe.",
-    tips: [
-      "Tous les champs indiqués sont obligatoires",
-      "Vous pourrez affiner le contenu plus tard dans Personnalisation"
-    ],
-    cta: "Commencer"
-  },
-  {
-    id: "header",
-    section: "header",
-    title: "Étape 1 — Identité du site",
-    subtitle: "Logo, nom affiché et sous-titre visibles dans l’en-tête de votre site.",
-    tips: ["Logo", "Nom affiché", "Sous-titre"],
-    cta: "Étape suivante"
-  },
-  {
-    id: "template",
-    section: "template",
-    title: "Étape 2 — Thème visuel",
-    subtitle: "Choisissez l’ambiance graphique appliquée à tout le site.",
-    tips: ["Sélectionnez un thème"],
-    cta: "Étape suivante"
-  },
-  {
-    id: "seo",
-    section: "seo",
-    title: "Étape 3 — Page d’accueil",
-    subtitle: "La photo et les textes d’accroche en haut de votre site.",
-    tips: ["Photo principale", "Sur-titre", "Titre", "Texte d’introduction"],
-    cta: "Étape suivante"
-  },
-  {
-    id: "images",
-    section: "images",
-    title: "Étape 4 — Galerie photos",
-    subtitle: "Au moins une section avec titre, sous-titre et une photo.",
-    tips: ["Titre de section", "Sous-titre de section", "Au moins 1 photo"],
-    cta: "Étape suivante"
-  },
-  {
-    id: "host",
-    section: "host",
-    title: "Étape 5 — Présentation hôte",
-    subtitle: "Mettez un visage et une voix humaine derrière votre annonce.",
-    tips: ["Photo hôte", "Légende", "Titre", "Citation", "Introduction"],
-    cta: "Étape suivante"
-  },
-  {
-    id: "location",
-    section: "location",
-    title: "Étape 6 — Localisation",
-    subtitle: "Où se trouve le logement et comment le présenter.",
-    tips: ["Adresse", "Chapô (phrase d’accroche du quartier)"],
-    cta: "Étape suivante"
-  },
-  {
-    id: "booking",
-    section: "booking",
-    title: "Étape 7 — Tarifs",
-    subtitle: "Le prix affiché par défaut et le nombre de voyageurs inclus.",
-    tips: ["Prix par nuit", "Voyageurs inclus"],
-    cta: "Terminer le parcours"
-  }
-]
+export function getAdminOnboardingSteps(locale: HostivLocale = "fr"): AdminOnboardingStep[] {
+  return getAdminUi(locale).onboarding.steps as AdminOnboardingStep[]
+}
 
-export const adminOnboardingStepCount = adminOnboardingSteps.length
+/** @deprecated Utiliser getAdminOnboardingSteps(locale) */
+export const adminOnboardingSteps = getAdminOnboardingSteps("fr")
 
-const progressOnboardingStepIds = adminOnboardingSteps
-  .filter((step) => step.id !== "welcome")
-  .map((step) => step.id)
+export function getAdminOnboardingStepCount(locale: HostivLocale = "fr") {
+  return getAdminOnboardingSteps(locale).length
+}
+
+/** @deprecated Utiliser getAdminOnboardingStepCount(locale) */
+export const adminOnboardingStepCount = getAdminOnboardingStepCount("fr")
+
+function progressOnboardingStepIds(locale: HostivLocale) {
+  return getAdminOnboardingSteps(locale)
+    .filter((step) => step.id !== "welcome")
+    .map((step) => step.id)
+}
 
 /** Vrai tant qu’au moins une étape obligatoire du parcours n’est pas remplie dans le site. */
-export function isOnboardingRequired(record: PropertyAdminRecord): boolean {
-  return progressOnboardingStepIds.some((stepId) => !evaluateOnboardingStep(record, stepId))
+export function isOnboardingRequired(
+  record: PropertyAdminRecord,
+  locale: HostivLocale = "fr"
+): boolean {
+  return progressOnboardingStepIds(locale).some(
+    (stepId) => !evaluateOnboardingStep(record, stepId, locale)
+  )
 }
 
 /** Index de la première étape incomplète (1…n), ou dernière étape si tout est rempli. */
-export function getFirstIncompleteOnboardingStepIndex(record: PropertyAdminRecord): number {
-  for (let index = 0; index < adminOnboardingSteps.length; index += 1) {
-    const step = adminOnboardingSteps[index]
+export function getFirstIncompleteOnboardingStepIndex(
+  record: PropertyAdminRecord,
+  locale: HostivLocale = "fr"
+): number {
+  const steps = getAdminOnboardingSteps(locale)
 
-    if (step && step.id !== "welcome" && !evaluateOnboardingStep(record, step.id)) {
+  for (let index = 0; index < steps.length; index += 1) {
+    const step = steps[index]
+
+    if (step && step.id !== "welcome" && !evaluateOnboardingStep(record, step.id, locale)) {
       return index
     }
   }
 
-  return adminOnboardingSteps.length - 1
+  return steps.length - 1
 }
 
 function hasText(value: unknown) {
@@ -121,15 +77,19 @@ function hasText(value: unknown) {
 
 export function evaluateOnboardingStep(
   record: PropertyAdminRecord,
-  stepId: AdminOnboardingStepId
+  stepId: AdminOnboardingStepId,
+  locale: HostivLocale = "fr"
 ): boolean {
-  return getOnboardingStepMissingLabels(record, stepId).length === 0
+  return getOnboardingStepMissingLabels(record, stepId, locale).length === 0
 }
 
 export function getOnboardingStepMissingLabels(
   record: PropertyAdminRecord,
-  stepId: AdminOnboardingStepId
+  stepId: AdminOnboardingStepId,
+  locale: HostivLocale = "fr"
 ): string[] {
+  const v = getAdminUi(locale).validation
+
   switch (stepId) {
     case "welcome":
       return []
@@ -137,39 +97,39 @@ export function getOnboardingStepMissingLabels(
       const missing: string[] = []
 
       if (!hasText(record.logo_path)) {
-        missing.push("Logo")
+        missing.push(v.logo)
       }
 
       if (!hasText(record.brand_name)) {
-        missing.push("Nom affiché")
+        missing.push(v.brandName)
       }
 
       if (!hasText(record.brand_meta)) {
-        missing.push("Sous-titre")
+        missing.push(v.brandMeta)
       }
 
       return missing
     }
     case "template":
-      return parseSiteTemplateId(record.content.template?.id) ? [] : ["Thème sélectionné"]
+      return parseSiteTemplateId(record.content.template?.id) ? [] : [v.selectedTheme]
     case "seo": {
       const missing: string[] = []
-      const hero = record.content.copy.hero
+      const hero = record.content?.copy?.hero
 
       if (!hasText(record.hero_image_path)) {
-        missing.push("Photo principale")
+        missing.push(v.heroImageMain)
       }
 
       if (!hasText(hero?.eyebrow)) {
-        missing.push("Sur-titre")
+        missing.push(v.eyebrow)
       }
 
       if (!hasText(hero?.title)) {
-        missing.push("Titre d’accueil")
+        missing.push(v.heroHomeTitle)
       }
 
       if (!hasText(hero?.text)) {
-        missing.push("Texte d’introduction")
+        missing.push(v.heroIntroText)
       }
 
       return missing
@@ -182,32 +142,30 @@ export function getOnboardingStepMissingLabels(
           (category.images ?? []).some((image) => hasText(image))
       )
 
-      return hasValidSection
-        ? []
-        : ["Au moins une section avec titre, sous-titre et 1 photo"]
+      return hasValidSection ? [] : [v.gallerySectionMin]
     }
     case "host": {
       const missing: string[] = []
-      const host = record.content.copy.host
+      const host = record.content?.copy?.host
 
       if (!hasText(record.host_photo_path)) {
-        missing.push("Photo hôte")
+        missing.push(v.hostPhoto)
       }
 
       if (!hasText(host?.caption)) {
-        missing.push("Légende photo")
+        missing.push(v.caption)
       }
 
       if (!hasText(host?.title)) {
-        missing.push("Titre")
+        missing.push(v.title)
       }
 
       if (!hasText(host?.quote)) {
-        missing.push("Citation")
+        missing.push(v.quote)
       }
 
       if (!hasText(host?.intro_1)) {
-        missing.push("Introduction")
+        missing.push(v.introduction)
       }
 
       return missing
@@ -216,11 +174,11 @@ export function getOnboardingStepMissingLabels(
       const missing: string[] = []
 
       if (!hasText(record.location?.address)) {
-        missing.push("Adresse")
+        missing.push(v.address)
       }
 
-      if (!hasText(record.content.copy.location?.lead)) {
-        missing.push("Chapô")
+      if (!hasText(record.content?.copy?.location?.lead)) {
+        missing.push(v.neighborhoodChapo)
       }
 
       return missing
@@ -229,11 +187,11 @@ export function getOnboardingStepMissingLabels(
       const missing: string[] = []
 
       if (Number(record.booking_config?.base_night_price_eur ?? 0) <= 0) {
-        missing.push("Prix par nuit")
+        missing.push(v.nightPrice)
       }
 
       if (Number(record.booking_config?.included_main_guests ?? 0) <= 0) {
-        missing.push("Voyageurs inclus")
+        missing.push(v.includedGuests)
       }
 
       return missing

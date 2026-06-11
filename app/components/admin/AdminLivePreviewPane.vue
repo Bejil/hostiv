@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { Monitor, Smartphone, Tablet } from "@lucide/vue"
+import { adminUiFormat } from "../../data/admin-ui"
 import {
-  ADMIN_LIVE_PREVIEW_VIEWPORTS,
+  getAdminLivePreviewViewports,
   adminLivePreviewAnchorFor,
   type AdminLivePreviewViewport
 } from "../../data/admin-live-editor"
@@ -12,6 +13,7 @@ import {
   cloneSiteForLivePreviewPostMessage,
   type AdminLivePreviewSiteMessage
 } from "../../utils/admin-live-preview-messages"
+import { useAdminLiveEditorContext } from "../../composables/admin-live-editor-context"
 import { mapAdminRecordToSitePreview } from "../../utils/map-admin-site-preview"
 
 const props = defineProps<{
@@ -19,7 +21,14 @@ const props = defineProps<{
   record: PropertyAdminRecord
   activeSection: AdminSectionId
   activePreviewBlock: AdminNavSectionId | null
+  assetRevision: number
 }>()
+
+const { ui, locale } = useAdminUi()
+const ext = computed(() => ui.value.extended)
+const liveEditor = useAdminLiveEditorContext()
+
+const previewViewports = computed(() => getAdminLivePreviewViewports(locale.value))
 
 const viewport = ref<AdminLivePreviewViewport>("desktop")
 const canvasRef = ref<HTMLElement | null>(null)
@@ -28,11 +37,18 @@ const canvasWidth = ref(0)
 const canvasHeight = ref(720)
 const iframeReady = ref(false)
 let pushScheduled = false
+const previewPushNonce = ref(0)
 
-const previewSite = computed(() => mapAdminRecordToSitePreview(props.record))
+const previewSite = computed(() =>
+  mapAdminRecordToSitePreview(props.record, {
+    locale: liveEditor?.siteEditLocale.value ?? "fr"
+  })
+)
 
 const viewportMeta = computed(
-  () => ADMIN_LIVE_PREVIEW_VIEWPORTS.find((item) => item.id === viewport.value) ?? ADMIN_LIVE_PREVIEW_VIEWPORTS[0]
+  () =>
+    previewViewports.value.find((item) => item.id === viewport.value) ??
+    previewViewports.value[0]
 )
 
 const designWidth = computed(() => viewportMeta.value.widthPx)
@@ -75,7 +91,9 @@ const dimensionsLabel = computed(() => {
   const w = designWidth.value
   const pct = Math.round(fitScale.value * 100)
 
-  return pct >= 100 ? `${w}px · 100 %` : `${w}px · ${pct} % (ajusté au panneau)`
+  return pct >= 100
+    ? adminUiFormat(ext.value.livePreview.dimensionsFull, { width: w })
+    : adminUiFormat(ext.value.livePreview.dimensionsScaled, { width: w, percent: pct })
 })
 
 const scalerStyle = computed(() => ({
@@ -98,10 +116,15 @@ function pushSiteToIframe() {
   }
 
   try {
+    previewPushNonce.value += 1
+
     const payload: AdminLivePreviewSiteMessage = {
       type: ADMIN_LIVE_PREVIEW_MESSAGE.site,
       site: cloneSiteForLivePreviewPostMessage(previewSite.value),
-      scrollAnchor: previewScrollAnchor.value
+      scrollAnchor: previewScrollAnchor.value,
+      locale: liveEditor?.siteEditLocale.value ?? "fr",
+      assetRevision: props.assetRevision,
+      previewNonce: previewPushNonce.value
     }
 
     win.postMessage(payload, window.location.origin)
@@ -161,13 +184,20 @@ function observeCanvas(el: HTMLElement | null) {
   canvasHeight.value = Math.floor(el.clientHeight)
 }
 
+let unregisterPreviewPusher: (() => void) | undefined
+
 onMounted(() => {
   window.addEventListener("message", onWindowMessage)
+  unregisterPreviewPusher = liveEditor?.registerSitePreviewPusher(() => {
+    pushSiteToIframe()
+  })
 })
 
 watch(canvasRef, (el) => observeCanvas(el), { immediate: true })
 
 onUnmounted(() => {
+  unregisterPreviewPusher?.()
+  unregisterPreviewPusher = undefined
   window.removeEventListener("message", onWindowMessage)
   canvasObserver?.disconnect()
   canvasObserver = null
@@ -186,6 +216,20 @@ watch(previewScrollAnchor, () => {
   schedulePushSiteToIframe()
 })
 
+watch(
+  () => liveEditor?.siteEditLocale.value,
+  () => {
+    schedulePushSiteToIframe()
+  }
+)
+
+watch(
+  () => props.assetRevision,
+  () => {
+    schedulePushSiteToIframe()
+  }
+)
+
 watch(viewport, () => {
   iframeReady.value = false
 })
@@ -200,17 +244,17 @@ onErrorCaptured((err) => {
   <div class="admin-live-preview">
     <div class="admin-live-preview__chrome">
       <div class="admin-live-preview__chrome-left">
-        <span class="admin-live-preview__badge">Aperçu live</span>
+        <span class="admin-live-preview__badge">{{ ext.livePreview.badge }}</span>
         <span class="admin-live-preview__hint">
-          Modifications visibles sans enregistrer · faites défiler l’aperçu pour parcourir la page
+          {{ ext.livePreview.hint }}
         </span>
         <span class="admin-live-preview__dimensions" aria-live="polite">
           {{ dimensionsLabel }}
         </span>
       </div>
-      <div class="admin-live-preview__viewport-tabs" role="tablist" aria-label="Taille d’écran">
+      <div class="admin-live-preview__viewport-tabs" role="tablist" :aria-label="ext.livePreview.viewportTabsAria">
         <button
-          v-for="item in ADMIN_LIVE_PREVIEW_VIEWPORTS"
+          v-for="item in previewViewports"
           :key="item.id"
           type="button"
           role="tab"
@@ -238,7 +282,7 @@ onErrorCaptured((err) => {
           :style="iframeStyle"
           :width="designWidth"
           :height="iframeLayoutHeight"
-          title="Aperçu du site"
+          :title="ext.livePreview.iframeTitle"
           @load="onIframeLoad"
         />
       </div>

@@ -14,18 +14,26 @@ const props = defineProps<{
   intro: string
 }>()
 
-const displayEyebrow = computed(() => props.eyebrow.trim() || "Sur-titre")
-const displayTitle = computed(() => props.title.trim() || "Titre de la section")
-const displayIntro = computed(() => props.intro.trim() || "Introduction de la section.")
+const { ui } = useAdminUi()
+
+const displayEyebrow = computed(
+  () => props.eyebrow.trim() || ui.value.previews.common.eyebrow
+)
+const displayTitle = computed(
+  () => props.title.trim() || ui.value.previews.common.sectionTitle
+)
+const displayIntro = computed(
+  () => props.intro.trim() || ui.value.previews.common.intro
+)
 
 const displaySections = computed(() =>
   props.sections
     .map((section) => ({
       ...section,
-      title: section.title.trim() || "Catégorie",
+      title: section.title.trim() || ui.value.previews.amenities.category,
       items: section.items.map((item) => ({
         ...item,
-        name: item.name.trim() || "Équipement"
+        name: item.name.trim() || ui.value.previews.amenities.item
       }))
     }))
     .filter((section) => section.title || section.items.length)
@@ -33,8 +41,8 @@ const displaySections = computed(() =>
 </script>
 
 <template>
-  <div class="admin-amenities-preview" aria-label="Aperçu section équipements">
-    <p class="admin-amenities-preview__label">Aperçu</p>
+  <div class="admin-amenities-preview" :aria-label="ui.previews.amenities.ariaLabel">
+    <p class="admin-amenities-preview__label">{{ ui.previews.common.label }}</p>
     <section class="admin-amenities-preview__section">
       <div class="admin-amenities-preview__head">
         <p class="admin-amenities-preview__eyebrow">{{ displayEyebrow }}</p>
@@ -45,7 +53,7 @@ const displaySections = computed(() =>
       </div>
 
       <p v-if="!displaySections.length" class="admin-amenities-preview__empty">
-        Renseignez au moins une section d’aperçu pour afficher la grille.
+        {{ ui.previews.amenities.emptySections }}
       </p>
 
       <div v-else class="admin-amenities-preview__grid">
@@ -67,7 +75,9 @@ const displaySections = computed(() =>
               <span class="admin-amenities-preview__name">{{ item.name }}</span>
             </li>
           </ul>
-          <span v-if="amenitySectionHasMore(section)" class="admin-amenities-preview__more">Voir la suite</span>
+          <span v-if="amenitySectionHasMore(section)" class="admin-amenities-preview__more">
+            {{ ui.previews.amenities.seeMore }}
+          </span>
         </article>
       </div>
     </section>

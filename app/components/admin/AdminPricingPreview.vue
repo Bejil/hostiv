@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue"
 import type { PropertyBookingConfig } from "../../types/property-site"
+import { formatCancellationRefundPolicy } from "../../utils/cancellation-policy"
 import { buildPricingDisplayCards } from "../../utils/pricing-display-cards"
 
 const props = defineProps<{
@@ -10,16 +11,31 @@ const props = defineProps<{
   intro: string
 }>()
 
-const displayEyebrow = computed(() => props.eyebrow.trim() || "Sur-titre")
-const displayTitle = computed(() => props.title.trim() || "Titre de la section")
-const displayIntro = computed(() => props.intro.trim() || "Introduction de la section tarifs.")
+const { ui, locale } = useAdminUi()
+const ext = computed(() => ui.value.extended)
 
-const pricingCards = computed(() => buildPricingDisplayCards(props.bookingConfig))
+const displayEyebrow = computed(
+  () => props.eyebrow.trim() || ext.value.pricingPreview.fallback.eyebrow
+)
+const displayTitle = computed(
+  () => props.title.trim() || ext.value.pricingPreview.fallback.title
+)
+const displayIntro = computed(
+  () => props.intro.trim() || ext.value.pricingPreview.fallback.intro
+)
+
+const pricingCards = computed(() =>
+  buildPricingDisplayCards(props.bookingConfig, locale.value)
+)
+
+const cancellationText = computed(() =>
+  formatCancellationRefundPolicy(props.bookingConfig, locale.value)
+)
 </script>
 
 <template>
-  <div class="admin-pricing-preview" aria-label="Aperçu section tarifs">
-    <p class="admin-pricing-preview__label">Aperçu</p>
+  <div class="admin-pricing-preview" :aria-label="ext.pricingPreview.ariaLabel">
+    <p class="admin-pricing-preview__label">{{ ext.pricingPreview.label }}</p>
     <section class="admin-pricing-preview__section">
       <div class="admin-pricing-preview__head">
         <p class="admin-pricing-preview__eyebrow">{{ displayEyebrow }}</p>
@@ -60,7 +76,7 @@ const pricingCards = computed(() => buildPricingDisplayCards(props.bookingConfig
               <path d="M16 2v4M8 2v4M3 10h18M8 14h.01M12 14h.01M16 14h.01" />
             </svg>
             <svg
-              v-else
+              v-else-if="card.icon === 'month'"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -78,6 +94,10 @@ const pricingCards = computed(() => buildPricingDisplayCards(props.bookingConfig
           <p>{{ card.text }}</p>
         </article>
       </div>
+
+      <p v-if="cancellationText" class="admin-pricing-preview__cancellation">
+        {{ cancellationText }}
+      </p>
     </section>
   </div>
 </template>

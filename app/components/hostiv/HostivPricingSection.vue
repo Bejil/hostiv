@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { ArrowRight, Check, Sparkles, Star } from "@lucide/vue"
-import { hostivPricing } from "../../data/hostivLanding"
-
+const { landing } = useHostivLocale()
 const { openSignup } = useHostivAccountModal()
 
-const starterPlan = hostivPricing.plans[0]
-const proPlan = hostivPricing.plans[1]
-const premiumAddon = hostivPricing.premiumAddon
+const hostivPricing = computed(() => landing.value.pricing)
+const starterPlan = computed(() => hostivPricing.value.plans[0])
+const proPlan = computed(() => hostivPricing.value.plans[1])
+const premiumAddon = computed(() => hostivPricing.value.premiumAddon)
 
 function openSignupWithPlan(planId: "starter" | "pro") {
   openSignup(planId)
@@ -120,7 +120,7 @@ function openSignupWithPlan(planId: "starter" | "pro") {
         <aside
           v-scroll-reveal="{ delay: 160, rootMargin: '0px 0px -6% 0px' }"
           class="hostiv-pricing-addon"
-          aria-label="Extension Premium pour forfait Starter"
+          :aria-label="premiumAddon.ariaLabel"
         >
           <div class="hostiv-pricing-addon__main">
             <div class="hostiv-pricing-addon__head">
@@ -161,7 +161,7 @@ function openSignupWithPlan(planId: "starter" | "pro") {
               class="hostiv-btn hostiv-btn--accent hostiv-pricing-addon__cta"
               @click="openSignupWithPlan('pro')"
             >
-              Choisir Pro
+              {{ premiumAddon.chooseProCta }}
               <ArrowRight :size="16" />
             </button>
           </div>

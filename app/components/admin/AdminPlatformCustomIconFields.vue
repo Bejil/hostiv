@@ -20,6 +20,8 @@ const emit = defineEmits<{
   "update:iconBg": [value: string]
 }>()
 
+const { ui } = useAdminUi()
+
 const iconId = computed(() => normalizePlatformCustomIconId(props.icon ?? DEFAULT_PLATFORM_CUSTOM_ICON))
 const iconBg = computed(() => normalizePlatformIconBg(props.iconBg ?? DEFAULT_PLATFORM_ICON_BG))
 
@@ -45,13 +47,13 @@ function onColorTextInput(event: Event) {
     />
 
     <div class="admin-platform-custom-icon-fields__color">
-      <span class="admin-field__label">Couleur de fond</span>
+      <span class="admin-field__label">{{ ui.previews.platformIcon.backgroundColor }}</span>
       <div class="admin-platform-custom-icon-fields__color-inputs">
         <input
           class="admin-platform-custom-icon-fields__color-picker"
           type="color"
           :value="iconBg"
-          aria-label="Couleur de fond de l’icône"
+          :aria-label="ui.previews.platformIcon.backgroundColorAria"
           @input="onColorInput"
         />
         <input
@@ -67,7 +69,9 @@ function onColorTextInput(event: Event) {
     </div>
 
     <div class="admin-platform-custom-icon-fields__preview-wrap">
-      <span class="admin-field__label admin-platform-custom-icon-fields__preview-label">Aperçu</span>
+      <span class="admin-field__label admin-platform-custom-icon-fields__preview-label">
+        {{ ui.previews.common.label }}
+      </span>
       <div class="admin-platform-custom-icon-fields__preview" :style="{ backgroundColor: iconBg }">
         <AdminIcon :name="iconId" :size="22" />
         <span class="sr-only">{{ platformCustomIconLabel(iconId) }}</span>

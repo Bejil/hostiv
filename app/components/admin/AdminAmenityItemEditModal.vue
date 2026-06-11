@@ -4,6 +4,7 @@ import AdminAmenityIconPicker from "./AdminAmenityIconPicker.vue"
 import AdminField from "./AdminField.vue"
 import { DEFAULT_AMENITY_ICON } from "../../data/amenity-icons"
 import type { AmenityItem } from "../../types/amenity"
+import { getAdminCustomizationAmenityExamples } from "../../data/admin-customization-field-examples"
 
 const props = withDefaults(
   defineProps<{
@@ -22,12 +23,18 @@ const emit = defineEmits<{
   save: [value: AmenityItem]
 }>()
 
+const { ui, locale } = useAdminUi()
+
+const amenityExamples = computed(() => getAdminCustomizationAmenityExamples(locale.value))
+
 const draft = ref<AmenityItem>({ ...props.item })
 
 const canSave = computed(() => Boolean(draft.value.name.trim()))
 
 const modalTitle = computed(() =>
-  props.isNew ? "Ajouter un équipement" : "Modifier l’équipement"
+  props.isNew
+    ? ui.value.editors.amenities.modal.itemAddTitle
+    : ui.value.editors.amenities.modal.itemEditTitle
 )
 
 watch(
@@ -109,8 +116,8 @@ function save() {
             <span class="hostiv-modal__accent" aria-hidden="true" />
             <span class="hostiv-modal__glow" aria-hidden="true" />
 
-            <button type="button" class="hostiv-modal__close" aria-label="Fermer" @click="emit('close')">
-              <span class="sr-only">Fermer</span>
+            <button type="button" class="hostiv-modal__close" :aria-label="ui.common.close" @click="emit('close')">
+              <span class="sr-only">{{ ui.common.close }}</span>
               <X :size="18" stroke-width="2" />
             </button>
 
@@ -120,7 +127,7 @@ function save() {
                   {{ modalTitle }}
                 </h2>
                 <p class="hostiv-modal__subtitle">
-                  {{ draft.name.trim() || "Sans nom" }}
+                  {{ draft.name.trim() || ui.editors.shared.noName }}
                 </p>
               </div>
             </header>
@@ -131,21 +138,22 @@ function save() {
                 @update:model-value="patchDraft({ icon: $event as string })"
               />
               <AdminField
-                label="Nom"
+                :label="ui.editors.shared.name"
                 required
                 full-width
+                :examples="[...amenityExamples.itemName]"
                 :model-value="draft.name"
                 @update:model-value="patchDraft({ name: $event as string })"
               />
             </div>
 
             <p v-if="!canSave" class="admin-amenity-item-modal__hint">
-              Le nom est obligatoire pour enregistrer.
+              {{ ui.editors.amenities.modal.itemSaveHint }}
             </p>
 
             <footer class="admin-amenity-item-modal__footer">
               <button type="button" class="hostiv-btn hostiv-btn--secondary" @click="emit('close')">
-                Annuler
+                {{ ui.common.cancel }}
               </button>
               <button
                 type="button"
@@ -153,7 +161,7 @@ function save() {
                 :disabled="!canSave"
                 @click="save"
               >
-                Enregistrer
+                {{ ui.common.save }}
               </button>
             </footer>
           </div>

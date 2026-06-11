@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { toValue } from "vue"
 import {
   BOOKING_RESERVATION_KEY,
   type BookingFieldsInstance
@@ -16,6 +17,8 @@ const booking = inject(BOOKING_RESERVATION_KEY)
 if (!booking) {
   throw new Error("BookingReservationFields requires booking reservation context.")
 }
+
+const labels = computed(() => toValue(booking.bookingLabels))
 
 const datesPopoverRef = ref<HTMLElement | null>(null)
 const guestsPopoverRef = ref<HTMLElement | null>(null)
@@ -118,7 +121,7 @@ defineExpose({
         @click="toggleDatesPopover"
       >
         <span
-          >Dates
+          >{{ labels.dates }}
           <span v-if="showRequired" class="required-mark" aria-hidden="true">*</span></span
         >
         <strong>{{ booking.bookingDateSummary }}</strong>
@@ -140,11 +143,8 @@ defineExpose({
       >
         <div class="booking-popover-header booking-popover-header-dates">
           <div>
-            <strong>Sélectionnez vos dates</strong>
-            <span
-              >Réservez au moins {{ booking.MIN_BOOKING_NOTICE_DAYS }} jours à
-              l’avance.</span
-            >
+            <strong>{{ labels.selectDates }}</strong>
+            <span>{{ booking.bookAheadNoticeText }}</span>
           </div>
 
           <div class="booking-date-summary">
@@ -154,7 +154,7 @@ defineExpose({
               :class="{ 'is-active': booking.activeCalendarStep === 'arrival' }"
               @click="booking.activeCalendarStep = 'arrival'"
             >
-              <span>Arrivée</span>
+              <span>{{ labels.arrival }}</span>
               <strong>{{ booking.formatLongDisplayDate(booking.arrivalDate) }}</strong>
             </button>
 
@@ -164,7 +164,7 @@ defineExpose({
               :class="{ 'is-active': booking.activeCalendarStep === 'departure' }"
               @click="booking.activeCalendarStep = 'departure'"
             >
-              <span>Départ</span>
+              <span>{{ labels.departure }}</span>
               <strong>{{ booking.formatLongDisplayDate(booking.departureDate) }}</strong>
             </button>
           </div>
@@ -237,8 +237,7 @@ defineExpose({
         </div>
 
         <p class="booking-popover-note">
-          {{ booking.pluralize(booking.stayNights, "nuit", "nuits") }} sélectionnée(s).
-          Séjour autorisé : de {{ booking.MIN_STAY_NIGHTS }} à {{ booking.MAX_STAY_NIGHTS }} nuits.
+          {{ booking.bookingDatesPopoverNote }}
         </p>
       </div>
     </div>
@@ -259,7 +258,7 @@ defineExpose({
         @click="toggleGuestsPopover"
       >
         <span
-          >Voyageurs
+          >{{ labels.travelers }}
           <span v-if="showRequired" class="required-mark" aria-hidden="true">*</span></span
         >
         <strong>{{ booking.guestSummary }}</strong>
@@ -277,17 +276,15 @@ defineExpose({
 
       <div v-if="showGuestsPopover" class="booking-popover booking-popover-guests">
         <div class="booking-popover-header">
-          <strong>Choisissez vos voyageurs</strong>
-          <span
-            >Adultes + enfants limités à {{ booking.MAX_TRAVELERS }}. 1 bébé maximum.</span
-          >
+          <strong>{{ labels.chooseTravelers }}</strong>
+          <span>{{ booking.travelersLimitNote }}</span>
         </div>
 
         <div class="guest-stepper-list">
           <div class="guest-stepper-row">
             <div class="guest-stepper-copy">
-              <strong>Adultes</strong>
-              <span>13 ans et plus</span>
+              <strong>{{ labels.adults }}</strong>
+              <span>{{ labels.adultsAge }}</span>
             </div>
 
             <div class="guest-stepper-controls">
@@ -313,8 +310,8 @@ defineExpose({
 
           <div class="guest-stepper-row">
             <div class="guest-stepper-copy">
-              <strong>Enfants</strong>
-              <span>De 2 à 12 ans</span>
+              <strong>{{ labels.children }}</strong>
+              <span>{{ labels.childrenAge }}</span>
             </div>
 
             <div class="guest-stepper-controls">
@@ -340,8 +337,8 @@ defineExpose({
 
           <div class="guest-stepper-row">
             <div class="guest-stepper-copy">
-              <strong>Bébé</strong>
-              <span>Moins de 2 ans</span>
+              <strong>{{ labels.babies }}</strong>
+              <span>{{ labels.babyAge }}</span>
             </div>
 
             <div class="guest-stepper-controls">

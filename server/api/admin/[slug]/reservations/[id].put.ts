@@ -4,6 +4,14 @@ import {
   getAdminBookingReservationById,
   updateAdminBookingReservation
 } from "../../../../utils/booking-reservation-repository"
+import {
+  describeReservationChanges,
+  reservationMeaningfulFieldsChanged
+} from "../../../../utils/admin-reservation-changes"
+import {
+  sendReservationCancelledEmails,
+  sendReservationUpdatedEmails
+} from "../../../../utils/transactional-email"
 
 export default defineEventHandler(async (event) => {
   const slug = getRouterParam(event, "slug")
@@ -29,6 +37,20 @@ export default defineEventHandler(async (event) => {
   }
 
   const reservation = await updateAdminBookingReservation(slug, id, parsed.data)
+
+  if (existing.status === "confirmed" && reservation.status === "cancelled" && !reservation.refunded_at) {
+    void sendReservationCancelledEmails({
+      slug,
+      reservation,
+      refunded: false
+    })
+  } else if (reservationMeaningfulFieldsChanged(existing, reservation)) {
+    void sendReservationUpdatedEmails({
+      slug,
+      reservation,
+      changes: describeReservationChanges(existing, reservation)
+    })
+  }
 
   return { reservation }
 })

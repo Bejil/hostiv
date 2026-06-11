@@ -24,6 +24,9 @@ const emit = defineEmits<{
   "request-delete": []
 }>()
 
+const { ui } = useAdminUi()
+const ext = computed(() => ui.value.extended)
+
 const profile = ref<HostivAccountProfile | null>(null)
 const firstName = ref("")
 const lastName = ref("")
@@ -66,7 +69,7 @@ async function loadProfile() {
   } catch (err: unknown) {
     const e = err as { data?: { message?: string }; message?: string }
 
-    error.value = e.data?.message || e.message || "Impossible de charger votre compte."
+    error.value = e.data?.message || e.message || ext.value.account.loadFailed
   } finally {
     loading.value = false
   }
@@ -78,17 +81,17 @@ async function onSave() {
 
   if (newPassword.value) {
     if (!isHostivPasswordValid(newPassword.value)) {
-      error.value = "Choisissez un mot de passe qui respecte tous les critères de sécurité."
+      error.value = ext.value.account.errors.passwordInvalid
       passwordFieldFocused.value = true
       return
     }
 
     if (newPassword.value !== confirmPassword.value) {
-      error.value = "Les deux mots de passe ne correspondent pas."
+      error.value = ext.value.account.errors.passwordMismatch
       return
     }
   } else if (confirmPassword.value) {
-    error.value = "Saisissez le nouveau mot de passe ou videz la confirmation."
+    error.value = ext.value.account.errors.passwordConfirmEmpty
     return
   }
 
@@ -132,12 +135,12 @@ async function onSave() {
     }
 
     success.value = result.emailChanged
-      ? "Compte mis à jour. Si vous changez d’e-mail, utilisez la nouvelle adresse pour vous reconnecter."
-      : "Compte mis à jour."
+      ? ext.value.account.success.emailChanged
+      : ext.value.account.success.updated
   } catch (err: unknown) {
     const e = err as { data?: { message?: string }; message?: string }
 
-    error.value = e.data?.message || e.message || "Impossible d’enregistrer les modifications."
+    error.value = e.data?.message || e.message || ext.value.account.errors.saveFailed
   } finally {
     saving.value = false
   }
@@ -150,7 +153,7 @@ onMounted(() => {
 
 <template>
   <div class="admin-account" :class="{ 'admin-account--modal': embedded }">
-    <p v-if="loading" class="admin-account__loading">Chargement…</p>
+    <p v-if="loading" class="admin-account__loading">{{ ext.account.loading }}</p>
 
     <template v-else>
       <AdminAlert v-if="error" variant="error" :message="error" />
@@ -160,19 +163,28 @@ onMounted(() => {
         <div class="admin-subpanel admin-account__panel">
           <div class="admin-subpanel__head">
             <div>
-              <h3>Identité</h3>
+              <h3>{{ ext.account.identityTitle }}</h3>
               <p class="admin-account__lead">
-                Ces informations sont liées à votre compte Hostiv (connexion au backoffice).
+                {{ ext.account.identityLead }}
               </p>
             </div>
           </div>
 
           <div class="admin-account__fields">
-            <AdminField v-model="firstName" label="Prénom" autocomplete="given-name" required />
-            <AdminField v-model="lastName" label="Nom" autocomplete="family-name" />
+            <AdminField
+              v-model="firstName"
+              :label="ext.account.fields.firstName"
+              autocomplete="given-name"
+              required
+            />
+            <AdminField
+              v-model="lastName"
+              :label="ext.account.fields.lastName"
+              autocomplete="family-name"
+            />
             <AdminField
               v-model="email"
-              label="E-mail"
+              :label="ext.account.fields.email"
               type="email"
               autocomplete="email"
               required
@@ -184,14 +196,14 @@ onMounted(() => {
         <div class="admin-subpanel admin-account__panel">
           <div class="admin-subpanel__head">
             <div>
-              <h3>Mot de passe</h3>
-              <p class="admin-account__lead">Laissez vide pour conserver le mot de passe actuel.</p>
+              <h3>{{ ext.account.passwordTitle }}</h3>
+              <p class="admin-account__lead">{{ ext.account.passwordLead }}</p>
             </div>
           </div>
 
           <div class="admin-account__password-block">
             <label class="admin-field admin-field--full" for="admin-account-new-password">
-              <span class="admin-field__label">Nouveau mot de passe</span>
+              <span class="admin-field__label">{{ ext.account.newPassword }}</span>
               <input
                 id="admin-account-new-password"
                 v-model="newPassword"
@@ -213,7 +225,7 @@ onMounted(() => {
 
             <AdminField
               v-model="confirmPassword"
-              label="Confirmer le mot de passe"
+              :label="ext.account.confirmPassword"
               type="password"
               autocomplete="new-password"
               full-width
@@ -228,17 +240,16 @@ onMounted(() => {
             :disabled="saving"
             @mousedown.prevent
           >
-            {{ saving ? "Enregistrement…" : "Enregistrer le compte" }}
+            {{ saving ? ui.common.saving : ext.account.saveAccount }}
           </button>
         </div>
       </form>
 
       <section class="admin-account__danger-zone" aria-labelledby="admin-account-danger-title">
         <div class="admin-account__danger-head">
-          <h3 id="admin-account-danger-title">Zone de danger</h3>
+          <h3 id="admin-account-danger-title">{{ ext.account.dangerTitle }}</h3>
           <p class="admin-account__lead">
-            La suppression de votre compte efface définitivement votre site, vos données et votre
-            accès Hostiv.
+            {{ ext.account.dangerLead }}
           </p>
         </div>
         <button
@@ -247,7 +258,7 @@ onMounted(() => {
           :disabled="saving"
           @click="emit('request-delete')"
         >
-          Supprimer mon compte…
+          {{ ext.account.deleteAccount }}
         </button>
       </section>
     </template>

@@ -5,6 +5,9 @@ const props = defineProps<{
   page: HostivStaticPage
 }>()
 
+const { landing, homePath } = useHostivLocale()
+const staticUi = computed(() => landing.value.staticUi)
+
 useHostivPageSeo(props.page.title, props.page.description)
 </script>
 
@@ -18,7 +21,7 @@ useHostivPageSeo(props.page.title, props.page.description)
           <h1 class="hostiv-h2 hostiv-static__title">{{ page.title }}</h1>
           <p class="hostiv-static__lead">{{ page.lead }}</p>
           <p v-if="page.updatedAt" class="hostiv-static__updated">
-            Dernière mise à jour : {{ page.updatedAt }}
+            {{ staticUi.lastUpdated }} {{ page.updatedAt }}
           </p>
         </header>
 
@@ -64,7 +67,7 @@ useHostivPageSeo(props.page.title, props.page.description)
         </div>
 
         <p class="hostiv-static__back">
-          <NuxtLink to="/" class="hostiv-static__back-link">← Retour à l’accueil</NuxtLink>
+          <NuxtLink :to="homePath" class="hostiv-static__back-link">{{ staticUi.backHome }}</NuxtLink>
         </p>
       </div>
     </main>

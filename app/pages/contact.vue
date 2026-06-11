@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { getHostivStaticPage } from "../data/hostivStaticPages"
 
-const page = getHostivStaticPage("contact")
+const { landing } = useHostivLocale()
+const page = getHostivStaticPage("contact", "fr")
 const { openContact } = useHostivContactModal()
 </script>
 
@@ -9,7 +10,7 @@ const { openContact } = useHostivContactModal()
   <HostivStaticPage :page="page">
     <template #actions>
       <button type="button" class="hostiv-btn hostiv-btn--primary" @click="openContact">
-        Ouvrir le formulaire de contact
+        {{ landing.staticUi.contactFormCta }}
       </button>
     </template>
   </HostivStaticPage>

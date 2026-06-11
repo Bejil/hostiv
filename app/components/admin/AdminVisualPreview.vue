@@ -15,25 +15,41 @@ const props = defineProps<{
   previewUrl: (path: string) => string
 }>()
 
-const displayEyebrow = computed(() => props.eyebrow.trim() || "Sur-titre")
-const displayTitle = computed(() => props.title.trim() || "Titre de la section")
-const displayIntro = computed(() => props.intro.trim() || "Introduction de la section.")
+const { ui } = useAdminUi()
+
+const displayEyebrow = computed(
+  () => props.eyebrow.trim() || ui.value.previews.common.eyebrow
+)
+const displayTitle = computed(
+  () => props.title.trim() || ui.value.previews.common.sectionTitle
+)
+const displayIntro = computed(
+  () => props.intro.trim() || ui.value.previews.common.intro
+)
 
 const displayCards = computed(() =>
   props.cards
     .map((card) => ({
       ...card,
-      title: card.title.trim() || "Titre de la carte",
-      text: card.text.trim() || "Description de la carte.",
+      title: card.title.trim() || ui.value.previews.visual.cardTitle,
+      text: card.text.trim() || ui.value.previews.visual.cardText,
       image: card.image.trim()
     }))
     .filter((card) => card.title || card.text || card.image)
 )
 
-const displayCtaEyebrow = computed(() => props.ctaEyebrow.trim() || "Sur-titre CTA")
-const displayCtaTitle = computed(() => props.ctaTitle.trim() || "Titre CTA")
-const displayCtaText = computed(() => props.ctaText.trim() || "Texte de la carte galerie.")
-const displayCtaAction = computed(() => props.ctaAction.trim() || "Voir la galerie")
+const displayCtaEyebrow = computed(
+  () => props.ctaEyebrow.trim() || ui.value.previews.visual.ctaEyebrow
+)
+const displayCtaTitle = computed(
+  () => props.ctaTitle.trim() || ui.value.previews.visual.ctaTitle
+)
+const displayCtaText = computed(
+  () => props.ctaText.trim() || ui.value.previews.visual.ctaText
+)
+const displayCtaAction = computed(
+  () => props.ctaAction.trim() || ui.value.previews.visual.ctaAction
+)
 
 function imageSrc(path: string) {
   const trimmed = path.trim()
@@ -50,8 +66,8 @@ function imageSrc(path: string) {
 </script>
 
 <template>
-  <div class="admin-visual-preview" aria-label="Aperçu section images">
-    <p class="admin-visual-preview__label">Aperçu</p>
+  <div class="admin-visual-preview" :aria-label="ui.previews.visual.ariaLabel">
+    <p class="admin-visual-preview__label">{{ ui.previews.common.label }}</p>
     <section class="admin-visual-preview__section">
       <div class="admin-visual-preview__head">
         <p class="admin-visual-preview__eyebrow">{{ displayEyebrow }}</p>
@@ -62,7 +78,7 @@ function imageSrc(path: string) {
       </div>
 
       <p v-if="!displayCards.length" class="admin-visual-preview__empty">
-        Renseignez au moins une carte visuelle pour afficher l’aperçu.
+        {{ ui.previews.visual.emptyCards }}
       </p>
 
       <div v-else class="admin-visual-preview__grid">

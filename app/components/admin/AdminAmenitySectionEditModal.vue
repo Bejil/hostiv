@@ -6,7 +6,9 @@ import AdminField from "./AdminField.vue"
 import AdminIcon from "./AdminIcon.vue"
 import AmenityIcon from "../AmenityIcon.vue"
 import { DEFAULT_AMENITY_ICON } from "../../data/amenity-icons"
+import { adminUiFormat } from "../../data/admin-ui"
 import type { AmenityItem, AmenityPreviewSection } from "../../types/amenity"
+import { getAdminCustomizationAmenityExamples } from "../../data/admin-customization-field-examples"
 
 const props = defineProps<{
   open: boolean
@@ -18,6 +20,10 @@ const emit = defineEmits<{
   close: []
   save: [value: AmenityPreviewSection]
 }>()
+
+const { ui, locale } = useAdminUi()
+
+const amenityExamples = computed(() => getAdminCustomizationAmenityExamples(locale.value))
 
 const draft = ref<AmenityPreviewSection>({ ...props.section, items: [...props.section.items] })
 
@@ -36,7 +42,9 @@ const canSave = computed(
 )
 
 const modalTitle = computed(() =>
-  props.isNew ? "Ajouter une carte" : "Modifier la carte"
+  props.isNew
+    ? ui.value.editors.amenities.modal.addTitle
+    : ui.value.editors.amenities.modal.editTitle
 )
 
 const editingItem = computed(() => {
@@ -64,7 +72,10 @@ function createEmptyItem(): AmenityItem {
 }
 
 function itemName(item: AmenityItem, index: number) {
-  return item.name.trim() || `Équipement ${index + 1}`
+  return (
+    item.name.trim() ||
+    adminUiFormat(ui.value.editors.shared.amenityFallback, { index: index + 1 })
+  )
 }
 
 watch(
@@ -250,8 +261,8 @@ function save() {
             <span class="hostiv-modal__accent" aria-hidden="true" />
             <span class="hostiv-modal__glow" aria-hidden="true" />
 
-            <button type="button" class="hostiv-modal__close" aria-label="Fermer" @click="emit('close')">
-              <span class="sr-only">Fermer</span>
+            <button type="button" class="hostiv-modal__close" :aria-label="ui.common.close" @click="emit('close')">
+              <span class="sr-only">{{ ui.common.close }}</span>
               <X :size="18" stroke-width="2" />
             </button>
 
@@ -261,34 +272,35 @@ function save() {
                   {{ modalTitle }}
                 </h2>
                 <p class="hostiv-modal__subtitle">
-                  {{ draft.title.trim() || "Sans titre" }}
+                  {{ draft.title.trim() || ui.editors.shared.untitled }}
                 </p>
               </div>
             </header>
 
             <div class="admin-amenity-section-modal__fields">
               <AdminField
-                label="Titre de la carte"
+                :label="ui.editors.shared.cardTitle"
                 required
                 full-width
+                :examples="[...amenityExamples.sectionTitle]"
                 :model-value="draft.title"
                 @update:model-value="patchDraft({ title: $event as string })"
               />
 
               <div class="admin-amenity-section-modal__items-head">
-                <h3 class="admin-amenity-section-modal__items-title">Équipements</h3>
+                <h3 class="admin-amenity-section-modal__items-title">{{ ui.editors.amenities.itemsTitle }}</h3>
                 <button
                   type="button"
                   class="admin-btn admin-btn--secondary admin-btn--sm"
                   @click="openAddItem"
                 >
                   <AdminIcon name="plus" :size="16" />
-                  Ajouter
+                  {{ ui.editors.shared.add }}
                 </button>
               </div>
 
               <p v-if="!draft.items.length" class="admin-amenity-section-modal__items-empty">
-                Aucun équipement. Ajoutez au moins un équipement nommé.
+                {{ ui.editors.amenities.itemsEmpty }}
               </p>
 
               <ul v-else class="admin-amenity-section-modal__items">
@@ -307,7 +319,7 @@ function save() {
                   <button
                     type="button"
                     class="admin-sortable-list__drag-handle"
-                    aria-label="Glisser pour réordonner"
+                    :aria-label="ui.editors.shared.dragToReorder"
                     draggable="true"
                     @dragstart="onItemDragStart(itemIndex, $event)"
                     @dragend="onItemDragEnd"
@@ -327,7 +339,7 @@ function save() {
                     <button
                       type="button"
                       class="admin-btn admin-btn--secondary admin-btn--sm admin-btn--icon-only"
-                      aria-label="Modifier"
+                      :aria-label="ui.editors.shared.edit"
                       @click="openEditItem(itemIndex)"
                     >
                       <AdminIcon name="pencil" :size="16" />
@@ -335,7 +347,7 @@ function save() {
                     <button
                       type="button"
                       class="admin-btn admin-btn--ghost admin-btn--danger-ghost admin-btn--sm admin-btn--icon-only"
-                      aria-label="Supprimer"
+                      :aria-label="ui.common.delete"
                       @click="openDeleteItem(itemIndex)"
                     >
                       <AdminIcon name="trash" :size="16" />
@@ -346,12 +358,12 @@ function save() {
             </div>
 
             <p v-if="!canSave" class="admin-amenity-section-modal__hint">
-              Le titre de la carte et au moins un équipement nommé sont obligatoires.
+              {{ ui.editors.amenities.modal.saveHint }}
             </p>
 
             <footer class="admin-amenity-section-modal__footer">
               <button type="button" class="hostiv-btn hostiv-btn--secondary" @click="emit('close')">
-                Annuler
+                {{ ui.common.cancel }}
               </button>
               <button
                 type="button"
@@ -359,7 +371,7 @@ function save() {
                 :disabled="!canSave"
                 @click="save"
               >
-                Enregistrer
+                {{ ui.common.save }}
               </button>
             </footer>
           </div>
@@ -379,7 +391,7 @@ function save() {
 
     <AdminAmenityItemDeleteModal
       :open="itemDeleteOpen"
-      :item-name="deletingItem ? itemName(deletingItem, deletingItemIndex ?? 0) : 'Cet équipement'"
+      :item-name="deletingItem ? itemName(deletingItem, deletingItemIndex ?? 0) : ui.editors.shared.thisAmenity"
       :lock-scroll="false"
       @cancel="closeDeleteItem"
       @confirm="confirmDeleteItem"

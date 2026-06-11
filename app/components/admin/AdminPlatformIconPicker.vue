@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ChevronDown } from "@lucide/vue"
+import { adminUiFormat } from "../../data/admin-ui"
 import AdminIcon from "./AdminIcon.vue"
 import {
   PLATFORM_CUSTOM_ICON_OPTIONS,
@@ -16,6 +17,8 @@ const emit = defineEmits<{
   "update:modelValue": [value: AdminIconName]
 }>()
 
+const { ui } = useAdminUi()
+
 const rootRef = ref<HTMLElement | null>(null)
 const triggerRef = ref<HTMLButtonElement | null>(null)
 const panelRef = ref<HTMLElement | null>(null)
@@ -26,6 +29,10 @@ const PANEL_WIDTH_PX = 288
 const PANEL_GAP_PX = 6
 
 const activeLabel = computed(() => platformCustomIconLabel(props.modelValue))
+
+const iconsListLabel = computed(() =>
+  adminUiFormat(ui.value.common.iconsAvailable, { label: activeLabel.value })
+)
 
 function updatePanelPosition() {
   const trigger = triggerRef.value
@@ -150,7 +157,7 @@ onUnmounted(() => {
 
 <template>
   <div ref="rootRef" class="admin-platform-icon-picker">
-    <span class="admin-field__label">Icône</span>
+    <span class="admin-field__label">{{ ui.common.icon }}</span>
     <button
       ref="triggerRef"
       type="button"
@@ -173,7 +180,7 @@ onUnmounted(() => {
         class="admin-platform-icon-picker__panel"
         :style="panelStyle"
         role="listbox"
-        :aria-label="`Icônes — ${activeLabel}`"
+        :aria-label="iconsListLabel"
       >
         <button
           v-for="option in PLATFORM_CUSTOM_ICON_OPTIONS"

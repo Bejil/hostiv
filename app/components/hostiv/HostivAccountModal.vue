@@ -3,8 +3,11 @@ import { Check, CheckCircle2, Loader2, X } from "@lucide/vue"
 import type { HostivAccountModalMode } from "../../composables/useHostivAccountModal"
 import { hostivPricing, type HostivPricingPlanId } from "../../data/hostivLanding"
 import { useHostivPropertySlugCheck } from "../../composables/useHostivPropertySlugCheck"
+import { startHostivSignupCheckout } from "../../composables/useHostivSubscriptionCheckout"
+import { clearHostivSignupLoginCredentials } from "../../utils/hostiv-signup-session"
 import { isHostivPasswordValid } from "../../utils/hostiv-password-rules"
 import HostivPasswordRulesChecklist from "../HostivPasswordRulesChecklist.vue"
+import HostivSignupPlanCard from "./HostivSignupPlanCard.vue"
 
 const { open, mode, close, selectedPlan, setSelectedPlan } = useHostivAccountModal()
 
@@ -45,9 +48,12 @@ const title = computed(() =>
 
 const subtitle = computed(() =>
   mode.value === "signup"
-    ? "Créez votre compte et accédez tout de suite à votre backoffice (site en brouillon)."
+    ? "Choisissez votre forfait, renseignez vos informations puis payez en ligne. Votre compte et votre site sont créés après le paiement."
     : "Connectez-vous pour gérer votre site et vos réservations."
 )
+
+const route = useRoute()
+const router = useRouter()
 
 const showPropertySlugStatus = computed(() => Boolean(propertyName.value.trim()))
 
@@ -103,6 +109,26 @@ watch(open, (isOpen) => {
   propertyFieldFocused.value = false
   document.body.style.overflow = ""
 })
+
+watch(
+  () => route.query.signup,
+  (value) => {
+    if (value !== "cancelled") {
+      return
+    }
+
+    mode.value = "signup"
+    open.value = true
+    error.value = "Paiement annulé. Aucun compte n’a été créé — vous pouvez réessayer."
+    clearHostivSignupLoginCredentials()
+
+    const query = { ...route.query }
+
+    delete query.signup
+    void router.replace({ path: route.path, query })
+  },
+  { immediate: true }
+)
 
 onUnmounted(() => {
   document.body.style.overflow = ""
@@ -179,70 +205,20 @@ async function onSignupSubmit() {
   loading.value = true
 
   try {
-    let supabase
-
-    try {
-      supabase = useSupabaseClient()
-    } catch {
-      throw new Error("Inscription indisponible : Supabase n’est pas configuré sur cet environnement.")
-    }
-
-    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+    await startHostivSignupCheckout({
+      full_name: name,
       email: mail,
       password: pass,
-      options: {
-        data: {
-          full_name: name,
-          property_name: trimmedProperty,
-          property_slug: propertySlug.value,
-          subscription_plan: selectedPlan.value
-        }
-      }
+      property_name: trimmedProperty,
+      property_slug: propertySlug.value,
+      subscription_plan: selectedPlan.value
     })
-
-    if (signUpError) {
-      throw signUpError
-    }
-
-    let session = signUpData.session
-
-    if (!session) {
-      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-        email: mail,
-        password: pass
-      })
-
-      if (signInError) {
-        throw new Error(
-          "Compte créé. Connectez-vous avec votre e-mail et votre mot de passe pour accéder à votre backoffice."
-        )
-      }
-
-      session = signInData.session
-    }
-
-    if (!session?.access_token) {
-      throw new Error("Compte créé mais session indisponible. Essayez de vous connecter.")
-    }
-
-    const provision = await $fetch<{ slug: string }>("/api/hostiv/provision", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${session.access_token}`
-      },
-      body: {
-        property_name: trimmedProperty,
-        property_slug: propertySlug.value,
-        subscription_plan: selectedPlan.value
-      }
-    })
-
-    password.value = ""
-    close()
-    await navigateTo(`/${provision.slug}/admin?onboarding=1`)
   } catch (cause) {
+    const err = cause as { data?: { message?: string }; message?: string }
+
     error.value =
-      cause instanceof Error ? cause.message : "Impossible de créer le compte. Réessayez plus tard."
+      err.data?.message ||
+      (cause instanceof Error ? cause.message : "Impossible d’ouvrir le paiement. Réessayez plus tard.")
   } finally {
     loading.value = false
   }
@@ -312,6 +288,7 @@ async function onLoginSubmit() {
         <Transition name="hostiv-modal-panel" appear>
           <div
             class="hostiv-modal__panel"
+            :class="{ 'hostiv-modal__panel--signup': mode === 'signup' }"
             role="dialog"
             aria-modal="true"
             aria-labelledby="hostiv-modal-title"
@@ -375,32 +352,24 @@ async function onLoginSubmit() {
             >
               <fieldset class="hostiv-modal__plans">
                 <legend class="hostiv-modal__plans-legend">Forfait</legend>
-                <div class="hostiv-modal__plans-grid" role="radiogroup" aria-label="Choisir un forfait">
-                  <button
+                <div
+                  class="hostiv-modal__plans-grid hostiv-modal__plans-grid--detailed"
+                  role="radiogroup"
+                  aria-label="Choisir un forfait"
+                >
+                  <HostivSignupPlanCard
                     v-for="plan in pricingPlans"
                     :key="plan.id"
-                    type="button"
-                    role="radio"
-                    class="hostiv-modal__plan"
-                    :class="{
-                      'hostiv-modal__plan--active': selectedPlan === plan.id,
-                      'hostiv-modal__plan--pro': plan.id === 'pro'
-                    }"
-                    :aria-checked="selectedPlan === plan.id"
-                    @click="setSelectedPlan(plan.id as HostivPricingPlanId)"
-                  >
-                    <span
-                      v-if="plan.recommended"
-                      class="hostiv-modal__plan-badge"
-                    >
-                      {{ plan.badge }}
-                    </span>
-                    <span class="hostiv-modal__plan-name">{{ plan.name }}</span>
-                    <span class="hostiv-modal__plan-price">
-                      {{ plan.price }}€<span class="hostiv-modal__plan-period">/ {{ plan.period }}</span>
-                    </span>
-                  </button>
+                    :plan-id="plan.id"
+                    :selected="selectedPlan === plan.id"
+                    :disabled="loading"
+                    @select="setSelectedPlan(plan.id as HostivPricingPlanId)"
+                  />
                 </div>
+                <p class="hostiv-modal__plans-note">
+                  Paiement unique par carte via Stripe. Aucun compte ni site n’est créé tant que le paiement
+                  n’est pas confirmé.
+                </p>
               </fieldset>
 
               <label class="hostiv-modal__field">
@@ -503,8 +472,8 @@ async function onLoginSubmit() {
               >
                 {{
                   loading
-                    ? "Création…"
-                    : `Créer mon compte — ${activePricingPlan.name}`
+                    ? "Redirection vers Stripe…"
+                    : `Payer ${activePricingPlan.price}€ / an — ${activePricingPlan.name}`
                 }}
               </button>
             </form>

@@ -311,6 +311,45 @@
   width: 100%;
 }
 
+.booking-modal .booking-item-trigger {
+  border-radius: var(--bm-radius-field, 18px);
+  background: var(--bm-card, #fff);
+  color: var(--bm-ink, #171311);
+}
+
+.booking-modal .booking-item-trigger.is-open {
+  background: var(--bm-card, #fff);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--bm-accent, #6b4f33) 18%, transparent);
+}
+
+.booking-modal .booking-item-trigger span {
+  color: var(--bm-muted, #8a7b6d);
+}
+
+.booking-modal .booking-item-trigger span .required-mark {
+  color: var(--bm-danger, #b42318);
+}
+
+.booking-modal .booking-item-trigger small {
+  color: var(--bm-muted, #7a6a5d);
+}
+
+.booking-modal .booking-popover {
+  border: 1px solid color-mix(in srgb, var(--bm-border, #e8dfd4) 72%, transparent);
+  border-radius: var(--bm-radius-field, 20px);
+  background: var(--bm-panel, #fffcf8);
+  box-shadow: 0 20px 45px color-mix(in srgb, var(--bm-ink, #171311) 16%, transparent);
+}
+
+.booking-modal .booking-popover-header strong {
+  color: var(--bm-ink, #171311);
+}
+
+.booking-modal .booking-popover-header span,
+.booking-modal .booking-popover-note {
+  color: var(--bm-muted, #7a6a5d);
+}
+
 .booking-item {
   position: relative;
   min-width: 0;
@@ -664,9 +703,9 @@
   min-height: 52px;
   padding: 14px 22px;
   border: 0;
-  border-radius: 999px;
-  background: #171311;
-  color: #fff;
+  border-radius: var(--bm-radius-button, 999px);
+  background: var(--bm-accent, #171311);
+  color: var(--bm-accent-text, #fff);
   font: inherit;
   font-size: 0.98rem;
   font-weight: 800;
@@ -676,13 +715,13 @@
     background 0.2s ease,
     transform 0.2s ease,
     box-shadow 0.2s ease;
-  box-shadow: 0 10px 28px rgba(24, 18, 13, 0.14);
+  box-shadow: 0 10px 28px color-mix(in srgb, var(--bm-accent, #171311) 28%, transparent);
 }
 
 .booking-modal-submit:hover:not(:disabled) {
-  background: #2a221c;
+  background: var(--bm-accent-2, #2a221c);
   transform: translateY(-1px);
-  box-shadow: 0 14px 32px rgba(24, 18, 13, 0.18);
+  box-shadow: 0 14px 32px color-mix(in srgb, var(--bm-accent, #171311) 34%, transparent);
 }
 
 .booking-modal-submit:disabled {
@@ -693,7 +732,7 @@
 }
 
 .booking-modal-submit:focus-visible {
-  outline: 3px solid rgba(255, 214, 107, 0.65);
+  outline: 3px solid color-mix(in srgb, var(--bm-accent-2, #94633c) 65%, transparent);
   outline-offset: 3px;
 }
 
@@ -705,7 +744,7 @@
   margin: 0;
   font-size: 0.88rem;
   line-height: 1.45;
-  color: #b42318;
+  color: var(--bm-danger, #b42318);
   font-weight: 600;
 }
 
@@ -713,11 +752,16 @@
 .booking-modal-price-recap {
   padding: 14px 16px;
   border-radius: 18px;
-  border: 1px solid rgba(74, 58, 43, 0.35);
-  background: linear-gradient(155deg, #7a6f63 0%, #625850 48%, #574e44 100%);
+  border: 1px solid color-mix(in srgb, var(--bm-accent, #6b4f33) 35%, transparent);
+  background: linear-gradient(
+    155deg,
+    var(--bm-recap-from, #7a6f63) 0%,
+    var(--bm-recap-mid, #625850) 48%,
+    var(--bm-recap-to, #574e44) 100%
+  );
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.14),
-    0 8px 28px rgba(24, 18, 13, 0.12);
+    inset 0 1px 0 color-mix(in srgb, var(--bm-accent-text, #fff) 14%, transparent),
+    0 8px 28px color-mix(in srgb, var(--bm-accent, #6b4f33) 18%, transparent);
 }
 
 .booking-modal-price-recap-title {
@@ -726,7 +770,7 @@
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgba(252, 248, 244, 0.72);
+  color: color-mix(in srgb, var(--bm-accent-text, #fffaf4) 72%, transparent);
 }
 
 .booking-modal-price-recap-lines {
@@ -741,7 +785,7 @@
   justify-content: space-between;
   gap: 12px;
   font-size: 0.92rem;
-  color: #fffaf6;
+  color: var(--bm-accent-text, #fffaf6);
 }
 
 .booking-modal-price-recap-row dt {
@@ -759,7 +803,7 @@
 
 .booking-modal-price-recap-row--muted dt,
 .booking-modal-price-recap-row--muted dd {
-  color: rgba(252, 246, 238, 0.88);
+  color: color-mix(in srgb, var(--bm-accent-text, #fffaf4) 88%, transparent);
   font-weight: 600;
 }
 
@@ -770,27 +814,37 @@
   gap: 12px;
   margin-top: 14px;
   padding-top: 14px;
-  border-top: 1px solid rgba(252, 248, 244, 0.22);
+  border-top: 1px solid color-mix(in srgb, var(--bm-accent-text, #fffaf4) 22%, transparent);
   font-size: 1rem;
 }
 
 .booking-modal-price-recap-total span {
   font-weight: 700;
-  color: #fffaf6;
+  color: var(--bm-accent-text, #fffaf6);
 }
 
 .booking-modal-price-recap-total strong {
   font-size: 1.25rem;
   font-variant-numeric: tabular-nums;
-  color: #ffffff;
-  text-shadow: 0 1px 0 rgba(24, 18, 13, 0.25);
+  color: var(--bm-accent-text, #ffffff);
+  text-shadow: 0 1px 0 color-mix(in srgb, var(--bm-accent, #171311) 25%, transparent);
+}
+
+.booking-modal-price-recap-cancellation {
+  margin: 12px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid color-mix(in srgb, var(--bm-accent-text, #fffaf4) 18%, transparent);
+  font-size: 0.8rem;
+  line-height: 1.5;
+  font-weight: 600;
+  color: color-mix(in srgb, var(--bm-accent-text, #fffaf4) 92%, transparent);
 }
 
 .booking-modal-price-recap-note {
   margin: 12px 0 0;
   font-size: 0.78rem;
   line-height: 1.5;
-  color: rgba(252, 246, 238, 0.78);
+  color: color-mix(in srgb, var(--bm-accent-text, #fffaf4) 78%, transparent);
 }
 
 /* BookingStripePayment.vue (composant enfant — styles globaux) */
@@ -800,29 +854,29 @@
   gap: 14px;
 }
 
-.booking-stripe-payment-lead {
+.booking-modal .booking-stripe-payment-lead {
   margin: 0;
   font-size: 0.95rem;
   line-height: 1.55;
-  color: #3d3834;
+  color: var(--bm-muted, #3d3834);
 }
 
-.booking-stripe-payment-lead strong {
-  color: #2a221c;
+.booking-modal .booking-stripe-payment-lead strong {
+  color: var(--bm-ink, #2a221c);
 }
 
-.booking-stripe-payment-element {
+.booking-modal .booking-stripe-payment-element {
   padding: 14px 16px;
-  border: 1px solid #e5dcd2;
-  border-radius: 14px;
-  background: #fff;
+  border: 1px solid color-mix(in srgb, var(--bm-border, #e5dcd2) 88%, transparent);
+  border-radius: var(--bm-radius-field, 14px);
+  background: var(--bm-card, #fff);
 }
 
-.booking-stripe-payment-note {
+.booking-modal .booking-stripe-payment-note {
   margin: 0;
   font-size: 0.82rem;
   line-height: 1.5;
-  color: #7a6f66;
+  color: var(--bm-muted, #7a6f66);
   text-align: center;
 }
 

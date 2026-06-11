@@ -9,23 +9,29 @@ const props = defineProps<{
   title: string
 }>()
 
-const displayEyebrow = computed(() => props.eyebrow.trim() || "Sur-titre")
-const displayTitle = computed(() => props.title.trim() || "Titre de la section")
+const { ui } = useAdminUi()
+
+const displayEyebrow = computed(
+  () => props.eyebrow.trim() || ui.value.previews.common.eyebrow
+)
+const displayTitle = computed(
+  () => props.title.trim() || ui.value.previews.common.sectionTitle
+)
 
 const displayCards = computed(() =>
   props.cards
     .map((card) => ({
       ...card,
-      title: card.title.trim() || "Titre de l’atout",
-      text: card.text.trim() || "Description de l’atout."
+      title: card.title.trim() || ui.value.previews.benefits.cardTitle,
+      text: card.text.trim() || ui.value.previews.benefits.cardText
     }))
     .filter((card) => card.title || card.text)
 )
 </script>
 
 <template>
-  <div class="admin-benefits-preview" aria-label="Aperçu des atouts">
-    <p class="admin-benefits-preview__label">Aperçu</p>
+  <div class="admin-benefits-preview" :aria-label="ui.previews.benefits.ariaLabel">
+    <p class="admin-benefits-preview__label">{{ ui.previews.common.label }}</p>
     <section class="admin-benefits-preview__section">
       <div class="admin-benefits-preview__head">
         <p class="admin-benefits-preview__eyebrow">{{ displayEyebrow }}</p>
@@ -33,7 +39,7 @@ const displayCards = computed(() =>
       </div>
 
       <p v-if="!displayCards.length" class="admin-benefits-preview__empty">
-        Renseignez au moins une carte pour afficher l’aperçu.
+        {{ ui.previews.common.emptyCard }}
       </p>
 
       <div v-else class="admin-benefits-preview__grid">

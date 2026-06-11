@@ -1,6 +1,8 @@
 import type { PropertyAdminRecord } from "../types/property-admin"
 import type { PropertySiteRecord } from "../types/property-site"
+import type { StripeConnectStatus } from "../types/stripe-connect"
 import { mapAdminRecordToSitePreview } from "../utils/map-admin-site-preview"
+import { useLocalizedPropertySite } from "./useLocalizedPropertySite"
 import { usePropertyAdmin } from "./usePropertyAdmin"
 
 export type PropertySitePreviewState = "loading" | "login" | "ready" | "error"
@@ -20,7 +22,8 @@ export function usePropertySitePreviewPage() {
     initAuthListener
   } = usePropertyAdmin(slug)
 
-  const site = ref<PropertySiteRecord | null>(null)
+  const rawSite = ref<PropertySiteRecord | null>(null)
+  const site = useLocalizedPropertySite(rawSite)
   const loadError = ref<string | null>(null)
   const pageState = ref<PropertySitePreviewState>("loading")
 
@@ -32,21 +35,28 @@ export function usePropertySitePreviewPage() {
     const token = data.session?.access_token
 
     if (!token) {
-      site.value = null
+      rawSite.value = null
       return
     }
 
-    const admin = await $fetch<PropertyAdminRecord>(`/api/admin/${slug.value}/site`, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
+    const headers = { Authorization: `Bearer ${token}` }
 
-    site.value = mapAdminRecordToSitePreview(admin)
+    const [admin, stripeStatus] = await Promise.all([
+      $fetch<PropertyAdminRecord>(`/api/admin/${slug.value}/site`, { headers }),
+      $fetch<StripeConnectStatus>(`/api/admin/${slug.value}/stripe-connect`, { headers }).catch(
+        () => null
+      )
+    ])
+
+    rawSite.value = mapAdminRecordToSitePreview(admin, {
+      stripePaymentsReady: stripeStatus?.paymentsReady ?? false
+    })
   }
 
   async function initPreview() {
     pageState.value = "loading"
     loadError.value = null
-    site.value = null
+    rawSite.value = null
 
     try {
       await bootstrap()

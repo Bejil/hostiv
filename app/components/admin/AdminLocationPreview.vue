@@ -13,17 +13,27 @@ const props = defineProps<{
   lead: string
 }>()
 
-const displayEyebrow = computed(() => props.eyebrow.trim() || "Sur-titre")
-const displayTitle = computed(() => props.title.trim() || "Titre de la section")
-const displayIntro = computed(() => props.intro.trim() || "Introduction de la section.")
-const displayLead = computed(() => props.lead.trim() || "Chapô du quartier.")
+const { ui } = useAdminUi()
+
+const displayEyebrow = computed(
+  () => props.eyebrow.trim() || ui.value.previews.common.eyebrow
+)
+const displayTitle = computed(
+  () => props.title.trim() || ui.value.previews.common.sectionTitle
+)
+const displayIntro = computed(
+  () => props.intro.trim() || ui.value.previews.common.intro
+)
+const displayLead = computed(
+  () => props.lead.trim() || ui.value.previews.location.lead
+)
 
 const displayHighlights = computed(() =>
   props.highlights
     .map((item) => ({
       ...item,
-      title: item.title.trim() || "Titre du point",
-      text: item.text.trim() || "Description du point."
+      title: item.title.trim() || ui.value.previews.location.highlightTitle,
+      text: item.text.trim() || ui.value.previews.location.highlightText
     }))
     .filter((item) => item.title || item.text)
 )
@@ -34,8 +44,8 @@ const mapKey = computed(
 </script>
 
 <template>
-  <div class="admin-location-preview" aria-label="Aperçu localisation">
-    <p class="admin-location-preview__label">Aperçu</p>
+  <div class="admin-location-preview" :aria-label="ui.previews.location.ariaLabel">
+    <p class="admin-location-preview__label">{{ ui.previews.common.label }}</p>
     <section class="admin-location-preview__section">
       <div class="admin-location-preview__head">
         <p class="admin-location-preview__eyebrow">{{ displayEyebrow }}</p>
@@ -66,7 +76,7 @@ const mapKey = computed(
           <p class="admin-location-preview__lead">{{ displayLead }}</p>
 
           <p v-if="!displayHighlights.length" class="admin-location-preview__empty">
-            Renseignez au moins un point du quartier pour afficher l’aperçu.
+            {{ ui.previews.location.emptyHighlights }}
           </p>
 
           <div v-else class="admin-location-preview__highlights">

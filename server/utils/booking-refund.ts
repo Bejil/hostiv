@@ -3,6 +3,7 @@ import { parseAdminBookingReservationUpdate } from "./admin-booking-reservation"
 import { getAdminBookingReservationById } from "./booking-reservation-repository"
 import { requireSupabaseAdmin } from "./supabase"
 import { getStripeClient } from "./stripe-client"
+import { sendReservationCancelledEmails } from "./transactional-email"
 
 const BOOKING_RESERVATION_SELECT =
   "id, status, arrival_date, departure_date, stay_nights, adults, children, babies, main_guests, guest_first_name, guest_last_name, guest_email, guest_phone, message, total_eur, stripe_payment_intent_id, refunded_at, stripe_refund_id, created_at, updated_at, cancelled_at"
@@ -160,5 +161,13 @@ export async function refundAdminBookingReservation(
     })
   }
 
-  return mapRefundedRow(data as Record<string, unknown>)
+  const refundedReservation = mapRefundedRow(data as Record<string, unknown>)
+
+  void sendReservationCancelledEmails({
+    slug,
+    reservation: refundedReservation,
+    refunded: true
+  })
+
+  return refundedReservation
 }

@@ -83,7 +83,7 @@ async function onSubmit() {
     })
 
     success.value =
-      "Message envoyé. Nous vous répondrons à l’adresse indiquée sous 2 jours ouvrés en général."
+      "Message envoyé. Un e-mail de confirmation vous a été adressé — nous vous répondrons sous 2 jours ouvrés en général."
     resetForm()
   } catch (cause) {
     const fetchError = cause as { data?: { message?: string }; message?: string }

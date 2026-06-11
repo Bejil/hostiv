@@ -2,6 +2,7 @@
 import AdminIcon from "./AdminIcon.vue"
 import AdminVisualCardDeleteModal from "./AdminVisualCardDeleteModal.vue"
 import AdminVisualCardEditModal from "./AdminVisualCardEditModal.vue"
+import { adminUiFormat } from "../../data/admin-ui"
 import type { PropertyVisualCard } from "../../types/property-site"
 
 const props = defineProps<{
@@ -13,6 +14,8 @@ const props = defineProps<{
 const emit = defineEmits<{
   "update:modelValue": [value: PropertyVisualCard[]]
 }>()
+
+const { ui } = useAdminUi()
 
 const editModalOpen = ref(false)
 const deleteModalOpen = ref(false)
@@ -59,11 +62,14 @@ function cardImageSrc(card: PropertyVisualCard, index: number) {
 }
 
 function cardTitle(card: PropertyVisualCard, index: number) {
-  return card.title.trim() || `Carte ${index + 1}`
+  return (
+    card.title.trim() ||
+    adminUiFormat(ui.value.editors.shared.cardFallback, { index: index + 1 })
+  )
 }
 
 function cardDescriptionPreview(card: PropertyVisualCard) {
-  return card.text.trim() || "Aucune description"
+  return card.text.trim() || ui.value.editors.shared.noDescription
 }
 
 function openAdd() {
@@ -174,15 +180,15 @@ function onDrop(index: number, event: DragEvent) {
 <template>
   <div class="admin-visual-cards">
     <div class="admin-subpanel__head admin-visual-cards__head">
-      <h3>Cartes visuelles</h3>
+      <h3>{{ ui.editors.visualCards.title }}</h3>
       <button type="button" class="admin-btn admin-btn--secondary admin-btn--sm" @click="openAdd">
         <AdminIcon name="plus" :size="16" />
-        Ajouter une carte
+        {{ ui.editors.visualCards.addButton }}
       </button>
     </div>
 
     <p v-if="!modelValue.length" class="admin-visual-cards__empty">
-      Aucune carte personnalisée. Utilisez « Ajouter une carte » pour en créer une.
+      {{ ui.editors.visualCards.empty }}
     </p>
 
     <ul v-else class="admin-visual-cards__list">
@@ -200,7 +206,7 @@ function onDrop(index: number, event: DragEvent) {
         <button
           type="button"
           class="admin-sortable-list__drag-handle"
-          aria-label="Glisser pour réordonner"
+          :aria-label="ui.editors.shared.dragToReorder"
           draggable="true"
           @dragstart="onDragStart(index, $event)"
           @dragend="onDragEnd"
@@ -225,7 +231,7 @@ function onDrop(index: number, event: DragEvent) {
           <button
             type="button"
             class="admin-btn admin-btn--secondary admin-btn--sm admin-btn--icon-only"
-            aria-label="Modifier"
+            :aria-label="ui.editors.shared.edit"
             @click="openEdit(index)"
           >
             <AdminIcon name="pencil" :size="16" />
@@ -233,7 +239,7 @@ function onDrop(index: number, event: DragEvent) {
           <button
             type="button"
             class="admin-btn admin-btn--ghost admin-btn--danger-ghost admin-btn--sm admin-btn--icon-only"
-            aria-label="Supprimer"
+            :aria-label="ui.common.delete"
             @click="openDelete(index)"
           >
             <AdminIcon name="trash" :size="16" />
@@ -256,7 +262,7 @@ function onDrop(index: number, event: DragEvent) {
 
     <AdminVisualCardDeleteModal
       :open="deleteModalOpen"
-      :card-title="deletingCard ? cardTitle(deletingCard, deletingIndex ?? 0) : 'Cette carte'"
+      :card-title="deletingCard ? cardTitle(deletingCard, deletingIndex ?? 0) : ui.editors.shared.thisCard"
       @cancel="closeDelete"
       @confirm="confirmDelete"
     />

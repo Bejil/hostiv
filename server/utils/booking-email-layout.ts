@@ -1,10 +1,21 @@
 import type { PropertySiteRecord } from "../../app/types/property-site"
 import { resolvePropertyAssetUrl } from "../../app/utils/property-asset-url"
+import {
+  buildHostivEmailAccentBar,
+  buildHostivEmailButton,
+  buildHostivEmailFontHead,
+  buildHostivPlatformFooter,
+  escapeHtmlAttr,
+  escapeHtmlText,
+  HOSTIV_EMAIL
+} from "./hostiv-email-theme"
 
 export type BookingEmailLink = {
   label: string
   href: string
 }
+
+const C = HOSTIV_EMAIL
 
 export function getBookingSiteUrl() {
   const raw =
@@ -103,28 +114,6 @@ export function sanitizeBookingEmailMeta(meta: string) {
   return s.trim()
 }
 
-const C = {
-  bg: "#e8dfd4",
-  card: "#fcf8f4",
-  cardAlt: "#f5efe8",
-  border: "#d9cfc4",
-  ink: "#171311",
-  inkSoft: "#3d3834",
-  muted: "#726458",
-  label: "#8a7b6d",
-  accent: "#6b4f33",
-  header: "#2a221c",
-  white: "#fcf8f4"
-} as const
-
-function escapeHtmlAttr(raw: string) {
-  return raw
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-}
-
 export function buildEmailHeaderRow(options: {
   title: string
   headerSubtitle?: string
@@ -133,23 +122,22 @@ export function buildEmailHeaderRow(options: {
 }) {
   const title = escapeHtmlAttr(options.title)
   const subtitle = options.headerSubtitle?.trim()
-    ? `<p style="margin:10px 0 0;font-size:14px;line-height:1.5;color:#3d3834;">${escapeHtmlAttr(options.headerSubtitle)}</p>`
+    ? `<p style="margin:12px 0 0;font-size:15px;line-height:1.55;color:${C.inkSoft};">${escapeHtmlAttr(options.headerSubtitle)}</p>`
     : ""
 
   const brandBlock = options.logoUrl
-    ? `<img src="${escapeHtmlAttr(options.logoUrl)}" alt="${escapeHtmlAttr(options.brandName)}" width="168" style="display:block;width:168px;max-width:100%;height:auto;margin:0 0 14px;border:0;outline:none;text-decoration:none;" />`
-    : `<p style="margin:0 0 10px;font-size:11px;font-weight:700;letter-spacing:0.16em;text-transform:uppercase;color:#6b4f33;">${escapeHtmlAttr(options.brandName)}</p>`
+    ? `<img src="${escapeHtmlAttr(options.logoUrl)}" alt="${escapeHtmlAttr(options.brandName)}" width="168" style="display:block;width:168px;max-width:100%;height:auto;margin:0 0 16px;border:0;outline:none;text-decoration:none;" />`
+    : `<p style="margin:0 0 12px;font-size:11px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:${C.accent};">${escapeHtmlAttr(options.brandName)}</p>`
 
   return `
           <tr>
-            <td bgcolor="#f5efe8" style="background-color:#f5efe8 !important;padding:28px 32px 24px;border-bottom:1px solid #d9cfc4;">
+            <td bgcolor="${C.surfaceMuted}" style="background-color:${C.surfaceMuted} !important;padding:30px 32px 26px;border-bottom:1px solid ${C.border};">
               ${brandBlock}
-              <h1 style="margin:0;font-size:22px;font-weight:700;line-height:1.3;color:#171311 !important;">${title}</h1>
+              <h1 style="margin:0;font-family:${C.font};font-size:24px;font-weight:800;line-height:1.25;letter-spacing:-0.03em;color:${C.ink} !important;">${title}</h1>
               ${subtitle}
             </td>
           </tr>`
 }
-
 
 export function buildEmailShell(options: {
   title: string
@@ -160,16 +148,16 @@ export function buildEmailShell(options: {
   footerHtml: string
   preheader?: string
 }) {
-  const preheaderFixed = options.preheader
-    ? `<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">${escapeHtmlAttr(options.preheader)}</div>`
-    : ""
-
   const headerRow = buildEmailHeaderRow({
     title: options.title,
     headerSubtitle: options.headerSubtitle,
     brandName: options.brandName,
     logoUrl: options.logoUrl
   })
+
+  // buildEmailHeaderRow inclut déjà la barre d’accent — retirer le doublon du document.
+  const propertyFooter = options.footerHtml
+  const platformFooter = buildHostivPlatformFooter()
 
   return `<!DOCTYPE html>
 <html lang="fr">
@@ -179,18 +167,21 @@ export function buildEmailShell(options: {
 <meta http-equiv="x-ua-compatible" content="ie=edge">
 <meta name="color-scheme" content="light">
 <meta name="supported-color-schemes" content="light">
-<title>${options.title}</title>
+<title>${escapeHtmlText(options.title)}</title>
+${buildHostivEmailFontHead()}
 </head>
-<body style="margin:0;padding:0;background-color:${C.bg};color:${C.ink};color-scheme:light;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;-webkit-font-smoothing:antialiased;">
-  ${preheaderFixed}
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:${C.bg};padding:32px 16px;">
+<body style="margin:0;padding:0;background-color:${C.bg};color:${C.ink};color-scheme:light;font-family:${C.font};-webkit-font-smoothing:antialiased;">
+  ${options.preheader ? `<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">${escapeHtmlText(options.preheader)}</div>` : ""}
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:${C.bg};padding:36px 16px;">
     <tr>
       <td align="center">
-        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:600px;background-color:${C.card};border-radius:20px;border:1px solid ${C.border};overflow:hidden;box-shadow:0 16px 48px rgba(24,18,13,0.1);">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:600px;background-color:${C.surface};border-radius:${C.radiusLg};border:1px solid ${C.border};overflow:hidden;box-shadow:${C.shadow};">
+          ${buildHostivEmailAccentBar()}
           ${headerRow}
           ${options.bodyHtml}
         </table>
-        ${options.footerHtml}
+        ${propertyFooter}
+        ${platformFooter}
       </td>
     </tr>
   </table>
@@ -209,14 +200,14 @@ export function buildEmailInfoCard(options: {
   paddingTop?: string
 }) {
   const secondary = options.secondary?.trim()
-    ? `<p style="margin:8px 0 0;font-size:14px;line-height:1.5;color:${C.muted};">${options.secondary}</p>`
+    ? `<p style="margin:8px 0 0;font-size:14px;line-height:1.55;color:${C.muted};">${options.secondary}</p>`
     : ""
 
   return `
           <tr>
             <td style="padding:${options.paddingTop ?? "24px"} 32px 0;">
               ${buildEmailSectionLabel(options.label)}
-              <div style="margin-top:12px;padding:16px 18px;background-color:#ffffff;border:1px solid ${C.border};border-radius:14px;">
+              <div style="margin-top:12px;padding:16px 18px;background-color:${C.surface};border:1px solid ${C.border};border-left:3px solid ${C.accent};border-radius:${C.radius};">
                 <p style="margin:0;font-size:17px;font-weight:700;line-height:1.35;color:${C.ink};">${options.primary}</p>
                 ${secondary}
               </div>
@@ -229,8 +220,8 @@ export function buildEmailMessageBlock(label: string, htmlBody: string, paddingB
           <tr>
             <td style="padding:24px 32px ${paddingBottom};">
               ${buildEmailSectionLabel(label)}
-              <div style="margin-top:12px;padding:16px 18px;background-color:#ffffff;border:1px solid ${C.border};border-radius:14px;">
-                <p style="margin:0;font-size:15px;line-height:1.55;color:${C.ink};">${htmlBody}</p>
+              <div style="margin-top:12px;padding:16px 18px;background-color:${C.surfaceMuted};border:1px solid ${C.border};border-radius:${C.radius};">
+                <p style="margin:0;font-size:15px;line-height:1.6;color:${C.ink};">${htmlBody}</p>
               </div>
             </td>
           </tr>`
@@ -256,7 +247,7 @@ export function buildEmailContactGrid(
           <tr>
             <td style="padding:${paddingTop} 32px 0;">
               ${buildEmailSectionLabel("Coordonnées du voyageur")}
-              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-top:12px;padding:4px 18px;background-color:#fff;border:1px solid ${C.border};border-radius:14px;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-top:12px;padding:4px 18px;background-color:${C.surface};border:1px solid ${C.border};border-left:3px solid ${C.accent};border-radius:${C.radius};">
                 ${cells}
               </table>
             </td>
@@ -270,8 +261,8 @@ export function buildEmailApartmentSection(
   const bullets = site.content.email.access_lines
     .map(
       (line) =>
-        `<tr><td style="padding:0 0 10px 0;font-size:14px;line-height:1.5;color:${C.inkSoft};vertical-align:top;">
-          <span style="color:${C.accent};font-weight:700;">·</span> ${escape(line)}
+        `<tr><td style="padding:0 0 10px 0;font-size:14px;line-height:1.55;color:${C.inkSoft};vertical-align:top;">
+          <span style="display:inline-block;width:18px;color:${C.accent};font-weight:800;">✓</span> ${escape(line)}
         </td></tr>`
     )
     .join("")
@@ -280,10 +271,10 @@ export function buildEmailApartmentSection(
           <tr>
             <td style="padding:24px 32px;">
               ${buildEmailSectionLabel("L’appartement")}
-              <div style="margin-top:12px;padding:18px 20px;background-color:#fff;border:1px solid ${C.border};border-radius:14px;">
-                <p style="margin:0 0 6px;font-size:15px;font-weight:700;color:${C.ink};">${escape(site.brand_name)}</p>
+              <div style="margin-top:12px;padding:18px 20px;background-color:${C.surface};border:1px solid ${C.border};border-radius:${C.radius};">
+                <p style="margin:0 0 6px;font-size:16px;font-weight:800;letter-spacing:-0.02em;color:${C.ink};">${escape(site.brand_name)}</p>
                 <p style="margin:0 0 14px;font-size:13px;color:${C.muted};">${escape(site.brand_meta)}</p>
-                <p style="margin:0 0 12px;font-size:14px;line-height:1.5;color:${C.inkSoft};"><strong style="color:${C.ink};">Adresse</strong><br/>${escape(site.location.address)}</p>
+                <p style="margin:0 0 14px;font-size:14px;line-height:1.55;color:${C.inkSoft};"><strong style="color:${C.ink};">Adresse</strong><br/>${escape(site.location.address)}</p>
                 <p style="margin:0 0 8px;font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:${C.label};">Accès &amp; arrivée</p>
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">${bullets}</table>
               </div>
@@ -301,7 +292,7 @@ export function buildEmailSiteLinksSection(
   }
 
   const intro = options?.intro
-    ? `<p style="margin:0 0 14px;font-size:14px;line-height:1.5;color:${C.ink};">${options.intro}</p>`
+    ? `<p style="margin:0 0 16px;font-size:14px;line-height:1.55;color:${C.inkSoft};">${options.intro}</p>`
     : ""
 
   const linkRows = links
@@ -309,7 +300,7 @@ export function buildEmailSiteLinksSection(
       (link, index) => `
         <tr>
           <td style="padding:${index > 0 ? "10px" : "0"} 0 0;">
-            <a href="${escape(link.href)}" style="display:block;padding:12px 16px;border-radius:12px;background-color:${index === 0 ? C.header : "#ffffff"};border:1px solid ${index === 0 ? C.header : C.border};color:${index === 0 ? "#ffffff" : C.ink};font-size:14px;font-weight:700;text-decoration:none;text-align:center;">${escape(link.label)}</a>
+            ${buildHostivEmailButton(link.label, link.href, index === 0 ? "primary" : "secondary")}
           </td>
         </tr>`
     )
@@ -319,7 +310,7 @@ export function buildEmailSiteLinksSection(
           <tr>
             <td style="padding:24px 32px 32px;">
               ${buildEmailSectionLabel("Sur le site")}
-              <div style="margin-top:12px;padding:18px 20px;background-color:#ffffff;border:1px solid ${C.border};border-radius:14px;">
+              <div style="margin-top:12px;padding:18px 20px;background-color:${C.surfaceMuted};border:1px solid ${C.border};border-radius:${C.radius};">
                 ${intro}
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">${linkRows}</table>
               </div>
@@ -329,7 +320,7 @@ export function buildEmailSiteLinksSection(
 
 export function buildEmailFooter(siteUrl: string, escape: (s: string) => string, note: string) {
   const siteLine = siteUrl
-    ? `<a href="${escape(siteUrl)}" style="color:${C.accent};text-decoration:underline;">${escape(siteUrl.replace(/^https?:\/\//, ""))}</a> · `
+    ? `<a href="${escape(siteUrl)}" style="color:${C.accentDeep};font-weight:600;text-decoration:underline;">${escape(siteUrl.replace(/^https?:\/\//, ""))}</a><br/>`
     : ""
 
   return `<p style="margin:20px 0 0;font-size:12px;line-height:1.55;color:${C.muted};text-align:center;max-width:600px;">${siteLine}${escape(note)}</p>`

@@ -2,11 +2,14 @@
 defineProps<{
   examples: string[]
 }>()
+
+const { ui } = useAdminUi()
+const ext = computed(() => ui.value.extended)
 </script>
 
 <template>
   <p v-if="examples.length" class="admin-onboarding-fields__examples">
-    <span class="admin-onboarding-fields__examples-label">Exemples :</span>
+    <span class="admin-onboarding-fields__examples-label">{{ ext.onboardingFields.examplesLabel }}</span>
     <span
       v-for="example in examples"
       :key="example"

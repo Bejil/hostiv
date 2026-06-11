@@ -14,10 +14,12 @@ export default defineEventHandler(async (event) => {
 
   const body = await readBody<Partial<PropertyCalendarConfig>>(event)
   const calendarConfig = normalizeCalendarConfig(body)
-  const { dates, sources } = await getMergedBlockedNightDates(calendarConfig.ics_feeds)
+  const { dates, dateSources, feedBlocks, sources } = await getMergedBlockedNightDates(calendarConfig.ics_feeds)
 
   return {
     dates,
+    dateSources,
+    feedBlocks,
     fetchedAt: new Date().toISOString(),
     sources
   }

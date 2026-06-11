@@ -32,3 +32,7 @@ export type AdminIconName =
   | "message"
   | "clock"
   | "map-pin"
+  | "baby"
+  | "child"
+  | "file"
+  | "sparkles"

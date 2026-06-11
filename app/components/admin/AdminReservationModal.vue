@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { X } from "@lucide/vue"
 import AdminConfirmDialog from "./AdminConfirmDialog.vue"
 import AdminField from "./AdminField.vue"
 import AdminIcon from "./AdminIcon.vue"
@@ -7,12 +8,17 @@ import type {
   AdminBookingReservationStatus,
   BookingReservationStatus
 } from "../../types/booking-reservation"
+import { adminUiFormat } from "../../data/admin-ui"
 import { computeStayNights } from "../../utils/booking-stay-nights"
 
 const props = defineProps<{
   slug: string
   reservation: AdminBookingReservation | null
 }>()
+
+const { ui, locale } = useAdminUi()
+const ext = computed(() => ui.value.extended.reservationModal)
+const resExt = computed(() => ui.value.extended.reservations)
 
 const emit = defineEmits<{
   close: []
@@ -43,11 +49,11 @@ const form = reactive({
   status: "confirmed" as BookingReservationStatus
 })
 
-const reservationStatusLabels: Record<AdminBookingReservationStatus, string> = {
-  upcoming: "À venir",
-  past: "Passée",
-  cancelled: "Annulée"
-}
+const reservationStatusLabels = computed<Record<AdminBookingReservationStatus, string>>(() => ({
+  upcoming: resExt.value.status.upcoming,
+  past: resExt.value.status.past,
+  cancelled: resExt.value.status.cancelled
+}))
 
 const computedNights = computed(() =>
   computeStayNights(form.arrival_date, form.departure_date)
@@ -70,11 +76,11 @@ type ConfirmKind = "cancel" | "delete" | "refund"
 const confirmKind = ref<ConfirmKind | null>(null)
 
 const guestLabel = computed(
-  () => `${form.guest_first_name} ${form.guest_last_name}`.trim() || "ce voyageur"
+  () => `${form.guest_first_name} ${form.guest_last_name}`.trim() || resExt.value.guestFallback
 )
 
 function formatAmount(value: number) {
-  return new Intl.NumberFormat("fr-FR", {
+  return new Intl.NumberFormat(locale.value === "en" ? "en-GB" : "fr-FR", {
     style: "currency",
     currency: "EUR",
     maximumFractionDigits: 0
@@ -85,23 +91,26 @@ const confirmDialog = computed(() => {
   switch (confirmKind.value) {
     case "cancel":
       return {
-        title: "Marquer comme annulée",
-        message: `Marquer la réservation de ${guestLabel.value} comme annulée ?\n\nAucun remboursement ne sera effectué automatiquement.`,
-        confirmLabel: "Marquer annulée",
+        title: ext.value.confirm.cancelTitle,
+        message: adminUiFormat(ext.value.confirm.cancelMessage, { guest: guestLabel.value }),
+        confirmLabel: ext.value.confirm.cancelConfirm,
         variant: "primary" as const
       }
     case "delete":
       return {
-        title: "Supprimer la réservation",
-        message: `Supprimer définitivement la réservation de ${guestLabel.value} ?\n\nCette action est irréversible.`,
-        confirmLabel: "Supprimer",
+        title: ext.value.confirm.deleteTitle,
+        message: adminUiFormat(ext.value.confirm.deleteMessage, { guest: guestLabel.value }),
+        confirmLabel: ext.value.confirm.deleteConfirm,
         variant: "danger" as const
       }
     case "refund":
       return {
-        title: "Rembourser le voyageur",
-        message: `Rembourser ${formatAmount(form.total_eur)} à ${guestLabel.value} via Stripe ?\n\nLa réservation sera marquée comme annulée.`,
-        confirmLabel: "Rembourser",
+        title: ext.value.confirm.refundTitle,
+        message: adminUiFormat(ext.value.confirm.refundMessage, {
+          amount: formatAmount(form.total_eur),
+          guest: guestLabel.value
+        }),
+        confirmLabel: ext.value.confirm.refundConfirm,
         variant: "primary" as const
       }
     default:
@@ -219,12 +228,12 @@ async function saveReservation() {
       }
     )
 
-    successMessage.value = "Réservation enregistrée."
+    successMessage.value = ext.value.messages.saved
     emit("saved", response.reservation)
   } catch (err: unknown) {
     const e = err as { data?: { message?: string }; message?: string }
 
-    error.value = e.data?.message || e.message || "Enregistrement impossible."
+    error.value = e.data?.message || e.message || ext.value.messages.saveFailed
   } finally {
     saving.value = false
   }
@@ -258,7 +267,7 @@ async function executeDelete() {
   } catch (err: unknown) {
     const e = err as { data?: { message?: string }; message?: string }
 
-    error.value = e.data?.message || e.message || "Suppression impossible."
+    error.value = e.data?.message || e.message || ext.value.messages.deleteFailed
   } finally {
     deleting.value = false
     confirmKind.value = null
@@ -300,12 +309,12 @@ async function executeRefund() {
     )
 
     resetForm(response.reservation)
-    successMessage.value = "Remboursement effectué. Le voyageur sera crédité sous quelques jours ouvrés."
+    successMessage.value = ext.value.messages.refundSuccess
     emit("saved", response.reservation)
   } catch (err: unknown) {
     const e = err as { data?: { message?: string }; message?: string }
 
-    error.value = e.data?.message || e.message || "Remboursement impossible."
+    error.value = e.data?.message || e.message || ext.value.messages.refundFailed
   } finally {
     refunding.value = false
     confirmKind.value = null
@@ -339,7 +348,7 @@ function formatReservationDate(value: string) {
     return value
   }
 
-  return new Intl.DateTimeFormat("fr-FR", {
+  return new Intl.DateTimeFormat(locale.value === "en" ? "en-GB" : "fr-FR", {
     day: "numeric",
     month: "long",
     year: "numeric"
@@ -351,7 +360,7 @@ function formatCreatedAt(value: string) {
     return "—"
   }
 
-  return new Intl.DateTimeFormat("fr-FR", {
+  return new Intl.DateTimeFormat(locale.value === "en" ? "en-GB" : "fr-FR", {
     dateStyle: "medium",
     timeStyle: "short"
   }).format(new Date(value))
@@ -360,212 +369,242 @@ function formatCreatedAt(value: string) {
 
 <template>
   <Teleport to="body">
-    <div
-      v-if="isOpen && reservation"
-      class="admin-reservation-modal"
-      data-backdrop="true"
-      @click="onBackdropClick"
-      @keydown="onKeydown"
-    >
+    <Transition name="hostiv-modal-fade">
       <div
-        class="admin-reservation-modal__dialog"
-        role="dialog"
-        aria-modal="true"
-        :aria-labelledby="`admin-reservation-modal-title-${reservation.id}`"
-        @click.stop
+        v-if="isOpen && reservation"
+        class="hostiv-modal hostiv-modal--reservation"
+        data-backdrop="true"
+        role="presentation"
+        @click="onBackdropClick"
+        @keydown="onKeydown"
       >
-        <header class="admin-reservation-modal__head">
-          <div>
-            <p class="admin-reservation-modal__kicker">Détail réservation</p>
-            <h3 :id="`admin-reservation-modal-title-${reservation.id}`">
-              {{ form.guest_first_name }} {{ form.guest_last_name }}
-            </h3>
-            <p class="admin-reservation-modal__meta-line">
-              <span
-                class="admin-reservations-booking__status"
-                :class="`admin-reservations-booking__status--${reservation.display_status}`"
-              >
-                {{ reservationStatusLabels[reservation.display_status] }}
-              </span>
-              <span v-if="isRefunded" class="admin-reservations-booking__status admin-reservation-modal__refunded">
-                Remboursée
-              </span>
-              <span>Confirmée le {{ formatCreatedAt(reservation.created_at) }}</span>
-            </p>
-          </div>
-          <button
-            type="button"
-            class="admin-reservation-modal__close"
-            aria-label="Fermer"
-            @click="closeModal"
+        <Transition name="hostiv-modal-panel" appear>
+          <div
+            class="hostiv-modal__panel hostiv-modal__panel--reservation"
+            role="dialog"
+            aria-modal="true"
+            :aria-labelledby="`admin-reservation-modal-title-${reservation.id}`"
+            @click.stop
           >
-            ×
-          </button>
-        </header>
+            <span class="hostiv-modal__accent" aria-hidden="true" />
+            <span class="hostiv-modal__glow" aria-hidden="true" />
 
-        <p v-if="error" class="admin-reservation-modal__error" role="alert">{{ error }}</p>
-        <p v-else-if="successMessage" class="admin-reservation-modal__success" role="status">
-          {{ successMessage }}
-        </p>
-
-        <form class="admin-reservation-modal__form" @submit.prevent="saveReservation">
-          <div class="admin-reservation-modal__grid admin-reservation-modal__grid--dates">
-            <AdminField
-              label="Arrivée"
-              :model-value="form.arrival_date"
-              type="date"
-              @update:model-value="form.arrival_date = String($event)"
-            />
-            <AdminField
-              label="Départ"
-              :model-value="form.departure_date"
-              type="date"
-              @update:model-value="form.departure_date = String($event)"
-            />
-          </div>
-
-          <p class="admin-reservation-modal__hint">
-            {{ computedNights > 0 ? `${computedNights} nuit${computedNights > 1 ? 's' : ''}` : "Dates invalides" }}
-            ·
-            {{ computedGuests }} personne{{ computedGuests > 1 ? "s" : "" }}
-            ·
-            {{ formatAmount(form.total_eur) }}
-          </p>
-
-          <div class="admin-reservation-modal__grid admin-reservation-modal__grid--guests">
-            <AdminField
-              label="Adultes"
-              :model-value="form.adults"
-              type="number"
-              min="1"
-              max="20"
-              @update:model-value="form.adults = Number($event)"
-            />
-            <AdminField
-              label="Enfants"
-              :model-value="form.children"
-              type="number"
-              min="0"
-              max="20"
-              @update:model-value="form.children = Number($event)"
-            />
-            <AdminField
-              label="Bébés"
-              :model-value="form.babies"
-              type="number"
-              min="0"
-              max="10"
-              @update:model-value="form.babies = Number($event)"
-            />
-            <AdminField
-              label="Montant (€)"
-              :model-value="form.total_eur"
-              type="number"
-              min="0"
-              step="1"
-              @update:model-value="form.total_eur = Number($event)"
-            />
-          </div>
-
-          <div class="admin-reservation-modal__grid">
-            <AdminField
-              label="Prénom"
-              :model-value="form.guest_first_name"
-              @update:model-value="form.guest_first_name = String($event)"
-            />
-            <AdminField
-              label="Nom"
-              :model-value="form.guest_last_name"
-              @update:model-value="form.guest_last_name = String($event)"
-            />
-          </div>
-
-          <div class="admin-reservation-modal__grid">
-            <AdminField
-              label="E-mail"
-              :model-value="form.guest_email"
-              type="email"
-              @update:model-value="form.guest_email = String($event)"
-            />
-            <AdminField
-              label="Téléphone"
-              :model-value="form.guest_phone"
-              @update:model-value="form.guest_phone = String($event)"
-            />
-          </div>
-
-          <label class="admin-field admin-field--full">
-            <span class="admin-field__label">Statut</span>
-            <select
-              v-model="form.status"
-              class="admin-field__control"
-              :disabled="isRefunded"
-            >
-              <option value="confirmed">Confirmée</option>
-              <option value="cancelled">Annulée</option>
-            </select>
-          </label>
-
-          <AdminField
-            label="Message du voyageur"
-            :model-value="form.message"
-            type="textarea"
-            :rows="4"
-            full-width
-            @update:model-value="form.message = String($event)"
-          />
-
-          <div class="admin-reservation-modal__secondary-actions">
             <button
-              v-if="canMarkCancelled"
               type="button"
-              class="admin-btn admin-btn--secondary admin-btn--sm"
+              class="hostiv-modal__close"
+              :aria-label="ui.common.close"
               :disabled="saving || deleting || refunding"
-              @click="markAsCancelled"
+              @click="closeModal"
             >
-              Marquer comme annulée
+              <span class="sr-only">{{ ui.common.close }}</span>
+              <X :size="18" stroke-width="2" />
             </button>
-            <button
-              v-if="canRefund"
-              type="button"
-              class="admin-btn admin-btn--secondary admin-btn--sm"
-              :disabled="saving || deleting || refunding"
-              @click="requestRefund"
-            >
-              {{ refunding ? "Remboursement…" : "Rembourser le voyageur (Stripe)" }}
-            </button>
-            <p
-              v-else-if="reservation?.stripe_payment_intent_id && isRefunded"
-              class="admin-reservation-modal__hint admin-reservation-modal__hint--inline"
-            >
-              Remboursement Stripe enregistré
-              <template v-if="reservation.stripe_refund_id">
-                ({{ reservation.stripe_refund_id }})
-              </template>
+
+            <header class="hostiv-modal__head">
+              <div class="hostiv-modal__head-text">
+                <p class="admin-reservation-modal__kicker">{{ ext.kicker }}</p>
+                <h2 :id="`admin-reservation-modal-title-${reservation.id}`" class="hostiv-modal__title">
+                  {{ form.guest_first_name }} {{ form.guest_last_name }}
+                </h2>
+                <p class="hostiv-modal__subtitle admin-reservation-modal__meta-line">
+                  <span
+                    class="admin-reservations-status-pill"
+                    :class="`admin-reservations-status-pill--${reservation.display_status}`"
+                  >
+                    {{ reservationStatusLabels[reservation.display_status] }}
+                  </span>
+                  <span v-if="isRefunded" class="admin-reservations-status-pill admin-reservation-modal__refunded">
+                    {{ ext.refunded }}
+                  </span>
+                  <span>
+                    {{
+                      adminUiFormat(ext.confirmedOn, {
+                        date: formatCreatedAt(reservation.created_at)
+                      })
+                    }}
+                  </span>
+                </p>
+              </div>
+            </header>
+
+            <p v-if="error" class="admin-reservation-modal__error" role="alert">{{ error }}</p>
+            <p v-else-if="successMessage" class="admin-reservation-modal__success" role="status">
+              {{ successMessage }}
             </p>
-            <button
-              type="button"
-              class="admin-btn admin-btn--ghost admin-btn--danger-ghost admin-btn--sm"
-              :disabled="saving || deleting || refunding"
-              @click="requestDelete"
-            >
-              <AdminIcon name="trash" :size="16" />
-              {{ deleting ? "Suppression…" : "Supprimer" }}
-            </button>
-          </div>
 
-          <footer class="admin-reservation-modal__footer">
-            <button
-              type="submit"
-              class="admin-btn admin-btn--primary admin-btn--sm"
-              :disabled="saving || deleting || refunding || computedNights < 1"
-            >
-              {{ saving ? "Enregistrement…" : "Enregistrer" }}
-            </button>
-          </footer>
-        </form>
+            <form class="admin-reservation-modal__form" @submit.prevent="saveReservation">
+              <div class="admin-reservation-modal__grid admin-reservation-modal__grid--dates">
+                <AdminField
+                  :label="ext.fields.arrival"
+                  :model-value="form.arrival_date"
+                  type="date"
+                  @update:model-value="form.arrival_date = String($event)"
+                />
+                <AdminField
+                  :label="ext.fields.departure"
+                  :model-value="form.departure_date"
+                  type="date"
+                  @update:model-value="form.departure_date = String($event)"
+                />
+              </div>
+
+              <p class="admin-reservation-modal__hint">
+                {{
+                  computedNights > 0
+                    ? `${computedNights} ${computedNights > 1 ? ext.hints.nights : ext.hints.night}`
+                    : ext.hints.invalidDates
+                }}
+                ·
+                {{ computedGuests }}
+                {{ computedGuests > 1 ? ext.hints.persons : ext.hints.person }}
+                ·
+                {{ formatAmount(form.total_eur) }}
+              </p>
+
+              <div class="admin-reservation-modal__grid admin-reservation-modal__grid--guests">
+                <AdminField
+                  :label="ext.fields.adults"
+                  :model-value="form.adults"
+                  type="number"
+                  min="1"
+                  max="20"
+                  @update:model-value="form.adults = Number($event)"
+                />
+                <AdminField
+                  :label="ext.fields.children"
+                  :model-value="form.children"
+                  type="number"
+                  min="0"
+                  max="20"
+                  @update:model-value="form.children = Number($event)"
+                />
+                <AdminField
+                  :label="ext.fields.babies"
+                  :model-value="form.babies"
+                  type="number"
+                  min="0"
+                  max="10"
+                  @update:model-value="form.babies = Number($event)"
+                />
+                <AdminField
+                  :label="ext.fields.amount"
+                  :model-value="form.total_eur"
+                  type="number"
+                  min="0"
+                  step="1"
+                  @update:model-value="form.total_eur = Number($event)"
+                />
+              </div>
+
+              <div class="admin-reservation-modal__grid">
+                <AdminField
+                  :label="ext.fields.firstName"
+                  :model-value="form.guest_first_name"
+                  @update:model-value="form.guest_first_name = String($event)"
+                />
+                <AdminField
+                  :label="ext.fields.lastName"
+                  :model-value="form.guest_last_name"
+                  @update:model-value="form.guest_last_name = String($event)"
+                />
+              </div>
+
+              <div class="admin-reservation-modal__grid">
+                <AdminField
+                  :label="ext.fields.email"
+                  :model-value="form.guest_email"
+                  type="email"
+                  @update:model-value="form.guest_email = String($event)"
+                />
+                <AdminField
+                  :label="ext.fields.phone"
+                  :model-value="form.guest_phone"
+                  @update:model-value="form.guest_phone = String($event)"
+                />
+              </div>
+
+              <label class="admin-field admin-field--full">
+                <span class="admin-field__label">{{ ext.fields.status }}</span>
+                <select
+                  v-model="form.status"
+                  class="admin-field__control"
+                  :disabled="isRefunded"
+                >
+                  <option value="confirmed">{{ ext.statusOptions.confirmed }}</option>
+                  <option value="cancelled">{{ ext.statusOptions.cancelled }}</option>
+                </select>
+              </label>
+
+              <AdminField
+                :label="ext.fields.message"
+                :model-value="form.message"
+                type="textarea"
+                :rows="4"
+                full-width
+                @update:model-value="form.message = String($event)"
+              />
+
+              <div class="admin-reservation-modal__secondary-actions">
+                <button
+                  v-if="canMarkCancelled"
+                  type="button"
+                  class="admin-btn admin-btn--secondary admin-btn--sm"
+                  :disabled="saving || deleting || refunding"
+                  @click="markAsCancelled"
+                >
+                  {{ ext.actions.markCancelled }}
+                </button>
+                <button
+                  v-if="canRefund"
+                  type="button"
+                  class="admin-btn admin-btn--secondary admin-btn--sm"
+                  :disabled="saving || deleting || refunding"
+                  @click="requestRefund"
+                >
+                  {{ refunding ? ext.actions.refunding : ext.actions.refund }}
+                </button>
+                <p
+                  v-else-if="reservation?.stripe_payment_intent_id && isRefunded"
+                  class="admin-reservation-modal__hint admin-reservation-modal__hint--inline"
+                >
+                  {{ ext.hints.refundRecorded }}
+                  <template v-if="reservation.stripe_refund_id">
+                    ({{ reservation.stripe_refund_id }})
+                  </template>
+                </p>
+                <button
+                  type="button"
+                  class="admin-btn admin-btn--ghost admin-btn--danger-ghost admin-btn--sm"
+                  :disabled="saving || deleting || refunding"
+                  @click="requestDelete"
+                >
+                  <AdminIcon name="trash" :size="16" />
+                  {{ deleting ? ext.actions.deleting : ext.actions.delete }}
+                </button>
+              </div>
+
+              <footer class="admin-reservation-modal__footer">
+                <button
+                  type="button"
+                  class="hostiv-btn hostiv-btn--secondary"
+                  :disabled="saving || deleting || refunding"
+                  @click="closeModal"
+                >
+                  {{ ui.common.cancel }}
+                </button>
+                <button
+                  type="submit"
+                  class="hostiv-btn hostiv-btn--primary"
+                  :disabled="saving || deleting || refunding || computedNights < 1"
+                >
+                  {{ saving ? ui.common.saving : ui.common.save }}
+                </button>
+              </footer>
+            </form>
+          </div>
+        </Transition>
       </div>
-    </div>
+    </Transition>
 
     <AdminConfirmDialog
       :open="Boolean(confirmKind && confirmDialog)"

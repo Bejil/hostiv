@@ -2,11 +2,13 @@
 import { ChevronDown } from "@lucide/vue"
 import type { AccordionItem } from "@nuxt/ui"
 import type { AdminNavSectionId } from "../../data/admin-nav-sections"
-import { adminCustomizationBlocks } from "../../data/admin-nav-sections"
+import { getAdminCustomizationBlocks } from "../../data/admin-nav-sections"
 import AdminCustomizationBlockBody from "./AdminCustomizationBlockBody.vue"
 import AdminIcon from "./AdminIcon.vue"
 import AdminTemplateEditor from "./AdminTemplateEditor.vue"
+import AdminCustomizationBlockStatus from "./AdminCustomizationBlockStatus.vue"
 import { useAdminEditorContext } from "../../composables/admin-editor-context"
+import { isCustomizationBlockComplete } from "../../utils/admin-customization-block-completion"
 
 const props = defineProps<{
   openBlockId: AdminNavSectionId | null
@@ -17,11 +19,16 @@ const emit = defineEmits<{
 }>()
 
 const ctx = useAdminEditorContext()
+const { locale } = useAdminUi()
 
-const templateBlock = adminCustomizationBlocks.find((block) => block.id === "template")
+const customizationBlocks = computed(() => getAdminCustomizationBlocks(locale.value))
+
+const templateBlock = computed(() =>
+  customizationBlocks.value.find((block) => block.id === "template")
+)
 
 const accordionBlocks = computed(() =>
-  adminCustomizationBlocks.filter((block) => block.id !== "template")
+  customizationBlocks.value.filter((block) => block.id !== "template")
 )
 
 const accordionItems = computed<AccordionItem[]>(() =>
@@ -64,6 +71,10 @@ const blockDescriptionById = computed(() =>
 const blockIconById = computed(() =>
   Object.fromEntries(accordionBlocks.value.map((block) => [block.id, block.icon]))
 )
+
+function isBlockComplete(blockId: AdminNavSectionId) {
+  return isCustomizationBlockComplete(ctx.record.value, blockId, locale.value)
+}
 </script>
 
 <template>
@@ -77,7 +88,7 @@ const blockIconById = computed(() =>
       <div class="admin-customization__template-card">
         <div class="admin-customization__template-intro">
           <div>
-            <p class="admin-general-card__kicker">Template</p>
+            <p class="admin-general-card__kicker">{{ templateBlock.label }}</p>
             <h3>{{ templateBlock.title }}</h3>
           </div>
           <p>{{ templateBlock.description }}</p>
@@ -108,22 +119,27 @@ const blockIconById = computed(() =>
       </template>
 
       <template #default="{ item }">
-        <span class="admin-customization-accordion__copy">
-          <span class="admin-customization-accordion__title-row">
-            <AdminIcon
-              v-if="blockIconById[String(item.value)]"
-              :name="blockIconById[String(item.value)]"
-              :size="20"
-              class="admin-customization-accordion__icon"
-            />
-            <span class="admin-customization-accordion__title">{{ item.label }}</span>
+        <span class="admin-customization-accordion__head">
+          <span class="admin-customization-accordion__copy">
+            <span class="admin-customization-accordion__title-row">
+              <AdminIcon
+                v-if="blockIconById[String(item.value)]"
+                :name="blockIconById[String(item.value)]"
+                :size="20"
+                class="admin-customization-accordion__icon"
+              />
+              <span class="admin-customization-accordion__title">{{ item.label }}</span>
+            </span>
+            <span
+              v-if="blockDescriptionById[String(item.value)]"
+              class="admin-customization__block-lead"
+            >
+              {{ blockDescriptionById[String(item.value)] }}
+            </span>
           </span>
-          <span
-            v-if="blockDescriptionById[String(item.value)]"
-            class="admin-customization__block-lead"
-          >
-            {{ blockDescriptionById[String(item.value)] }}
-          </span>
+          <AdminCustomizationBlockStatus
+            :complete="isBlockComplete(item.value as AdminNavSectionId)"
+          />
         </span>
       </template>
 

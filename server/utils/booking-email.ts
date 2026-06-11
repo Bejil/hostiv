@@ -21,6 +21,7 @@ import {
   getPropertyPublicSiteUrl,
   sanitizeBookingEmailMeta
 } from "./booking-email-layout"
+import { HOSTIV_EMAIL } from "./hostiv-email-theme"
 
 function escapeHtml(raw: string): string {
   return raw
@@ -110,11 +111,11 @@ function buildBookingRequestHtml(parts: BookingEmailContentParts & {
               { label: "Prénom", valueHtml: z(parts.safeFirstName) },
               {
                 label: "Téléphone",
-                valueHtml: `<a href="${phoneHref}" style="color:#6b4f33;text-decoration:none;">${z(parts.safePhone)}</a>`
+                valueHtml: `<a href="${phoneHref}" style="color:${HOSTIV_EMAIL.accentDeep};text-decoration:none;font-weight:600;">${z(parts.safePhone)}</a>`
               },
               {
                 label: "E-mail",
-                valueHtml: `<a href="mailto:${mailHref}" style="color:#6b4f33;text-decoration:underline;">${z(parts.guestEmail)}</a>`
+                valueHtml: `<a href="mailto:${mailHref}" style="color:${HOSTIV_EMAIL.accentDeep};text-decoration:underline;font-weight:600;">${z(parts.guestEmail)}</a>`
               }
             ],
             "24px"
@@ -146,9 +147,9 @@ function buildGuestConfirmationHtml(parts: BookingEmailContentParts) {
 
   const introBlock = `
           <tr>
-            <td style="padding:26px 32px 0;">
-              <p style="margin:0;font-size:15px;color:#171311;line-height:1.55;">Bonjour ${z(parts.safeFirstName)},</p>
-              <p style="margin:14px 0 0;font-size:15px;color:#3d3834;line-height:1.55;">Merci pour votre réservation et votre paiement. Votre séjour est confirmé&nbsp;; nous vous recontacterons à cette adresse pour préciser l’heure d’arrivée et les derniers détails pratiques.</p>
+            <td style="padding:28px 32px 0;">
+              <p style="margin:0;font-size:16px;font-weight:600;color:${HOSTIV_EMAIL.ink};line-height:1.55;">Bonjour ${z(parts.safeFirstName)},</p>
+              <p style="margin:14px 0 0;font-size:15px;color:${HOSTIV_EMAIL.inkSoft};line-height:1.65;">Merci pour votre réservation et votre paiement. Votre séjour est confirmé&nbsp;; nous vous recontacterons à cette adresse pour préciser l’heure d’arrivée et les derniers détails pratiques.</p>
             </td>
           </tr>`
 
@@ -196,6 +197,7 @@ export async function sendResendEmail(params: {
   subject: string
   text: string
   html: string
+  attachments?: Array<{ filename: string; content: Buffer | Uint8Array }>
 }) {
   const payload: Record<string, unknown> = {
     from: params.from,
@@ -207,6 +209,13 @@ export async function sendResendEmail(params: {
 
   if (params.replyTo?.trim()) {
     payload.reply_to = params.replyTo.trim()
+  }
+
+  if (params.attachments?.length) {
+    payload.attachments = params.attachments.map((attachment) => ({
+      filename: attachment.filename,
+      content: Buffer.from(attachment.content).toString("base64")
+    }))
   }
 
   const response = await fetch("https://api.resend.com/emails", {
@@ -254,7 +263,10 @@ export async function sendBookingRequestEmail(params: {
   })
 }
 
-export async function parseBookingRequestBody(body: unknown) {
+export async function parseBookingRequestBody(
+  body: unknown,
+  options?: { publishedOnly?: boolean }
+) {
   if (!body || typeof body !== "object") {
     return { ok: false as const, message: "Corps de requête invalide." }
   }
@@ -268,10 +280,16 @@ export async function parseBookingRequestBody(body: unknown) {
     return { ok: false as const, message: "Site de réservation non précisé." }
   }
 
-  const site = await getPropertySiteBySlug(propertySlug)
+  const publishedOnly = options?.publishedOnly !== false
+  const site = await getPropertySiteBySlug(propertySlug, { publishedOnly })
 
   if (!site) {
-    return { ok: false as const, message: "Site de réservation introuvable." }
+    return {
+      ok: false as const,
+      message: publishedOnly
+        ? "Site de réservation introuvable."
+        : "Site de réservation introuvable ou aperçu non autorisé."
+    }
   }
 
   const guestEmail = typeof o.guestEmail === "string" ? o.guestEmail.trim() : ""

@@ -26,8 +26,10 @@ Redémarrer `npm run dev` après modification.
 8. `migrations/20260520100000_properties_stripe_connect.sql` — Stripe Connect Express
 9. `migrations/20260521100000_booking_reservations_refund.sql`
 10. `migrations/20260521120000_hostiv_subscription_plan.sql` — forfait Starter / Pro (`hostiv_accounts` + `properties.subscription_plan`)
-11. `migrations/20260528120000_drop_properties_booking_notify_email.sql` — notifications réservation via l’e-mail du compte propriétaire
-12. `migrations/20260528130000_drop_properties_favicon_path.sql` — favicon = logo du site (`logo_path`)
+11. `migrations/20260521130000_hostiv_subscription_access.sql` — `paid_until` / accès forfait
+12. `migrations/20260602120000_hostiv_pending_signups.sql` — inscriptions en attente (paiement avant création compte)
+13. `migrations/20260528120000_drop_properties_booking_notify_email.sql` — notifications réservation via l’e-mail du compte propriétaire
+14. `migrations/20260528130000_drop_properties_favicon_path.sql` — favicon = logo du site (`logo_path`)
 
 ## 3. Données initiales
 

@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { X } from "@lucide/vue"
 import AdminField from "./AdminField.vue"
+import AdminFieldHelp from "./AdminFieldHelp.vue"
 import type { PropertyReview } from "../../types/property-site"
+import { getAdminCustomizationCardExamples } from "../../data/admin-customization-field-examples"
 import { ratingToStars } from "../../utils/platform-rating-stars"
 
 const props = defineProps<{
@@ -15,6 +17,10 @@ const emit = defineEmits<{
   save: [value: PropertyReview]
 }>()
 
+const { ui, locale } = useAdminUi()
+
+const cardExamples = computed(() => getAdminCustomizationCardExamples(locale.value))
+
 const draft = ref<PropertyReview>({ ...props.review })
 
 const draftStars = computed(() => ratingToStars(draft.value.rating))
@@ -23,7 +29,11 @@ const canSave = computed(
   () => Boolean(draft.value.author.trim() && draft.value.quote.trim())
 )
 
-const modalTitle = computed(() => (props.isNew ? "Ajouter un verbatim" : "Modifier le verbatim"))
+const modalTitle = computed(() =>
+  props.isNew
+    ? ui.value.editors.reviews.modal.addTitle
+    : ui.value.editors.reviews.modal.editTitle
+)
 
 watch(
   () => [props.open, props.review] as const,
@@ -106,8 +116,8 @@ function save() {
             <span class="hostiv-modal__accent" aria-hidden="true" />
             <span class="hostiv-modal__glow" aria-hidden="true" />
 
-            <button type="button" class="hostiv-modal__close" aria-label="Fermer" @click="emit('close')">
-              <span class="sr-only">Fermer</span>
+            <button type="button" class="hostiv-modal__close" :aria-label="ui.common.close" @click="emit('close')">
+              <span class="sr-only">{{ ui.common.close }}</span>
               <X :size="18" stroke-width="2" />
             </button>
 
@@ -117,64 +127,70 @@ function save() {
                   {{ modalTitle }}
                 </h2>
                 <p class="hostiv-modal__subtitle">
-                  {{ draft.author.trim() || "Sans auteur" }}
+                  {{ draft.author.trim() || ui.editors.shared.noAuthor }}
                 </p>
               </div>
             </header>
 
             <div class="admin-review-modal__fields">
               <AdminField
-                label="Auteur"
+                :label="ui.editors.shared.author"
                 required
                 full-width
+                :examples="[...cardExamples.reviewAuthor]"
                 :model-value="draft.author"
                 @update:model-value="patchDraft({ author: $event as string })"
               />
               <AdminField
-                label="Date affichée"
+                :label="ui.editors.shared.displayDate"
                 full-width
-                placeholder="ex. Mars 2025"
+                :placeholder="ui.editors.shared.datePlaceholder"
+                :examples="[...cardExamples.reviewDate]"
                 :model-value="draft.date"
                 @update:model-value="patchDraft({ date: $event as string })"
               />
               <div class="admin-review-modal__rating-field">
-                <span class="admin-field__label">Note</span>
+                <span class="admin-field__label-row">
+                  <span class="admin-field__label">{{ ui.editors.shared.rating }}</span>
+                  <AdminFieldHelp :examples="[...cardExamples.reviewRating]" />
+                </span>
                 <div class="admin-review-modal__rating-inline">
                   <input
                     class="admin-field__control"
                     type="text"
-                    placeholder="ex. 4,97/5"
+                    :placeholder="ui.editors.shared.ratingPlaceholder"
                     :value="draft.rating"
                     @input="patchDraft({ rating: ($event.target as HTMLInputElement).value })"
                   />
                   <p
                     class="admin-review-modal__stars-display"
                     :class="{ 'admin-review-modal__stars-display--empty': !draftStars }"
-                    aria-label="Aperçu des étoiles"
+                    :aria-label="ui.editors.shared.starsPreview"
                   >
-                    {{ draftStars || "☆☆☆☆☆" }}
+                    {{ draftStars || ui.editors.shared.emptyStars }}
                   </p>
                 </div>
-                <span class="admin-field__hint">Format score / max (ex. 4,97/5, 5/10)</span>
+                <span class="admin-field__hint">{{ ui.editors.shared.ratingFormatHint }}</span>
               </div>
               <AdminField
-                label="Citation"
+                :label="ui.editors.shared.quote"
                 required
                 type="textarea"
                 :rows="4"
                 full-width
+                :examples="[...cardExamples.reviewQuote]"
                 :model-value="draft.quote"
                 @update:model-value="patchDraft({ quote: $event as string })"
               />
             </div>
 
             <p v-if="!canSave" class="admin-review-modal__hint">
-              L’auteur et la citation sont obligatoires pour enregistrer.
+              {{ ui.editors.reviews.modal.saveHint }}
             </p>
 
             <footer class="admin-review-modal__footer">
               <button type="button" class="hostiv-btn hostiv-btn--secondary" @click="emit('close')">
-                Annuler
+                {{ ui.common.cancel }}
               </button>
               <button
                 type="button"
@@ -182,7 +198,7 @@ function save() {
                 :disabled="!canSave"
                 @click="save"
               >
-                Enregistrer
+                {{ ui.common.save }}
               </button>
             </footer>
           </div>

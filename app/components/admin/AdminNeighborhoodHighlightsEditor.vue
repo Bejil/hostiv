@@ -3,6 +3,7 @@ import AdminIcon from "./AdminIcon.vue"
 import AdminNeighborhoodHighlightDeleteModal from "./AdminNeighborhoodHighlightDeleteModal.vue"
 import AdminNeighborhoodHighlightEditModal from "./AdminNeighborhoodHighlightEditModal.vue"
 import LocationHighlightIcon from "../LocationHighlightIcon.vue"
+import { adminUiFormat } from "../../data/admin-ui"
 import { DEFAULT_LOCATION_HIGHLIGHT_ICON } from "../../data/location-highlight-icons"
 import type { PropertyNeighborhoodHighlight } from "../../types/property-site"
 
@@ -13,6 +14,8 @@ const props = defineProps<{
 const emit = defineEmits<{
   "update:modelValue": [value: PropertyNeighborhoodHighlight[]]
 }>()
+
+const { ui } = useAdminUi()
 
 const editModalOpen = ref(false)
 const deleteModalOpen = ref(false)
@@ -43,11 +46,14 @@ const deletingItem = computed(() =>
 )
 
 function itemTitle(item: PropertyNeighborhoodHighlight, index: number) {
-  return item.title.trim() || `Point ${index + 1}`
+  return (
+    item.title.trim() ||
+    adminUiFormat(ui.value.editors.shared.pointFallback, { index: index + 1 })
+  )
 }
 
 function itemDescriptionPreview(item: PropertyNeighborhoodHighlight) {
-  return item.text.trim() || "Aucune description"
+  return item.text.trim() || ui.value.editors.shared.noDescription
 }
 
 function openAdd() {
@@ -158,15 +164,15 @@ function onDrop(index: number, event: DragEvent) {
 <template>
   <div class="admin-neighborhood-highlights">
     <div class="admin-subpanel__head admin-neighborhood-highlights__head">
-      <h3>Points du quartier</h3>
+      <h3>{{ ui.editors.neighborhoodHighlights.title }}</h3>
       <button type="button" class="admin-btn admin-btn--secondary admin-btn--sm" @click="openAdd">
         <AdminIcon name="plus" :size="16" />
-        Ajouter un point
+        {{ ui.editors.neighborhoodHighlights.addButton }}
       </button>
     </div>
 
     <p v-if="!modelValue.length" class="admin-neighborhood-highlights__empty">
-      Aucun point. Utilisez « Ajouter un point » pour en créer un.
+      {{ ui.editors.neighborhoodHighlights.empty }}
     </p>
 
     <ul v-else class="admin-neighborhood-highlights__list">
@@ -185,7 +191,7 @@ function onDrop(index: number, event: DragEvent) {
         <button
           type="button"
           class="admin-sortable-list__drag-handle"
-          aria-label="Glisser pour réordonner"
+          :aria-label="ui.editors.shared.dragToReorder"
           draggable="true"
           @dragstart="onDragStart(index, $event)"
           @dragend="onDragEnd"
@@ -204,7 +210,7 @@ function onDrop(index: number, event: DragEvent) {
           <button
             type="button"
             class="admin-btn admin-btn--secondary admin-btn--sm admin-btn--icon-only"
-            aria-label="Modifier"
+            :aria-label="ui.editors.shared.edit"
             @click="openEdit(index)"
           >
             <AdminIcon name="pencil" :size="16" />
@@ -212,7 +218,7 @@ function onDrop(index: number, event: DragEvent) {
           <button
             type="button"
             class="admin-btn admin-btn--ghost admin-btn--danger-ghost admin-btn--sm admin-btn--icon-only"
-            aria-label="Supprimer"
+            :aria-label="ui.common.delete"
             @click="openDelete(index)"
           >
             <AdminIcon name="trash" :size="16" />
@@ -232,7 +238,7 @@ function onDrop(index: number, event: DragEvent) {
 
     <AdminNeighborhoodHighlightDeleteModal
       :open="deleteModalOpen"
-      :point-title="deletingItem ? itemTitle(deletingItem, deletingIndex ?? 0) : 'Ce point'"
+      :point-title="deletingItem ? itemTitle(deletingItem, deletingIndex ?? 0) : ui.editors.shared.thisPoint"
       @cancel="closeDelete"
       @confirm="confirmDelete"
     />

@@ -5,9 +5,14 @@ import {
   type StripeElements,
   type StripePaymentElement
 } from "@stripe/stripe-js"
+import type { SiteBookingModalLabels } from "../../data/site-booking-modal-labels"
+import { siteUiFormat } from "../../data/site-ui-labels"
+import type { HostivLocale } from "../../types/hostiv-locale"
 
 const props = defineProps<{
   clientSecret: string
+  locale: HostivLocale
+  labels: SiteBookingModalLabels
   totalLabel: string
   guestEmail: string
 }>()
@@ -28,6 +33,12 @@ let stripe: Stripe | null = null
 let elements: StripeElements | null = null
 let paymentElement: StripePaymentElement | null = null
 
+const payButtonLabel = computed(() =>
+  isProcessing.value
+    ? props.labels.paymentProcessing
+    : siteUiFormat(props.labels.payButton, { total: props.totalLabel })
+)
+
 function destroyPaymentElement() {
   paymentElement?.destroy()
   paymentElement = null
@@ -43,7 +54,7 @@ async function mountPaymentElement() {
   const publishableKey = String(runtimeConfig.public.stripePublishableKey || "").trim()
 
   if (!publishableKey) {
-    localError.value = "Paiement non configuré (clé publique Stripe manquante)."
+    localError.value = props.labels.stripeNotConfigured
     emit("error", localError.value)
     return
   }
@@ -51,14 +62,14 @@ async function mountPaymentElement() {
   stripe = await loadStripe(publishableKey)
 
   if (!stripe) {
-    localError.value = "Impossible de charger Stripe."
+    localError.value = props.labels.stripeLoadFailed
     emit("error", localError.value)
     return
   }
 
   elements = stripe.elements({
     clientSecret: props.clientSecret,
-    locale: "fr",
+    locale: props.locale === "en" ? "en" : "fr",
     appearance: {
       theme: "stripe",
       variables: {
@@ -78,7 +89,6 @@ async function mountPaymentElement() {
       defaultCollapsed: false,
       radios: "always",
       spacedAccordionItems: true,
-      // Carte, Apple Pay, Google Pay visibles ; le reste derrière « Autres » (libellé Stripe en fr)
       visibleAccordionItemsCount: 3
     },
     paymentMethodOrder: ["card", "apple_pay", "google_pay"],
@@ -125,8 +135,7 @@ async function confirmPayment() {
   isProcessing.value = false
 
   if (error) {
-    localError.value =
-      error.message || "Le paiement n’a pas pu être finalisé. Réessayez ou utilisez une autre carte."
+    localError.value = error.message || props.labels.paymentFailed
     emit("error", localError.value)
     return
   }
@@ -136,12 +145,12 @@ async function confirmPayment() {
     return
   }
 
-  localError.value = "Paiement en attente de confirmation. Réessayez dans un instant."
+  localError.value = props.labels.paymentPending
   emit("error", localError.value)
 }
 
 watch(
-  () => props.clientSecret,
+  () => [props.clientSecret, props.locale] as const,
   () => {
     void mountPaymentElement()
   },
@@ -158,7 +167,7 @@ defineExpose({ confirmPayment })
 <template>
   <div class="booking-stripe-payment">
     <p class="booking-stripe-payment-lead">
-      Choisissez votre moyen de paiement
+      {{ labels.choosePaymentMethod }}
     </p>
 
     <div ref="paymentMountRef" class="booking-stripe-payment-element" />
@@ -173,11 +182,11 @@ defineExpose({ confirmPayment })
       :disabled="!isReady || isProcessing"
       @click="confirmPayment"
     >
-      {{ isProcessing ? "Paiement en cours…" : `Payer ${totalLabel}` }}
+      {{ payButtonLabel }}
     </button>
 
     <p class="booking-stripe-payment-note">
-      Paiement traité par Stripe. Vos coordonnées bancaires ne transitent pas par notre serveur.
+      {{ labels.paymentNote }}
     </p>
   </div>
 </template>

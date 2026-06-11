@@ -14,6 +14,8 @@ const props = defineProps<{
   previewUrl: (path: string) => string
 }>()
 
+const { ui } = useAdminUi()
+
 const hostPhotoPathRef = toRef(props, "hostPhotoPath")
 const hostRevisionRef = toRef(props, "hostRevision")
 
@@ -30,19 +32,38 @@ const photoSrc = computed(() => {
   return `${base}${separator}r=${hostRevisionRef.value}`
 })
 
-const displayCaption = computed(() => props.caption.trim() || "Légende photo")
-const displayEyebrow = computed(() => props.eyebrow.trim() || "Sur-titre")
-const displayTitle = computed(() => props.title.trim() || "Titre de la section")
-const displayQuote = computed(() => props.quote.trim() || "Citation de l’hôte.")
-const displayIntro1 = computed(() => props.intro1.trim() || "Premier paragraphe de présentation.")
-const displayIntro2 = computed(() => props.intro2.trim() || "Deuxième paragraphe de présentation.")
-const displayCta = computed(() => props.cta.trim() || "Réserver")
-const displayAlt = computed(() => props.caption.trim() || props.title.trim() || "Photo hôte")
+const displayCaption = computed(
+  () => props.caption.trim() || ui.value.previews.host.photoCaption
+)
+const displayEyebrow = computed(
+  () => props.eyebrow.trim() || ui.value.previews.common.eyebrow
+)
+const displayTitle = computed(
+  () => props.title.trim() || ui.value.previews.common.sectionTitle
+)
+const displayQuote = computed(
+  () => props.quote.trim() || ui.value.previews.host.quote
+)
+const displayIntro1 = computed(
+  () => props.intro1.trim() || ui.value.previews.host.intro1
+)
+const displayIntro2 = computed(
+  () => props.intro2.trim() || ui.value.previews.host.intro2
+)
+const displayCta = computed(
+  () => props.cta.trim() || ui.value.previews.common.book
+)
+const displayAlt = computed(
+  () =>
+    props.caption.trim() ||
+    props.title.trim() ||
+    ui.value.previews.host.photoAlt
+)
 </script>
 
 <template>
-  <div class="admin-host-preview" aria-label="Aperçu de la section Hôte">
-    <p class="admin-host-preview__label">Aperçu</p>
+  <div class="admin-host-preview" :aria-label="ui.previews.host.ariaLabel">
+    <p class="admin-host-preview__label">{{ ui.previews.common.label }}</p>
     <section class="admin-host-preview__card">
       <div class="admin-host-preview__layout">
         <div class="admin-host-preview__media">

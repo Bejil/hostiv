@@ -2,6 +2,7 @@ import type { BenefitIconId } from "../data/benefit-icons"
 import type { LocationHighlightIconId } from "../data/location-highlight-icons"
 import type { SiteTemplateId } from "../data/site-templates"
 import type { AmenityPreviewSection, AmenitySection } from "./amenity"
+import type { PropertyWelcomeGuide } from "./welcome-guide"
 import type { HostivSubscriptionPlan } from "../utils/hostiv-subscription-plan"
 
 export type PropertyBookingConfig = {
@@ -19,6 +20,10 @@ export type PropertyBookingConfig = {
   month_discount_rate: number
   included_main_guests: number
   extra_main_guest_per_night_eur: number
+  /** % remboursé si annulation assez tôt (0 = politique masquée). */
+  cancellation_refund_percent: number
+  /** Délai minimum avant la date d'arrivée (en jours) pour bénéficier du remboursement. */
+  cancellation_days_before_checkin: number
 }
 
 export type PropertyCalendarFeed = {
@@ -64,6 +69,7 @@ export type PropertyVisualCard = {
   title: string
   text: string
   image: string
+  gallery_category_id?: string
 }
 
 export type PropertyNeighborhoodHighlight = {
@@ -186,22 +192,48 @@ export type PropertySiteEmailContent = {
   access_lines: string[]
 }
 
-export type PropertySiteContent = {
-  template: {
-    id: SiteTemplateId | null
-  }
+/** Contenu FR d’origine conservé pour la résolution locale (évite le repli FR sur l’UI système). */
+export type PropertySiteLocaleBase = {
   copy: PropertySiteCopy
-  email: PropertySiteEmailContent
   featured_spaces: PropertyFeaturedSpace[]
   space_gallery_categories: PropertyGalleryCategory[]
   benefit_cards: PropertyBenefitCard[]
   visual_cards: PropertyVisualCard[]
   neighborhood_highlights: PropertyNeighborhoodHighlight[]
   house_rules: PropertyHouseRule[]
+  reviews: PropertyReview[]
+}
+
+export type PropertySiteContent = {
+  template: {
+    id: SiteTemplateId | null
+  }
+  copy: PropertySiteCopy
+  /** Textes de section en anglais (parallèle à `copy`). */
+  copy_en?: PropertySiteCopy
+  /** Snapshot FR avant fusion locale (rempli par `applySiteContentLocale`). */
+  locale_base?: PropertySiteLocaleBase
+  email: PropertySiteEmailContent
+  featured_spaces: PropertyFeaturedSpace[]
+  featured_spaces_en?: PropertyFeaturedSpace[]
+  space_gallery_categories: PropertyGalleryCategory[]
+  space_gallery_categories_en?: PropertyGalleryCategory[]
+  benefit_cards: PropertyBenefitCard[]
+  benefit_cards_en?: PropertyBenefitCard[]
+  visual_cards: PropertyVisualCard[]
+  visual_cards_en?: PropertyVisualCard[]
+  neighborhood_highlights: PropertyNeighborhoodHighlight[]
+  neighborhood_highlights_en?: PropertyNeighborhoodHighlight[]
+  house_rules: PropertyHouseRule[]
+  house_rules_en?: PropertyHouseRule[]
   platform_links: PropertyPlatformLink[]
   reviews: PropertyReview[]
+  reviews_en?: PropertyReview[]
   amenity_catalog: AmenitySection[]
   amenity_preview_sections: AmenityPreviewSection[]
+  welcome_guide: PropertyWelcomeGuide
+  /** Guide d’accueil PDF en anglais (parallèle à `welcome_guide`). */
+  welcome_guide_en?: PropertyWelcomeGuide
 }
 
 export type PropertySiteRecord = {
@@ -214,6 +246,9 @@ export type PropertySiteRecord = {
   seo_title: string
   seo_description: string
   seo_keywords: string
+  seo_keywords_en: string
+  seo_keywords_fr_enabled: boolean
+  seo_keywords_en_enabled: boolean
   seo_og_title: string
   seo_og_description: string
   seo_og_image_path: string
@@ -243,6 +278,9 @@ export type PropertySiteRow = {
   seo_title: string
   seo_description: string
   seo_keywords: string
+  seo_keywords_en: string
+  seo_keywords_fr_enabled: boolean
+  seo_keywords_en_enabled: boolean
   seo_og_title: string
   seo_og_description: string
   seo_og_image_path: string

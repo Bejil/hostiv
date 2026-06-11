@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { ref, watch } from "vue"
 import AdminField from "./AdminField.vue"
-import AdminOnboardingFieldExamples from "./AdminOnboardingFieldExamples.vue"
 import { useAdminGeocode } from "../../composables/useAdminGeocode"
+import { adminCopyFieldExamples } from "../../data/admin-copy-sections"
+import { getAdminCustomizationLocationExamples } from "../../data/admin-customization-field-examples"
 import type { PropertyLocation } from "../../types/property-site"
 
 const props = defineProps<{
@@ -10,18 +11,20 @@ const props = defineProps<{
   modelValue: PropertyLocation
   lead: string
   markRequired?: boolean
-  showFieldExamples?: boolean
 }>()
-
-const leadExamples = [
-  "Quartier calme, commerces à pied et RER à 8 min pour Paris.",
-  "Entre le château de Versailles et les forêts — cadre verdoyant, accès facile."
-]
 
 const emit = defineEmits<{
   "update:modelValue": [value: PropertyLocation]
   "update:lead": [value: string]
 }>()
+
+const { ui, locale } = useAdminUi()
+
+const locationExamples = computed(() => getAdminCustomizationLocationExamples(locale.value))
+const locationLeadExamples = computed(() =>
+  adminCopyFieldExamples("location", "lead", locale.value)
+)
+const ext = computed(() => ui.value.extended)
 
 const { geocodeAddress } = useAdminGeocode(props.slug)
 
@@ -61,7 +64,7 @@ async function runGeocode(address: string) {
   const requestId = ++geocodeRequestId
 
   geocodeStatus.value = "loading"
-  geocodeMessage.value = "Recherche de la position…"
+  geocodeMessage.value = ext.value.location.geocodeLoading
 
   try {
     const result = await geocodeAddress(address)
@@ -78,7 +81,7 @@ async function runGeocode(address: string) {
       radius_meters: result.radius_meters
     })
     geocodeStatus.value = "ok"
-    geocodeMessage.value = "Position et zone mises à jour automatiquement."
+    geocodeMessage.value = ext.value.location.geocodeSuccess
   } catch (error: unknown) {
     if (requestId !== geocodeRequestId) {
       return
@@ -89,7 +92,7 @@ async function runGeocode(address: string) {
 
     geocodeMessage.value =
       fetchError.data?.message ??
-      (error instanceof Error ? error.message : "Impossible de localiser cette adresse.")
+      (error instanceof Error ? error.message : ext.value.location.geocodeFailed)
   }
 }
 
@@ -117,11 +120,12 @@ watch(
     <div class="admin-subpanel">
       <div class="admin-location-map__fields">
         <AdminField
-          label="Adresse"
+          :label="ext.location.addressLabel"
           type="text"
           full-width
           :required="markRequired"
-          hint="La position et la zone sur le site public sont calculées automatiquement à partir de cette adresse."
+          :examples="[...locationExamples.address]"
+          :hint="ext.location.addressHint"
           :model-value="modelValue.address"
           @update:model-value="onAddressInput"
         />
@@ -132,21 +136,16 @@ watch(
         >
           {{ geocodeMessage }}
         </p>
-        <div class="admin-onboarding-fields__field-block">
-          <AdminField
-            label="Chapô"
-            type="textarea"
-            :rows="4"
-            full-width
-            :required="markRequired"
-            :model-value="lead"
-            @update:model-value="emit('update:lead', $event as string)"
-          />
-          <AdminOnboardingFieldExamples
-            v-if="showFieldExamples"
-            :examples="leadExamples"
-          />
-        </div>
+        <AdminField
+          :label="ext.location.leadLabel"
+          type="textarea"
+          :rows="4"
+          full-width
+          :required="markRequired"
+          :examples="locationLeadExamples"
+          :model-value="lead"
+          @update:model-value="emit('update:lead', $event as string)"
+        />
       </div>
     </div>
   </div>

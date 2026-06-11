@@ -3,7 +3,7 @@ import { normalizePropertyAdminRecord } from "../../app/utils/normalize-property
 import { requireSupabaseAdmin } from "./supabase"
 
 const PROPERTY_ADMIN_SELECT =
-  "id, slug, published, brand_name, brand_meta, logo_path, seo_title, seo_description, seo_keywords, seo_og_title, seo_og_description, seo_og_image_path, seo_twitter_card, seo_noindex, hero_image_path, hero_image_alt, testimonials_bg_path, host_photo_path, owner_user_id, subscription_plan, booking_config, calendar_config, location, content"
+  "id, slug, published, brand_name, brand_meta, logo_path, seo_title, seo_description, seo_keywords, seo_keywords_en, seo_keywords_fr_enabled, seo_keywords_en_enabled, seo_og_title, seo_og_description, seo_og_image_path, seo_twitter_card, seo_noindex, hero_image_path, hero_image_alt, testimonials_bg_path, host_photo_path, owner_user_id, subscription_plan, booking_config, calendar_config, location, content"
 
 function mapAdminRow(row: Record<string, unknown>): PropertyAdminRecord {
   return normalizePropertyAdminRecord({
@@ -16,6 +16,9 @@ function mapAdminRow(row: Record<string, unknown>): PropertyAdminRecord {
     seo_title: String(row.seo_title),
     seo_description: String(row.seo_description),
     seo_keywords: String(row.seo_keywords ?? ""),
+    seo_keywords_en: String(row.seo_keywords_en ?? ""),
+    seo_keywords_fr_enabled: row.seo_keywords_fr_enabled !== false,
+    seo_keywords_en_enabled: Boolean(row.seo_keywords_en_enabled),
     seo_og_title: String(row.seo_og_title ?? ""),
     seo_og_description: String(row.seo_og_description ?? ""),
     seo_og_image_path: String(row.seo_og_image_path ?? ""),
@@ -82,6 +85,9 @@ export async function updatePropertyAdmin(
     seo_title: normalized.seo_title,
     seo_description: normalized.seo_description,
     seo_keywords: normalized.seo_keywords,
+    seo_keywords_en: normalized.seo_keywords_en,
+    seo_keywords_fr_enabled: normalized.seo_keywords_fr_enabled,
+    seo_keywords_en_enabled: normalized.seo_keywords_en_enabled,
     seo_og_title: normalized.seo_og_title,
     seo_og_description: normalized.seo_og_description,
     seo_og_image_path: normalized.seo_og_image_path,

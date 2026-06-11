@@ -8,57 +8,34 @@ import AdminLocationMapEditor from "./AdminLocationMapEditor.vue"
 import AdminTemplateEditor from "./AdminTemplateEditor.vue"
 import type { AdminOnboardingStepId } from "../../data/admin-onboarding-steps"
 import { useAdminEditorContext } from "../../composables/admin-editor-context"
+import { useAdminLiveEditorContext } from "../../composables/admin-live-editor-context"
 
-const props = defineProps<{
+defineProps<{
   stepId: AdminOnboardingStepId
 }>()
 
 const ctx = useAdminEditorContext()
+const liveEditor = useAdminLiveEditorContext()
 const record = ctx.record
 
-const brandMetaExamples = ["Le Chesnay · Versailles", "Appartement familial · 10 min du centre"]
+function onSiteImageUploaded() {
+  liveEditor?.bumpSitePreviewAssets()
+}
 
-const heroPhotoExamples = [
-  "Salon lumineux vu depuis l’entrée",
-  "Façade ou pièce la plus représentative du logement"
-]
+const { ui } = useAdminUi()
+const ext = computed(() => ui.value.extended)
+const onboardingFields = computed(() => ext.value.onboardingFields)
 
-const heroEyebrowExamples = [
-  "Appartement entier · Le Chesnay",
-  "Maison de vacances · 10 min de la mer"
-]
-
-const heroTitleExamples = [
-  "Séjournez au calme, sans compromis sur le confort",
-  "Un pied-à-terre familial, à deux pas du centre-ville"
-]
-
-const heroTextExamples = [
-  "Un appartement de charme avec arrivée autonome, proche des commerces et des transports.",
-  "54 m², 4 voyageurs, espace télétravail et équipements pensés pour les familles."
-]
-
-const hostPhotoExamples = [
-  "Portrait en situation, regard caméra",
-  "Photo naturelle, sourire, dans le logement ou devant l’entrée"
-]
-
-const hostCaptionExamples = ["Sophie · votre hôte", "Marc & Julie · vos hôtes"]
-
-const hostTitleExamples = [
-  "Une adresse familiale à laquelle nous sommes attachés",
-  "Un logement que nous ouvrons avec soin, saison après saison"
-]
-
-const hostQuoteExamples = [
-  "Un ancien chez-nous que nous ouvrons avec attention — pour que vous vous sentiez attendus.",
-  "Nous aimons accueillir des voyageurs curieux, pas seulement des visiteurs de passage."
-]
-
-const hostIntroExamples = [
-  "Je m’occupe personnellement de l’accueil et reste disponible pendant votre séjour pour répondre à vos questions.",
-  "Nous habitons à proximité : arrivée autonome le soir, conseils sur le quartier le lendemain si besoin."
-]
+const brandMetaExamples = computed(() => [...onboardingFields.value.examples.brandMeta])
+const heroPhotoExamples = computed(() => [...onboardingFields.value.examples.heroPhoto])
+const heroEyebrowExamples = computed(() => [...onboardingFields.value.examples.heroEyebrow])
+const heroTitleExamples = computed(() => [...onboardingFields.value.examples.heroTitle])
+const heroTextExamples = computed(() => [...onboardingFields.value.examples.heroText])
+const hostPhotoExamples = computed(() => [...onboardingFields.value.examples.hostPhoto])
+const hostCaptionExamples = computed(() => [...onboardingFields.value.examples.hostCaption])
+const hostTitleExamples = computed(() => [...onboardingFields.value.examples.hostTitle])
+const hostQuoteExamples = computed(() => [...onboardingFields.value.examples.hostQuote])
+const hostIntroExamples = computed(() => [...onboardingFields.value.examples.hostIntro])
 </script>
 
 <template>
@@ -69,7 +46,7 @@ const hostIntroExamples = [
         <AdminImageUpload
           cover
           required
-          label="Logo"
+          :label="onboardingFields.labels.logo"
           :model-value="record.logo_path"
           default-path="branding/header-logo.png"
           :upload="ctx.upload"
@@ -78,14 +55,14 @@ const hostIntroExamples = [
         />
         <div class="admin-onboarding-fields__stack">
           <AdminField
-            label="Nom affiché"
+            :label="onboardingFields.labels.brandName"
             required
             :model-value="record.brand_name"
             full-width
             @update:model-value="ctx.patchBrandName($event as string)"
           />
           <AdminField
-            label="Sous-titre"
+            :label="onboardingFields.labels.brandMeta"
             required
             :model-value="record.brand_meta"
             full-width
@@ -99,7 +76,8 @@ const hostIntroExamples = [
     <!-- Template -->
     <div v-else-if="stepId === 'template'" class="admin-onboarding-fields__section">
       <p class="admin-onboarding-fields__legend">
-        Thème <span class="admin-field__required" aria-hidden="true">*</span>
+        {{ onboardingFields.themeLegend }}
+        <span class="admin-field__required" aria-hidden="true">*</span>
       </p>
       <AdminTemplateEditor
         :model-value="record.content.template.id"
@@ -114,19 +92,20 @@ const hostIntroExamples = [
           <AdminImageUpload
             cover
             required
-            label="Photo principale"
+            :label="onboardingFields.labels.heroPhoto"
             :model-value="record.hero_image_path"
             default-path="gallery/hero-salon.jpeg"
             :upload="ctx.upload"
             :preview-url="ctx.previewUrl"
             @update:model-value="ctx.patch({ hero_image_path: $event })"
+            @uploaded="onSiteImageUploaded"
           />
           <AdminOnboardingFieldExamples :examples="heroPhotoExamples" />
         </div>
         <div class="admin-onboarding-fields__stack">
           <div class="admin-onboarding-fields__field-block">
             <AdminField
-              label="Sur-titre"
+              :label="onboardingFields.labels.heroEyebrow"
               required
               :model-value="ctx.getCopyField('hero', 'eyebrow')"
               full-width
@@ -136,7 +115,7 @@ const hostIntroExamples = [
           </div>
           <div class="admin-onboarding-fields__field-block">
             <AdminField
-              label="Titre d’accueil"
+              :label="onboardingFields.labels.heroTitle"
               required
               :model-value="ctx.getCopyField('hero', 'title')"
               full-width
@@ -146,7 +125,7 @@ const hostIntroExamples = [
           </div>
           <div class="admin-onboarding-fields__field-block">
             <AdminField
-              label="Texte d’introduction"
+              :label="onboardingFields.labels.heroText"
               type="textarea"
               required
               :rows="4"
@@ -168,6 +147,7 @@ const hostIntroExamples = [
         :model-value="record"
         :upload="ctx.upload"
         :preview-url="ctx.previewUrl"
+        :save-draft="ctx.saveDraft"
         @update:model-value="ctx.replaceRecord"
       />
     </div>
@@ -179,7 +159,7 @@ const hostIntroExamples = [
           <AdminImageUpload
             cover
             required
-            label="Photo hôte"
+            :label="onboardingFields.labels.hostPhoto"
             :model-value="record.host_photo_path"
             default-path="about/host-photo.png"
             :upload="ctx.upload"
@@ -191,7 +171,7 @@ const hostIntroExamples = [
         <div class="admin-onboarding-fields__stack">
           <div class="admin-onboarding-fields__field-block">
             <AdminField
-              label="Légende photo"
+              :label="onboardingFields.labels.hostCaption"
               required
               :model-value="ctx.getCopyField('host', 'caption')"
               full-width
@@ -201,7 +181,7 @@ const hostIntroExamples = [
           </div>
           <div class="admin-onboarding-fields__field-block">
             <AdminField
-              label="Titre"
+              :label="onboardingFields.labels.hostTitle"
               required
               :model-value="ctx.getCopyField('host', 'title')"
               full-width
@@ -211,7 +191,7 @@ const hostIntroExamples = [
           </div>
           <div class="admin-onboarding-fields__field-block">
             <AdminField
-              label="Citation"
+              :label="onboardingFields.labels.hostQuote"
               type="textarea"
               required
               :rows="3"
@@ -225,7 +205,7 @@ const hostIntroExamples = [
       </div>
       <div class="admin-onboarding-fields__field-block admin-onboarding-fields__field-block--full">
         <AdminField
-          label="Intro 1"
+          :label="onboardingFields.labels.hostIntro"
           type="textarea"
           required
           :rows="4"
@@ -241,7 +221,6 @@ const hostIntroExamples = [
     <div v-else-if="stepId === 'location'" class="admin-onboarding-fields__section admin-onboarding-fields__section--wide">
       <AdminLocationMapEditor
         mark-required
-        show-field-examples
         :slug="record.slug"
         :model-value="record.location"
         :lead="ctx.getCopyField('location', 'lead')"
@@ -254,7 +233,7 @@ const hostIntroExamples = [
     <div v-else-if="stepId === 'booking'" class="admin-onboarding-fields__section">
       <div class="admin-onboarding-fields__stack admin-onboarding-fields__stack--2col">
         <AdminField
-          label="Prix par nuit (€)"
+          :label="onboardingFields.labels.nightPrice"
           type="number"
           required
           :model-value="record.booking_config.base_night_price_eur"
@@ -269,12 +248,12 @@ const hostIntroExamples = [
           "
         />
         <AdminField
-          label="Voyageurs inclus"
+          :label="onboardingFields.labels.includedGuests"
           type="number"
           required
           :model-value="record.booking_config.included_main_guests"
           full-width
-          hint="Nombre de voyageurs couverts par le tarif de base."
+          :hint="onboardingFields.includedGuestsHint"
           @update:model-value="
             ctx.patch({
               booking_config: {

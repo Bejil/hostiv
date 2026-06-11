@@ -2,6 +2,7 @@
 import AdminReviewDeleteModal from "./AdminReviewDeleteModal.vue"
 import AdminReviewEditModal from "./AdminReviewEditModal.vue"
 import AdminIcon from "./AdminIcon.vue"
+import { adminUiFormat } from "../../data/admin-ui"
 import type { PropertyReview } from "../../types/property-site"
 import { ratingToStars } from "../../utils/platform-rating-stars"
 
@@ -12,6 +13,8 @@ const props = defineProps<{
 const emit = defineEmits<{
   "update:modelValue": [value: PropertyReview[]]
 }>()
+
+const { ui } = useAdminUi()
 
 const editModalOpen = ref(false)
 const deleteModalOpen = ref(false)
@@ -48,13 +51,16 @@ const deletingReview = computed(() =>
 )
 
 function reviewTitle(review: PropertyReview, index: number) {
-  return review.author.trim() || `Verbatim ${index + 1}`
+  return (
+    review.author.trim() ||
+    adminUiFormat(ui.value.editors.shared.reviewFallback, { index: index + 1 })
+  )
 }
 
 function reviewQuotePreview(review: PropertyReview) {
   const quote = review.quote.trim()
 
-  return quote || "Aucune citation"
+  return quote || ui.value.editors.shared.noQuote
 }
 
 function reviewMeta(review: PropertyReview) {
@@ -65,7 +71,7 @@ function reviewMeta(review: PropertyReview) {
     return `${stars} · ${date}`
   }
 
-  return stars || date || "Sans note ni date"
+  return stars || date || ui.value.editors.shared.noRatingOrDate
 }
 
 function openAdd() {
@@ -177,19 +183,19 @@ function onDrop(index: number, event: DragEvent) {
 <template>
   <div class="admin-reviews-list">
     <div class="admin-subpanel__head admin-reviews-list__head">
-      <h3>Verbatims</h3>
+      <h3>{{ ui.editors.reviews.title }}</h3>
       <button type="button" class="admin-btn admin-btn--secondary admin-btn--sm" @click="openAdd">
         <AdminIcon name="plus" :size="16" />
-        Ajouter un verbatim
+        {{ ui.editors.reviews.addButton }}
       </button>
     </div>
 
     <p class="admin-reviews-list__lead">
-      Les avis défilent en carrousel sur la page.
+      {{ ui.editors.reviews.lead }}
     </p>
 
     <p v-if="!modelValue.length" class="admin-reviews-list__empty">
-      Aucun verbatim. Utilisez « Ajouter un verbatim » pour en créer un.
+      {{ ui.editors.reviews.empty }}
     </p>
 
     <ul v-else class="admin-reviews-list__items">
@@ -207,7 +213,7 @@ function onDrop(index: number, event: DragEvent) {
         <button
           type="button"
           class="admin-sortable-list__drag-handle"
-          aria-label="Glisser pour réordonner"
+          :aria-label="ui.editors.shared.dragToReorder"
           draggable="true"
           @dragstart="onDragStart(index, $event)"
           @dragend="onDragEnd"
@@ -223,7 +229,7 @@ function onDrop(index: number, event: DragEvent) {
           <button
             type="button"
             class="admin-btn admin-btn--secondary admin-btn--sm admin-btn--icon-only"
-            aria-label="Modifier"
+            :aria-label="ui.editors.shared.edit"
             @click="openEdit(index)"
           >
             <AdminIcon name="pencil" :size="16" />
@@ -231,7 +237,7 @@ function onDrop(index: number, event: DragEvent) {
           <button
             type="button"
             class="admin-btn admin-btn--ghost admin-btn--danger-ghost admin-btn--sm admin-btn--icon-only"
-            aria-label="Supprimer"
+            :aria-label="ui.common.delete"
             @click="openDelete(index)"
           >
             <AdminIcon name="trash" :size="16" />
@@ -252,7 +258,7 @@ function onDrop(index: number, event: DragEvent) {
     <AdminReviewDeleteModal
       :open="deleteModalOpen"
       :review-author="
-        deletingReview ? reviewTitle(deletingReview, deletingIndex ?? 0) : 'Cet auteur'
+        deletingReview ? reviewTitle(deletingReview, deletingIndex ?? 0) : ui.editors.shared.thisAuthor
       "
       @cancel="closeDelete"
       @confirm="confirmDelete"

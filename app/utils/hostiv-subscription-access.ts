@@ -1,9 +1,15 @@
 import type { HostivSubscriptionPlan } from "./hostiv-subscription-plan"
+import { hasHostivPremiumTools } from "./hostiv-premium-tools"
 
 export type HostivSubscriptionAccess = {
   plan: HostivSubscriptionPlan
   active: boolean
   paid_until: string | null
+  subscription_started_at: string | null
+  premium_tools_until: string | null
+  premium_tools_started_at: string | null
+  has_premium_tools: boolean
+  has_starter_plus: boolean
   requires_payment: boolean
 }
 
@@ -21,21 +27,134 @@ export function isHostivSubscriptionActive(paidUntil: string | null | undefined,
   return end.getTime() > now.getTime()
 }
 
+/** Début de période affichable (DB ou dérivé de la fin − 12 mois). */
+export function resolveHostivSubscriptionStartedAt(input: {
+  subscription_started_at?: string | null
+  paid_until?: string | null
+}) {
+  const startedAt =
+    typeof input.subscription_started_at === "string" && input.subscription_started_at.trim()
+      ? input.subscription_started_at.trim()
+      : null
+
+  if (startedAt) {
+    return startedAt
+  }
+
+  const paidUntil =
+    typeof input.paid_until === "string" && input.paid_until.trim() ? input.paid_until.trim() : null
+
+  if (!paidUntil) {
+    return null
+  }
+
+  const end = new Date(paidUntil)
+
+  if (Number.isNaN(end.getTime())) {
+    return null
+  }
+
+  const start = new Date(end)
+
+  start.setUTCFullYear(start.getUTCFullYear() - 1)
+
+  return start.toISOString()
+}
+
+export function resolvePremiumToolsStartedAt(input: {
+  premium_tools_started_at?: string | null
+  premium_tools_until?: string | null
+}) {
+  const startedAt =
+    typeof input.premium_tools_started_at === "string" && input.premium_tools_started_at.trim()
+      ? input.premium_tools_started_at.trim()
+      : null
+
+  if (startedAt) {
+    return startedAt
+  }
+
+  const until =
+    typeof input.premium_tools_until === "string" && input.premium_tools_until.trim()
+      ? input.premium_tools_until.trim()
+      : null
+
+  if (!until || !isHostivSubscriptionActive(until)) {
+    return null
+  }
+
+  const end = new Date(until)
+
+  if (Number.isNaN(end.getTime())) {
+    return null
+  }
+
+  const start = new Date(end)
+
+  start.setUTCFullYear(start.getUTCFullYear() - 1)
+
+  return start.toISOString()
+}
+
 export function buildHostivSubscriptionAccess(input: {
   subscription_plan?: string | null
   paid_until?: string | null
+  subscription_started_at?: string | null
+  premium_tools_until?: string | null
+  premium_tools_started_at?: string | null
 }): HostivSubscriptionAccess {
   const plan = (input.subscription_plan === "starter" ? "starter" : "pro") as HostivSubscriptionPlan
   const paidUntil =
     typeof input.paid_until === "string" && input.paid_until.trim()
       ? input.paid_until.trim()
       : null
+  const startedAt = resolveHostivSubscriptionStartedAt({
+    subscription_started_at: input.subscription_started_at,
+    paid_until: paidUntil
+  })
+  const premiumToolsUntil =
+    typeof input.premium_tools_until === "string" && input.premium_tools_until.trim()
+      ? input.premium_tools_until.trim()
+      : null
   const active = isHostivSubscriptionActive(paidUntil)
+  const premiumToolsStartedAt = resolvePremiumToolsStartedAt({
+    premium_tools_started_at: input.premium_tools_started_at,
+    premium_tools_until: premiumToolsUntil
+  })
+  const hasPremiumTools = hasHostivPremiumTools({
+    plan,
+    premium_tools_until: premiumToolsUntil
+  })
+  const hasStarterPlus =
+    plan === "starter" && isHostivSubscriptionActive(premiumToolsUntil)
 
   return {
     plan,
     active,
     paid_until: paidUntil,
+    subscription_started_at: startedAt,
+    premium_tools_until: premiumToolsUntil,
+    premium_tools_started_at: premiumToolsStartedAt,
+    has_premium_tools: hasPremiumTools,
+    has_starter_plus: hasStarterPlus,
     requires_payment: !active
   }
+}
+
+export function formatHostivSubscriptionDate(iso: string | null | undefined) {
+  if (!iso?.trim()) {
+    return "—"
+  }
+
+  const date = new Date(iso)
+
+  if (Number.isNaN(date.getTime())) {
+    return "—"
+  }
+
+  return date.toLocaleDateString("fr-FR", {
+    day: "numeric",
+    month: "long",
+    year: "numeric"
+  })
 }

@@ -1,3 +1,5 @@
+import { getSiteUiLabels, siteUiFormat } from "../data/site-ui-labels"
+import type { HostivLocale } from "../types/hostiv-locale"
 import type { PropertyBookingConfig } from "../types/property-site"
 import { normalizeBookingConfig } from "./booking-config"
 
@@ -8,32 +10,36 @@ export type PricingDisplayCard = {
   text: string
 }
 
-export function buildPricingDisplayCards(config: PropertyBookingConfig): PricingDisplayCard[] {
+export function buildPricingDisplayCards(
+  config: PropertyBookingConfig,
+  locale: HostivLocale = "fr"
+): PricingDisplayCard[] {
   const normalizedConfig = normalizeBookingConfig(config)
+  const labels = getSiteUiLabels(locale).pricing
   const cards: PricingDisplayCard[] = [
     {
       icon: "night",
-      title: "Nuitée",
+      title: labels.nightTitle,
       value: `${normalizedConfig.base_night_price_eur}€`,
-      text: "À partir d’une nuit"
+      text: labels.nightText
     }
   ]
 
   if (normalizedConfig.week_discount_enabled) {
     cards.push({
       icon: "week",
-      title: "Séjour d’une semaine",
+      title: labels.weekTitle,
       value: `-${Math.round(normalizedConfig.week_discount_rate * 100)}%`,
-      text: `Dès ${normalizedConfig.week_min_nights} nuits`
+      text: siteUiFormat(labels.weekText, { min: normalizedConfig.week_min_nights })
     })
   }
 
   if (normalizedConfig.month_discount_enabled) {
     cards.push({
       icon: "month",
-      title: "Séjour d’un mois",
+      title: labels.monthTitle,
       value: `-${Math.round(normalizedConfig.month_discount_rate * 100)}%`,
-      text: `Dès ${normalizedConfig.month_min_nights} nuits`
+      text: siteUiFormat(labels.monthText, { min: normalizedConfig.month_min_nights })
     })
   }
 

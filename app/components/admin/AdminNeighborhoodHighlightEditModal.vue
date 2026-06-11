@@ -8,6 +8,7 @@ import {
 } from "../../data/location-highlight-icons"
 import type { LocationHighlightIconId } from "../../data/location-highlight-icons"
 import type { PropertyNeighborhoodHighlight } from "../../types/property-site"
+import { getAdminCustomizationCardExamples } from "../../data/admin-customization-field-examples"
 
 const props = defineProps<{
   open: boolean
@@ -20,12 +21,18 @@ const emit = defineEmits<{
   save: [value: PropertyNeighborhoodHighlight]
 }>()
 
+const { ui, locale } = useAdminUi()
+
+const cardExamples = computed(() => getAdminCustomizationCardExamples(locale.value))
+
 const draft = ref<PropertyNeighborhoodHighlight>({ ...props.item })
 
 const canSave = computed(() => Boolean(draft.value.title.trim()))
 
 const modalTitle = computed(() =>
-  props.isNew ? "Ajouter un point du quartier" : "Modifier le point du quartier"
+  props.isNew
+    ? ui.value.editors.neighborhoodHighlights.modal.addTitle
+    : ui.value.editors.neighborhoodHighlights.modal.editTitle
 )
 
 watch(
@@ -107,8 +114,8 @@ function save() {
             <span class="hostiv-modal__accent" aria-hidden="true" />
             <span class="hostiv-modal__glow" aria-hidden="true" />
 
-            <button type="button" class="hostiv-modal__close" aria-label="Fermer" @click="emit('close')">
-              <span class="sr-only">Fermer</span>
+            <button type="button" class="hostiv-modal__close" :aria-label="ui.common.close" @click="emit('close')">
+              <span class="sr-only">{{ ui.common.close }}</span>
               <X :size="18" stroke-width="2" />
             </button>
 
@@ -118,7 +125,7 @@ function save() {
                   {{ modalTitle }}
                 </h2>
                 <p class="hostiv-modal__subtitle">
-                  {{ draft.title.trim() || "Sans titre" }}
+                  {{ draft.title.trim() || ui.editors.shared.untitled }}
                 </p>
               </div>
             </header>
@@ -129,29 +136,31 @@ function save() {
                 @update:model-value="patchDraft({ icon: $event as LocationHighlightIconId })"
               />
               <AdminField
-                label="Titre"
+                :label="ui.editors.shared.title"
                 required
                 full-width
+                :examples="[...cardExamples.highlightTitle]"
                 :model-value="draft.title"
                 @update:model-value="patchDraft({ title: $event as string })"
               />
               <AdminField
-                label="Description"
+                :label="ui.editors.shared.description"
                 type="textarea"
                 :rows="4"
                 full-width
+                :examples="[...cardExamples.highlightText]"
                 :model-value="draft.text"
                 @update:model-value="patchDraft({ text: $event as string })"
               />
             </div>
 
             <p v-if="!canSave" class="admin-neighborhood-highlight-modal__hint">
-              Le titre est obligatoire pour enregistrer.
+              {{ ui.editors.neighborhoodHighlights.modal.saveHint }}
             </p>
 
             <footer class="admin-neighborhood-highlight-modal__footer">
               <button type="button" class="hostiv-btn hostiv-btn--secondary" @click="emit('close')">
-                Annuler
+                {{ ui.common.cancel }}
               </button>
               <button
                 type="button"
@@ -159,7 +168,7 @@ function save() {
                 :disabled="!canSave"
                 @click="save"
               >
-                Enregistrer
+                {{ ui.common.save }}
               </button>
             </footer>
           </div>

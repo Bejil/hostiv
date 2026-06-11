@@ -43,18 +43,44 @@ export async function getMergedBlockedNightDates(feeds?: CalendarFeedInput[]) {
   )
 
   const blockedSets: Set<string>[] = []
+  const dateSources: Record<string, string[]> = {}
+  const feedBlocks: Array<{ name: string; dates: string[] }> = []
   let failed = 0
 
   for (const result of results) {
     if (result.status === "fulfilled") {
-      blockedSets.push(result.value.dates)
+      const { feed, dates } = result.value
+      const dateList = [...dates]
+
+      feedBlocks.push({
+        name: feed.name,
+        dates: dateList
+      })
+
+      for (const date of dateList) {
+        const sources = dateSources[date] ?? []
+
+        if (!sources.includes(feed.name)) {
+          sources.push(feed.name)
+        }
+
+        dateSources[date] = sources
+      }
+
+      blockedSets.push(dates)
     } else {
       failed += 1
     }
   }
 
+  for (const date of Object.keys(dateSources)) {
+    dateSources[date].sort((a, b) => a.localeCompare(b, "fr"))
+  }
+
   return {
     dates: mergeBlockedNightDates(blockedSets),
+    dateSources,
+    feedBlocks,
     sources: {
       total: feedUrls.length,
       succeeded: blockedSets.length,

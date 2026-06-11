@@ -3,6 +3,7 @@ import { validatePropertySlugFormat } from "../../app/utils/property-slug"
 import { normalizeHostivSubscriptionPlan } from "../../app/utils/hostiv-subscription-plan"
 import { normalizeBookingConfig } from "../../app/utils/booking-config"
 import { normalizeCalendarConfig } from "../../app/utils/calendar-config"
+import { createEmptyWelcomeGuide } from "../../app/utils/welcome-guide-content"
 import { requireSupabaseAdmin } from "./supabase"
 
 async function backfillBrandNameFromSignup(
@@ -117,7 +118,8 @@ function buildEmptySiteContent() {
     reviews: [],
     house_rules: [],
     amenity_catalog: [],
-    amenity_preview_sections: []
+    amenity_preview_sections: [],
+    welcome_guide: createEmptyWelcomeGuide()
   }
 }
 
@@ -188,6 +190,9 @@ export async function provisionPropertyForUser(input: {
     seo_title: "",
     seo_description: "",
     seo_keywords: "",
+    seo_keywords_en: "",
+    seo_keywords_fr_enabled: true,
+    seo_keywords_en_enabled: false,
     seo_og_title: "",
     seo_og_description: "",
     seo_og_image_path: "",

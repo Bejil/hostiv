@@ -1,15 +1,35 @@
 <script setup lang="ts">
-import AdminAlert from "./AdminAlert.vue"
-import AdminBookingConfigEditor from "./AdminBookingConfigEditor.vue"
-import AdminIcon from "./AdminIcon.vue"
+import AdminAccountingNav from "./AdminAccountingNav.vue"
+import AdminAccountingPricingBanner from "./AdminAccountingPricingBanner.vue"
+import AdminAccountingRevenuePanel from "./AdminAccountingRevenuePanel.vue"
+import AdminBookingCancellationPanel from "./AdminBookingCancellationPanel.vue"
+import AdminBookingPricingPanel from "./AdminBookingPricingPanel.vue"
+import AdminStripeConnectPanel from "./AdminStripeConnectPanel.vue"
+import type { BookingRateTabId } from "./AdminBookingConfigForm.vue"
+import type { AdminAccountingSectionId } from "../../data/admin-accounting-sections"
+import {
+  findAdminAccountingSection,
+  isAdminAccountingSectionId
+} from "../../data/admin-accounting-sections"
+import { adminSectionNavKey } from "../../composables/admin-section-nav-context"
 import { useAdminEditorContext } from "../../composables/admin-editor-context"
 import type { StripeConnectStatus } from "../../types/stripe-connect"
+import { normalizeBookingConfig } from "../../utils/booking-config"
+import {
+  isProductionAdminHost,
+  stripeConnectNeedsAttention
+} from "../../utils/admin-stripe-connect-attention"
 
 const props = defineProps<{
   slug: string
 }>()
 
 const ctx = useAdminEditorContext()
+const sectionNav = inject(adminSectionNavKey)
+
+if (!sectionNav) {
+  throw new Error("AdminPayoutsEditor requires adminSectionNavKey")
+}
 
 const route = useRoute()
 const router = useRouter()
@@ -19,68 +39,68 @@ const loading = ref(true)
 const actionLoading = ref(false)
 const error = ref<string | null>(null)
 const actionMessage = ref<string | null>(null)
+const revenuePanelRef = ref<InstanceType<typeof AdminAccountingRevenuePanel> | null>(null)
+const activePricingSection = ref<BookingRateTabId>("night")
+const activeAccountingSection = ref<AdminAccountingSectionId>("pricing")
 
-const statusLabel = computed(() => {
-  if (!status.value?.accountId) {
-    return "Non configuré"
-  }
+const { ui, locale } = useAdminUi()
+const ext = computed(() => ui.value.extended)
 
-  if (status.value.paymentsReady) {
-    return "Paiements actifs"
-  }
+const activeAccountingMeta = computed(() =>
+  findAdminAccountingSection(activeAccountingSection.value, locale.value)
+)
 
-  if (status.value.detailsSubmitted) {
-    return "Vérification en cours"
-  }
+const activeDetailTitle = computed(() => activeAccountingMeta.value.title)
 
-  return "Configuration à terminer"
-})
+const activeDetailLead = computed(() => activeAccountingMeta.value.lead)
 
-const statusVariant = computed(() => {
-  if (status.value?.paymentsReady) {
-    return "success"
-  }
+const revenueLoading = computed(() => revenuePanelRef.value?.loading ?? false)
 
-  if (status.value?.accountId) {
-    return "info"
-  }
+const bookingConfig = computed(() => normalizeBookingConfig(ctx.record.value.booking_config))
 
-  return "error"
-})
+const isProductionHost = computed(() => isProductionAdminHost())
 
-const isProductionHost = computed(() => {
-  if (import.meta.server) {
+const stripeBannerNeedsAttention = computed(() => {
+  if (loading.value) {
     return false
   }
 
-  const host = window.location.hostname
-
-  return host !== "localhost" && host !== "127.0.0.1"
+  return stripeConnectNeedsAttention(status.value, {
+    hasLoadError: Boolean(error.value),
+    isProductionHost: isProductionHost.value
+  })
 })
 
-const showTestKeysWarning = computed(
-  () => isProductionHost.value && status.value?.connectKeyMode === "test"
-)
-
-const connectModeMismatchMessage =
-  "Votre compte Stripe Connect a été créé en mode test. Les clés de production (Live) ne peuvent pas l’utiliser : cliquez sur « Connecter mon compte Stripe » pour refaire l’onboarding en mode réel."
-
-const testKeysWarningMessage =
-  "Les clés Stripe du serveur sont encore en mode test (sk_test_). Sur Vercel, utilisez STRIPE_SECRET_KEY et NUXT_PUBLIC_STRIPE_PUBLISHABLE_KEY en sk_live_ / pk_live_, puis redéployez."
-
-const pendingRequirements = computed(() => {
-  const requirements = status.value?.requirements
-
-  if (!requirements) {
-    return []
+const paymentsNavDescription = computed(() => {
+  if (loading.value) {
+    return ext.value.accounting.paymentsNav.verifying
   }
 
-  return [
-    ...requirements.pastDue,
-    ...requirements.currentlyDue,
-    ...requirements.eventuallyDue
-  ].filter((value, index, list) => list.indexOf(value) === index)
+  if (status.value?.paymentsReady) {
+    return ext.value.accounting.paymentsNav.paymentsActive
+  }
+
+  if (stripeBannerNeedsAttention.value) {
+    return ext.value.accounting.paymentsNav.setupIncomplete
+  }
+
+  return ext.value.accounting.paymentsNav.stripeConnect
 })
+
+function syncAccountingSectionQuery(section: AdminAccountingSectionId) {
+  const query = { ...route.query, section: "payouts", accounting: section }
+
+  router.replace({ path: route.path, query })
+}
+
+function applyAccountingSectionFromRoute() {
+  const raw = route.query.accounting
+  const id = (Array.isArray(raw) ? raw[0] : raw) ?? ""
+
+  if (isAdminAccountingSectionId(id)) {
+    activeAccountingSection.value = id
+  }
+}
 
 async function authHeaders(): Promise<Record<string, string>> {
   const supabase = useSupabaseClient()
@@ -112,10 +132,11 @@ async function loadStatus() {
       e.data?.statusMessage ||
       e.statusMessage ||
       e.message ||
-      "Impossible de charger le statut Stripe."
+      ext.value.accounting.stripeErrors.load
     status.value = null
   } finally {
     loading.value = false
+    sectionNav.updateStripeConnectStatus(status.value, { loadError: Boolean(error.value) })
   }
 }
 
@@ -144,7 +165,7 @@ async function startOnboarding() {
       e.data?.statusMessage ||
       e.statusMessage ||
       e.message ||
-      "Impossible d’ouvrir l’onboarding Stripe."
+      ext.value.accounting.stripeErrors.onboard
   } finally {
     actionLoading.value = false
   }
@@ -175,7 +196,7 @@ async function openDashboard() {
       e.data?.statusMessage ||
       e.statusMessage ||
       e.message ||
-      "Impossible d’ouvrir le tableau de bord Stripe."
+      ext.value.accounting.stripeErrors.dashboard
   } finally {
     actionLoading.value = false
   }
@@ -188,14 +209,35 @@ function clearStripeQuery() {
   router.replace({ path: route.path, query })
 }
 
+function selectPricingSection(section: BookingRateTabId) {
+  activePricingSection.value = section
+}
+
+function selectAccountingSection(section: AdminAccountingSectionId) {
+  activeAccountingSection.value = section
+  syncAccountingSectionQuery(section)
+
+  if (section === "revenue") {
+    void revenuePanelRef.value?.refresh()
+  }
+}
+
+watch(activeAccountingSection, (section) => {
+  if (section === "revenue") {
+    void revenuePanelRef.value?.refresh()
+  }
+})
+
 onMounted(async () => {
   const stripeQuery = route.query.stripe
 
   if (stripeQuery === "return" || stripeQuery === "refresh") {
+    activeAccountingSection.value = "payments"
+    syncAccountingSectionQuery("payments")
     actionMessage.value =
       stripeQuery === "return"
-        ? "Retour depuis Stripe. Actualisation du statut…"
-        : "Reprise de la configuration Stripe…"
+        ? ext.value.accounting.stripeReturn.returnPending
+        : ext.value.accounting.stripeReturn.refreshPending
     clearStripeQuery()
   }
 
@@ -203,10 +245,19 @@ onMounted(async () => {
 
   if (stripeQuery === "return" || stripeQuery === "refresh") {
     actionMessage.value = status.value?.paymentsReady
-      ? "Votre compte est prêt à recevoir les paiements."
-      : "Configuration enregistrée. Terminez les étapes indiquées par Stripe si nécessaire."
+      ? ext.value.accounting.stripeReturn.ready
+      : ext.value.accounting.stripeReturn.incomplete
   }
+
+  applyAccountingSectionFromRoute()
 })
+
+watch(
+  () => route.query.accounting,
+  () => {
+    applyAccountingSectionFromRoute()
+  }
+)
 
 watch(
   () => props.slug,
@@ -217,127 +268,90 @@ watch(
 </script>
 
 <template>
-  <div class="admin-payouts">
-    <AdminBookingConfigEditor
-      :model-value="ctx.record.value.booking_config"
-      @update:model-value="ctx.patch({ booking_config: $event })"
-    />
+  <div class="admin-accounting admin-gallery-editor">
+    <div class="admin-gallery-editor__layout">
+      <AdminAccountingNav
+        :active-section="activeAccountingSection"
+        :payments-nav-description="paymentsNavDescription"
+        @select="selectAccountingSection"
+      />
 
-    <div class="admin-subpanel admin-general-card admin-payouts__card">
-      <div class="admin-subpanel__head admin-general-card__head">
-        <div>
-          <p class="admin-general-card__kicker">Stripe Connect</p>
-          <h3>Versements</h3>
-        </div>
-        <p class="admin-general-card__hint">
-          Connectez un compte Stripe Express pour recevoir les paiements des réservations directement
-          sur votre compte bancaire.
-        </p>
-      </div>
+      <main class="admin-gallery-editor__main">
+        <article class="admin-gallery-editor__detail">
+          <header class="admin-gallery-editor__detail-head">
+            <div class="admin-gallery-editor__detail-copy">
+              <h3>{{ activeDetailTitle }}</h3>
+              <p class="admin-gallery-editor__detail-hint">
+                {{ activeDetailLead }}
+              </p>
+            </div>
 
-      <AdminAlert v-if="error" variant="error" :message="error" />
-      <AdminAlert v-else-if="actionMessage && !status" variant="success" :message="actionMessage" />
+            <button
+              v-if="activeAccountingSection === 'revenue'"
+              type="button"
+              class="admin-btn admin-btn--secondary admin-btn--sm"
+              :disabled="revenueLoading"
+              @click="revenuePanelRef?.refresh()"
+            >
+              {{ revenueLoading ? ui.common.loading : ext.accounting.refresh }}
+            </button>
 
-      <p v-if="loading" class="admin-payouts__loading">Chargement du statut…</p>
+            <button
+              v-else-if="activeAccountingSection === 'payments'"
+              type="button"
+              class="admin-btn admin-btn--secondary admin-btn--sm"
+              :disabled="loading || actionLoading"
+              @click="loadStatus"
+            >
+              {{ loading ? ui.common.loading : ext.accounting.refresh }}
+            </button>
+          </header>
 
-      <template v-else-if="status">
-        <AdminAlert
-          v-if="showTestKeysWarning"
-          variant="error"
-          :message="testKeysWarningMessage"
-        />
-        <AdminAlert
-          v-else-if="status.connectModeMismatch"
-          variant="info"
-          :message="connectModeMismatchMessage"
-        />
-        <AdminAlert v-else-if="actionMessage" variant="success" :message="actionMessage" />
+          <template v-if="activeAccountingSection === 'pricing'">
+            <div class="admin-accounting__pricing-stack">
+              <div class="admin-accounting__pricing-card">
+                <AdminAccountingPricingBanner
+                  :config="bookingConfig"
+                  :active-section="activePricingSection"
+                  @configure="selectPricingSection"
+                />
 
-        <div class="admin-payouts__status-row">
-          <span class="admin-payouts__badge" :class="`admin-payouts__badge--${statusVariant}`">
-            {{ statusLabel }}
-          </span>
-          <span v-if="status.accountId" class="admin-payouts__account-id">
-            {{ status.accountId }}
-          </span>
-        </div>
+                <div class="admin-accounting__pricing-card__body">
+                  <AdminBookingPricingPanel
+                    :model-value="bookingConfig"
+                    :section="activePricingSection"
+                    @update:model-value="ctx.patch({ booking_config: $event })"
+                  />
+                </div>
+              </div>
 
-        <ul class="admin-payouts__facts">
-          <li>
-            <strong>Paiements carte</strong>
-            {{ status.chargesEnabled ? "Activés" : "En attente" }}
-          </li>
-          <li>
-            <strong>Virements bancaires</strong>
-            {{ status.payoutsEnabled ? "Activés" : "En attente" }}
-          </li>
-          <li v-if="status.platformFeePercent > 0">
-            <strong>Commission plateforme</strong>
-            {{ status.platformFeePercent }}&nbsp;% par réservation
-          </li>
-          <li v-if="status.onboardingCompletedAt">
-            <strong>Activé le</strong>
-            {{
-              new Intl.DateTimeFormat("fr-FR", {
-                dateStyle: "medium",
-                timeStyle: "short"
-              }).format(new Date(status.onboardingCompletedAt))
-            }}
-          </li>
-        </ul>
+              <AdminBookingCancellationPanel
+                :model-value="bookingConfig"
+                @update:model-value="ctx.patch({ booking_config: $event })"
+              />
+            </div>
+          </template>
 
-        <AdminAlert
-          v-if="!status.paymentsReady"
-          variant="info"
-          message="Les voyageurs ne pourront pas payer par carte tant que Stripe n’a pas validé votre compte. Les demandes sans paiement en ligne restent possibles si vous les gérez autrement."
-        />
+          <AdminAccountingRevenuePanel
+            v-else-if="activeAccountingSection === 'revenue'"
+            ref="revenuePanelRef"
+            :slug="slug"
+            :platform-fee-percent="status?.platformFeePercent ?? 0"
+          />
 
-        <div v-if="pendingRequirements.length" class="admin-payouts__requirements">
-          <p class="admin-payouts__requirements-title">Informations demandées par Stripe</p>
-          <ul>
-            <li v-for="item in pendingRequirements" :key="item">{{ item }}</li>
-          </ul>
-        </div>
-
-        <div v-if="status.requirements.disabledReason" class="admin-payouts__requirements">
-          <p class="admin-payouts__requirements-title">Compte restreint</p>
-          <p>{{ status.requirements.disabledReason }}</p>
-        </div>
-
-        <div class="admin-payouts__actions">
-          <button
-            type="button"
-            class="admin-btn admin-btn--primary"
-            :disabled="actionLoading"
-            @click="startOnboarding"
-          >
-            <AdminIcon name="external" :size="16" />
-            {{
-              status.accountId ? "Reprendre la configuration Stripe" : "Connecter mon compte Stripe"
-            }}
-          </button>
-
-          <button
-            v-if="status.accountId"
-            type="button"
-            class="admin-btn admin-btn--ghost"
-            :disabled="actionLoading"
-            @click="openDashboard"
-          >
-            <AdminIcon name="external" :size="16" />
-            Tableau de bord Stripe
-          </button>
-
-          <button
-            type="button"
-            class="admin-btn admin-btn--ghost"
-            :disabled="loading || actionLoading"
-            @click="loadStatus"
-          >
-            Actualiser
-          </button>
-        </div>
-      </template>
+          <AdminStripeConnectPanel
+            v-else
+            :status="status"
+            :loading="loading"
+            :action-loading="actionLoading"
+            :error="error"
+            :action-message="actionMessage"
+            @refresh="loadStatus"
+            @start-onboarding="startOnboarding"
+            @open-dashboard="openDashboard"
+          />
+        </article>
+      </main>
     </div>
   </div>
 </template>

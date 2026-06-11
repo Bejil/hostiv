@@ -7,6 +7,7 @@ import {
   getPresetPlatform,
   isPresetPlatformId
 } from "../../data/admin-platform-tabs"
+import { adminUiFormat } from "../../data/admin-ui"
 import {
   DEFAULT_PLATFORM_CUSTOM_ICON,
   DEFAULT_PLATFORM_ICON_BG,
@@ -28,6 +29,7 @@ const emit = defineEmits<{
 }>()
 
 const { publicAsset } = usePublicAsset()
+const { ui } = useAdminUi()
 
 const editModalOpen = ref(false)
 const deleteModalOpen = ref(false)
@@ -69,7 +71,7 @@ const platformItems = computed(() => {
       id: link.id,
       label: isPreset
         ? (getPresetPlatform(link.id)?.label ?? (link.name.trim() || link.id))
-        : link.name.trim() || "Nouvelle plateforme",
+        : link.name.trim() || ui.value.editors.platformLinks.newPlatform,
       isPreset
     })
     seen.add(link.id)
@@ -129,7 +131,7 @@ function platformRatingStatus(id: string) {
   }
 
   if (isPlatformLinkHidden(link)) {
-    return "Masquée sur le site"
+    return ui.value.editors.platformLinks.hiddenOnSite
   }
 
   return ""
@@ -269,10 +271,10 @@ function onDrop(index: number, event: DragEvent) {
 <template>
   <div class="admin-platform-links">
     <div class="admin-subpanel__head admin-platform-links__head">
-      <h3>Plateformes</h3>
+      <h3>{{ ui.editors.platformLinks.title }}</h3>
       <button type="button" class="admin-btn admin-btn--secondary admin-btn--sm" @click="addCustomPlatform">
         <AdminIcon name="plus" :size="16" />
-        Ajouter une plateforme
+        {{ ui.editors.platformLinks.addButton }}
       </button>
     </div>
 
@@ -293,7 +295,7 @@ function onDrop(index: number, event: DragEvent) {
         <button
           type="button"
           class="admin-sortable-list__drag-handle"
-          aria-label="Glisser pour réordonner"
+          :aria-label="ui.editors.shared.dragToReorder"
           draggable="true"
           @dragstart="onDragStart(index, $event)"
           @dragend="onDragEnd"
@@ -342,7 +344,7 @@ function onDrop(index: number, event: DragEvent) {
           <button
             type="button"
             class="admin-btn admin-btn--secondary admin-btn--sm admin-btn--icon-only"
-            aria-label="Modifier"
+            :aria-label="ui.editors.shared.edit"
             @click="openEdit(item.id)"
           >
             <AdminIcon name="pencil" :size="16" />
@@ -351,7 +353,7 @@ function onDrop(index: number, event: DragEvent) {
             v-if="!item.isPreset"
             type="button"
             class="admin-btn admin-btn--ghost admin-btn--danger-ghost admin-btn--sm admin-btn--icon-only"
-            aria-label="Supprimer"
+            :aria-label="ui.common.delete"
             @click="openDelete(item.id)"
           >
             <AdminIcon name="trash" :size="16" />
@@ -372,7 +374,7 @@ function onDrop(index: number, event: DragEvent) {
 
     <AdminPlatformLinkDeleteModal
       :open="deleteModalOpen"
-      :platform-name="deletingLink?.name?.trim() || 'Cette plateforme'"
+      :platform-name="deletingLink?.name?.trim() || ui.editors.shared.thisPlatform"
       @cancel="closeDelete"
       @confirm="confirmDelete"
     />

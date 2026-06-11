@@ -3,6 +3,7 @@ import { X } from "@lucide/vue"
 import AdminField from "./AdminField.vue"
 import AdminImageUpload from "./AdminImageUpload.vue"
 import type { PropertyVisualCard } from "../../types/property-site"
+import { getAdminCustomizationCardExamples } from "../../data/admin-customization-field-examples"
 
 const props = defineProps<{
   open: boolean
@@ -18,11 +19,19 @@ const emit = defineEmits<{
   save: [value: PropertyVisualCard]
 }>()
 
+const { ui, locale } = useAdminUi()
+
+const cardExamples = computed(() => getAdminCustomizationCardExamples(locale.value))
+
 const draft = ref<PropertyVisualCard>({ ...props.card })
 
 const canSave = computed(() => Boolean(draft.value.title.trim() && draft.value.image.trim()))
 
-const modalTitle = computed(() => (props.isNew ? "Ajouter une carte" : "Modifier la carte"))
+const modalTitle = computed(() =>
+  props.isNew
+    ? ui.value.editors.visualCards.modal.addTitle
+    : ui.value.editors.visualCards.modal.editTitle
+)
 
 function defaultImagePath(current: string) {
   const trimmed = current.trim().replace(/^\/+/, "")
@@ -109,8 +118,8 @@ function save() {
             <span class="hostiv-modal__accent" aria-hidden="true" />
             <span class="hostiv-modal__glow" aria-hidden="true" />
 
-            <button type="button" class="hostiv-modal__close" aria-label="Fermer" @click="emit('close')">
-              <span class="sr-only">Fermer</span>
+            <button type="button" class="hostiv-modal__close" :aria-label="ui.common.close" @click="emit('close')">
+              <span class="sr-only">{{ ui.common.close }}</span>
               <X :size="18" stroke-width="2" />
             </button>
 
@@ -120,7 +129,7 @@ function save() {
                   {{ modalTitle }}
                 </h2>
                 <p class="hostiv-modal__subtitle">
-                  {{ draft.title.trim() || "Sans titre" }}
+                  {{ draft.title.trim() || ui.editors.shared.untitled }}
                 </p>
               </div>
             </header>
@@ -130,7 +139,8 @@ function save() {
                 class="admin-visual-card-modal__image"
                 cover
                 required
-                label="Image"
+                :label="ui.editors.shared.image"
+                :examples="[...cardExamples.visualImage]"
                 :model-value="draft.image"
                 :default-path="defaultImagePath(draft.image)"
                 :upload="upload"
@@ -138,29 +148,31 @@ function save() {
                 @update:model-value="patchDraft({ image: $event as string })"
               />
               <AdminField
-                label="Titre"
+                :label="ui.editors.shared.title"
                 required
                 full-width
+                :examples="[...cardExamples.visualTitle]"
                 :model-value="draft.title"
                 @update:model-value="patchDraft({ title: $event as string })"
               />
               <AdminField
-                label="Description"
+                :label="ui.editors.shared.description"
                 type="textarea"
                 :rows="4"
                 full-width
+                :examples="[...cardExamples.visualText]"
                 :model-value="draft.text"
                 @update:model-value="patchDraft({ text: $event as string })"
               />
             </div>
 
             <p v-if="!canSave" class="admin-visual-card-modal__hint">
-              L’image et le titre sont obligatoires pour enregistrer.
+              {{ ui.editors.visualCards.modal.saveHint }}
             </p>
 
             <footer class="admin-visual-card-modal__footer">
               <button type="button" class="hostiv-btn hostiv-btn--secondary" @click="emit('close')">
-                Annuler
+                {{ ui.common.cancel }}
               </button>
               <button
                 type="button"
@@ -168,7 +180,7 @@ function save() {
                 :disabled="!canSave"
                 @click="save"
               >
-                Enregistrer
+                {{ ui.common.save }}
               </button>
             </footer>
           </div>

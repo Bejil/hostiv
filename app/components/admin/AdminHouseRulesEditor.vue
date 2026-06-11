@@ -2,6 +2,7 @@
 import AdminHouseRuleDeleteModal from "./AdminHouseRuleDeleteModal.vue"
 import AdminHouseRuleEditModal from "./AdminHouseRuleEditModal.vue"
 import AdminIcon from "./AdminIcon.vue"
+import { adminUiFormat } from "../../data/admin-ui"
 import type { PropertyHouseRule } from "../../types/property-site"
 
 const props = defineProps<{
@@ -11,6 +12,8 @@ const props = defineProps<{
 const emit = defineEmits<{
   "update:modelValue": [value: PropertyHouseRule[]]
 }>()
+
+const { ui } = useAdminUi()
 
 const editModalOpen = ref(false)
 const deleteModalOpen = ref(false)
@@ -40,11 +43,14 @@ const deletingRule = computed(() =>
 )
 
 function ruleTitle(rule: PropertyHouseRule, index: number) {
-  return rule.title.trim() || `Règle ${index + 1}`
+  return (
+    rule.title.trim() ||
+    adminUiFormat(ui.value.editors.shared.ruleFallback, { index: index + 1 })
+  )
 }
 
 function ruleTextPreview(rule: PropertyHouseRule) {
-  return rule.text.trim() || "Aucun texte"
+  return rule.text.trim() || ui.value.editors.shared.noText
 }
 
 function openAdd() {
@@ -156,19 +162,19 @@ function onDrop(index: number, event: DragEvent) {
 <template>
   <div class="admin-house-rules">
     <div class="admin-subpanel__head admin-house-rules__head">
-      <h3>Règles de la maison</h3>
+      <h3>{{ ui.editors.houseRules.title }}</h3>
       <button type="button" class="admin-btn admin-btn--secondary admin-btn--sm" @click="openAdd">
         <AdminIcon name="plus" :size="16" />
-        Ajouter une règle
+        {{ ui.editors.houseRules.addButton }}
       </button>
     </div>
 
     <p class="admin-house-rules__lead">
-      Cartes affichées en grille sur la page (2 colonnes).
+      {{ ui.editors.houseRules.lead }}
     </p>
 
     <p v-if="!modelValue.length" class="admin-house-rules__empty">
-      Aucune règle. Utilisez « Ajouter une règle » pour en créer une.
+      {{ ui.editors.houseRules.empty }}
     </p>
 
     <ul v-else class="admin-house-rules__list">
@@ -186,7 +192,7 @@ function onDrop(index: number, event: DragEvent) {
         <button
           type="button"
           class="admin-sortable-list__drag-handle"
-          aria-label="Glisser pour réordonner"
+          :aria-label="ui.editors.shared.dragToReorder"
           draggable="true"
           @dragstart="onDragStart(index, $event)"
           @dragend="onDragEnd"
@@ -201,7 +207,7 @@ function onDrop(index: number, event: DragEvent) {
           <button
             type="button"
             class="admin-btn admin-btn--secondary admin-btn--sm admin-btn--icon-only"
-            aria-label="Modifier"
+            :aria-label="ui.editors.shared.edit"
             @click="openEdit(index)"
           >
             <AdminIcon name="pencil" :size="16" />
@@ -209,7 +215,7 @@ function onDrop(index: number, event: DragEvent) {
           <button
             type="button"
             class="admin-btn admin-btn--ghost admin-btn--danger-ghost admin-btn--sm admin-btn--icon-only"
-            aria-label="Supprimer"
+            :aria-label="ui.common.delete"
             @click="openDelete(index)"
           >
             <AdminIcon name="trash" :size="16" />
@@ -229,7 +235,7 @@ function onDrop(index: number, event: DragEvent) {
 
     <AdminHouseRuleDeleteModal
       :open="deleteModalOpen"
-      :rule-title="deletingRule ? ruleTitle(deletingRule, deletingIndex ?? 0) : 'Cette règle'"
+      :rule-title="deletingRule ? ruleTitle(deletingRule, deletingIndex ?? 0) : ui.editors.shared.thisRule"
       @cancel="closeDelete"
       @confirm="confirmDelete"
     />

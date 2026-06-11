@@ -18,6 +18,8 @@ export function resolvePropertyAssetUrl(
     slug: string
     supabaseUrl: string
     bucket?: string
+    /** Invalide le cache navigateur (aperçu live après remplacement d’image). */
+    cacheRevision?: number | string
   }
 ): string {
   const raw = src.trim()
@@ -41,5 +43,24 @@ export function resolvePropertyAssetUrl(
 
   const objectKey = encodeObjectKey(`${slug}/${relativePath}`)
 
-  return `${supabaseUrl}/storage/v1/object/public/${bucket}/${objectKey}`
+  const base = `${supabaseUrl}/storage/v1/object/public/${bucket}/${objectKey}`
+
+  return appendAssetCacheRevision(base, options.cacheRevision)
+}
+
+/** Ajoute un paramètre de version pour contourner le cache navigateur après remplacement d’image. */
+export function appendAssetCacheRevision(url: string, revision?: number | string) {
+  if (!url || revision === undefined || revision === null) {
+    return url
+  }
+
+  const token = String(revision).trim()
+
+  if (!token || token === "0") {
+    return url
+  }
+
+  const separator = url.includes("?") ? "&" : "?"
+
+  return `${url}${separator}r=${encodeURIComponent(token)}`
 }

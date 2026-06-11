@@ -4,15 +4,15 @@ import HostivHero from "../components/hostiv/HostivHero.vue"
 import HostivLandingBody from "../components/hostiv/HostivLandingBody.vue"
 import HostivNav from "../components/hostiv/HostivNav.vue"
 
+const { landing } = useHostivLocale()
+
 useHostivMarketingHead()
 
 useSeoMeta({
-  title: "Hostiv | Site de réservation directe pour hôtes",
-  description:
-    "Hostiv : site de réservation directe sans commission plateforme. Synchronisez vos calendriers et encaissez via Stripe — contrairement aux OTA.",
-  ogTitle: "Hostiv — Réservation directe, 0 % de commission",
-  ogDescription:
-    "Passez au direct sans la part Airbnb ou Booking. Site, calendrier, paiements Stripe et admin.",
+  title: () => landing.value.seo.homeTitle,
+  description: () => landing.value.seo.homeDescription,
+  ogTitle: () => landing.value.seo.homeOgTitle,
+  ogDescription: () => landing.value.seo.homeOgDescription,
   twitterCard: "summary_large_image"
 })
 </script>

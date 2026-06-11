@@ -14,6 +14,12 @@ const LEGACY_PLATFORM_LOGO_PATHS: Record<string, string> = {
   "platforms/airbnb.png": PLATFORM_LOGO_PATHS.airbnb,
   "platforms/booking.png": PLATFORM_LOGO_PATHS.booking,
   "platforms/abritel.png": PLATFORM_LOGO_PATHS.abritel,
+  "platforms/platform_airbnb.png": PLATFORM_LOGO_PATHS.airbnb,
+  "platforms/platform_booking.png": PLATFORM_LOGO_PATHS.booking,
+  "platforms/platform_abritel.png": PLATFORM_LOGO_PATHS.abritel,
+  "/platforms/platform_airbnb.png": PLATFORM_LOGO_PATHS.airbnb,
+  "/platforms/platform_booking.png": PLATFORM_LOGO_PATHS.booking,
+  "/platforms/platform_abritel.png": PLATFORM_LOGO_PATHS.abritel,
   "hostiv/platforms/platform_airbnb.png": PLATFORM_LOGO_PATHS.airbnb,
   "hostiv/platforms/platform_booking.png": PLATFORM_LOGO_PATHS.booking,
   "hostiv/platforms/platform_abritel.png": PLATFORM_LOGO_PATHS.abritel

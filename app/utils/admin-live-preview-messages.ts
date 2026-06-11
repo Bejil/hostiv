@@ -1,3 +1,4 @@
+import type { HostivLocale } from "../types/hostiv-locale"
 import type { PropertySiteRecord } from "../types/property-site"
 
 /** Objet brut sérialisable pour postMessage (évite les proxies Vue / DOMException). */
@@ -15,6 +16,11 @@ export type AdminLivePreviewSiteMessage = {
   type: typeof ADMIN_LIVE_PREVIEW_MESSAGE.site
   site: PropertySiteRecord
   scrollAnchor: string | null
+  locale: HostivLocale
+  /** Invalide le cache navigateur après remplacement d’image (même chemin Storage). */
+  assetRevision: number
+  /** Pousse iframe — combiné à assetRevision pour forcer le rechargement des images. */
+  previewNonce: number
 }
 
 export type AdminLivePreviewHeightMessage = {

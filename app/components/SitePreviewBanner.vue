@@ -7,7 +7,7 @@ defineProps<{
 <template>
   <div class="site-preview-banner" role="status">
     <p class="site-preview-banner__text">
-      <strong>Aperçu privé</strong> — ce site n’est visible ici que parce que vous êtes connecté au backoffice. Il n’est pas accessible au public tant qu’il n’est pas publié.
+      <strong>Aperçu privé</strong> — ce site n’est visible ici que parce que vous êtes connecté au backoffice. Il n’est pas accessible au public tant qu’il n’est pas publié. Vous pouvez tester le tunnel de réservation et le paiement Stripe ici (cartes de test).
     </p>
     <NuxtLink :to="`/${slug}/admin`" class="site-preview-banner__link">Retour au backoffice</NuxtLink>
   </div>

@@ -71,7 +71,7 @@ useSeoMeta({
 
     <template v-else-if="pageState === 'ready' && site">
       <SitePreviewBanner :slug="slug" />
-      <PropertySitePageView :site="site" :slug="slug" />
+      <PropertySitePageView :site="site" :slug="slug" owner-site-preview />
     </template>
 
     <AdminLoginModal

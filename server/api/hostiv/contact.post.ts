@@ -1,18 +1,15 @@
 import { sendResendEmail } from "../../utils/booking-email"
+import {
+  buildHostivContactConfirmationEmailHtml,
+  buildHostivContactConfirmationText,
+  buildHostivContactEmailHtml
+} from "../../utils/hostiv-email-theme"
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 /** Dotenv n’ignore pas les `#` en fin de ligne — évite un `from` invalide chez Resend. */
 function stripEnvInlineComment(value: string) {
   return value.replace(/\s+#.*$/, "").trim()
-}
-
-function escapeHtml(value: string) {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
 }
 
 export default defineEventHandler(async (event) => {
@@ -65,13 +62,35 @@ export default defineEventHandler(async (event) => {
     message
   ].join("\n")
 
-  const html = `
-    <p><strong>Nom :</strong> ${escapeHtml(name)}</p>
-    <p><strong>E-mail :</strong> ${escapeHtml(email)}</p>
-    <p><strong>Sujet :</strong> ${escapeHtml(subject)}</p>
-    <hr />
-    <p style="white-space:pre-wrap">${escapeHtml(message)}</p>
-  `
+  const html = buildHostivContactEmailHtml({ name, email, subject, message })
+
+  const confirmationSubject = "Hostiv — Nous avons bien reçu votre message"
+  const confirmationText = buildHostivContactConfirmationText({ name, subject, message })
+  const confirmationHtml = buildHostivContactConfirmationEmailHtml({ name, subject, message })
+
+  function devResendHint(detail: string) {
+    if (process.env.NODE_ENV === "production") {
+      return ""
+    }
+
+    if (detail.includes("Invalid `from`")) {
+      return " Vérifiez BOOKING_EMAIL_FROM : pas de commentaire # en fin de ligne dans .env."
+    }
+
+    if (
+      detail.includes("only send testing emails") ||
+      (from.includes("onboarding@resend.dev") &&
+        (to === "contact@hostiv.fr" || !detail.includes(email)))
+    ) {
+      return " En mode test Resend (onboarding@resend.dev), HOSTIV_CONTACT_EMAIL et l’e-mail de confirmation doivent être l’adresse de votre compte Resend."
+    }
+
+    if (detail.startsWith("Resend ")) {
+      return ` (${detail})`
+    }
+
+    return ""
+  }
 
   try {
     await sendResendEmail({
@@ -83,25 +102,30 @@ export default defineEventHandler(async (event) => {
       text,
       html
     })
+
+    try {
+      await sendResendEmail({
+        resendApiKey,
+        from,
+        to: email,
+        replyTo: to,
+        subject: confirmationSubject,
+        text: confirmationText,
+        html: confirmationHtml
+      })
+    } catch (confirmationCause) {
+      const detail =
+        confirmationCause instanceof Error ? confirmationCause.message : String(confirmationCause)
+
+      console.error("[hostiv/contact] confirmation email failed:", detail)
+    }
   } catch (cause) {
     const detail = cause instanceof Error ? cause.message : String(cause)
     console.error("[hostiv/contact]", detail)
 
-    const devHint =
-      process.env.NODE_ENV !== "production"
-        ? detail.includes("Invalid `from`")
-          ? " Vérifiez BOOKING_EMAIL_FROM : pas de commentaire # en fin de ligne dans .env."
-          : detail.includes("only send testing emails") ||
-              (from.includes("onboarding@resend.dev") && to === "contact@hostiv.fr")
-            ? " Définissez HOSTIV_CONTACT_EMAIL sur l’e-mail de votre compte Resend (ce n’est pas l’adresse saisie dans le formulaire)."
-            : detail.startsWith("Resend ")
-              ? ` (${detail})`
-              : ""
-        : ""
-
     throw createError({
       statusCode: 502,
-      message: `Impossible d’envoyer votre message. Réessayez plus tard.${devHint}`
+      message: `Impossible d’envoyer votre message. Réessayez plus tard.${devResendHint(detail)}`
     })
   }
 

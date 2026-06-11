@@ -11,17 +11,25 @@ const props = defineProps<{
   previewUrl: (path: string) => string
 }>()
 
-const displayEyebrow = computed(() => props.eyebrow.trim() || "Sur-titre")
-const displayTitle = computed(() => props.title.trim() || "Titre de la section")
-const displayIntro = computed(() => props.intro.trim() || "Introduction de la section.")
+const { ui } = useAdminUi()
+
+const displayEyebrow = computed(
+  () => props.eyebrow.trim() || ui.value.previews.common.eyebrow
+)
+const displayTitle = computed(
+  () => props.title.trim() || ui.value.previews.common.sectionTitle
+)
+const displayIntro = computed(
+  () => props.intro.trim() || ui.value.previews.common.intro
+)
 
 const displaySpaces = computed(() =>
   props.spaces
     .map((space) => ({
       ...space,
-      title: space.title.trim() || "Titre de l’espace",
-      text: space.text.trim() || "Description de l’espace.",
-      tag: space.tag.trim() || "Tag",
+      title: space.title.trim() || ui.value.previews.featured.spaceTitle,
+      text: space.text.trim() || ui.value.previews.featured.spaceText,
+      tag: space.tag.trim() || ui.value.previews.common.tag,
       image: space.image.trim()
     }))
     .filter((space) => space.title || space.text || space.image)
@@ -45,8 +53,8 @@ function imageSrc(path: string) {
 </script>
 
 <template>
-  <div class="admin-featured-preview" aria-label="Aperçu des coups de cœur">
-    <p class="admin-featured-preview__label">Aperçu</p>
+  <div class="admin-featured-preview" :aria-label="ui.previews.featured.ariaLabel">
+    <p class="admin-featured-preview__label">{{ ui.previews.common.label }}</p>
     <section class="admin-featured-preview__section">
       <div class="admin-featured-preview__head">
         <p class="admin-featured-preview__eyebrow">{{ displayEyebrow }}</p>
@@ -57,7 +65,7 @@ function imageSrc(path: string) {
       </div>
 
       <p v-if="!displaySpaces.length" class="admin-featured-preview__empty">
-        Renseignez au moins une carte pour afficher l’aperçu.
+        {{ ui.previews.common.emptyCard }}
       </p>
 
       <div v-else class="admin-featured-preview__layout">
@@ -78,7 +86,7 @@ function imageSrc(path: string) {
             <span class="admin-featured-preview__tag">{{ primarySpace.tag }}</span>
             <h3>{{ primarySpace.title }}</h3>
             <p>{{ primarySpace.text }}</p>
-            <span class="admin-featured-preview__cta">Voir tous les espaces de vie ▸</span>
+            <span class="admin-featured-preview__cta">{{ ui.previews.featured.seeAllSpaces }}</span>
           </div>
         </article>
 
@@ -101,7 +109,7 @@ function imageSrc(path: string) {
               <span class="admin-featured-preview__tag">{{ space.tag }}</span>
               <h3>{{ space.title }}</h3>
               <p>{{ space.text }}</p>
-              <span class="admin-featured-preview__cta">Voir tous les espaces de vie ▸</span>
+              <span class="admin-featured-preview__cta">{{ ui.previews.featured.seeAllSpaces }}</span>
             </div>
           </article>
         </div>

@@ -1,5 +1,7 @@
 import type { HostivSubscriptionAccess } from "../../app/utils/hostiv-subscription-access"
 import { buildHostivSubscriptionAccess, isHostivSubscriptionActive } from "../../app/utils/hostiv-subscription-access"
+import { getPropertySiteBySlug } from "./property-site-repository"
+import { getUserEmailById, sendHostivSubscriptionExpiredEmail } from "./transactional-email"
 import { requireSupabaseAdmin } from "./supabase"
 
 export type HostivAccountRow = {
@@ -7,6 +9,8 @@ export type HostivAccountRow = {
   subscription_plan: string
   paid_until: string | null
   subscription_started_at: string | null
+  premium_tools_until: string | null
+  premium_tools_started_at: string | null
 }
 
 export async function getHostivAccountByUserId(userId: string): Promise<HostivAccountRow | null> {
@@ -14,7 +18,9 @@ export async function getHostivAccountByUserId(userId: string): Promise<HostivAc
 
   const { data, error } = await supabase
     .from("hostiv_accounts")
-    .select("id, subscription_plan, paid_until, subscription_started_at")
+    .select(
+      "id, subscription_plan, paid_until, subscription_started_at, premium_tools_until, premium_tools_started_at"
+    )
     .eq("id", userId)
     .maybeSingle()
 
@@ -36,7 +42,11 @@ export async function getHostivAccountByUserId(userId: string): Promise<HostivAc
     subscription_plan: String(data.subscription_plan || "pro"),
     paid_until: typeof data.paid_until === "string" ? data.paid_until : null,
     subscription_started_at:
-      typeof data.subscription_started_at === "string" ? data.subscription_started_at : null
+      typeof data.subscription_started_at === "string" ? data.subscription_started_at : null,
+    premium_tools_until:
+      typeof data.premium_tools_until === "string" ? data.premium_tools_until : null,
+    premium_tools_started_at:
+      typeof data.premium_tools_started_at === "string" ? data.premium_tools_started_at : null
   }
 }
 
@@ -72,9 +82,25 @@ export async function unpublishPropertyIfSubscriptionExpired(
 
   if (updateError) {
     console.error("[hostiv-subscription] unpublish:", updateError.message)
+
+    return false
   }
 
-  return !updateError
+  const ownerEmail = await getUserEmailById(ownerUserId)
+
+  if (ownerEmail) {
+    const site = await getPropertySiteBySlug(slug, { publishedOnly: false })
+    const brandName = site?.brand_name?.trim() || slug
+
+    void sendHostivSubscriptionExpiredEmail({
+      to: ownerEmail,
+      slug,
+      brandName,
+      paidUntil: account.paid_until
+    })
+  }
+
+  return true
 }
 
 export async function getSubscriptionAccessForOwner(
@@ -87,7 +113,10 @@ export async function getSubscriptionAccessForOwner(
 
   return buildHostivSubscriptionAccess({
     subscription_plan: account?.subscription_plan,
-    paid_until: account?.paid_until
+    paid_until: account?.paid_until,
+    subscription_started_at: account?.subscription_started_at,
+    premium_tools_until: account?.premium_tools_until,
+    premium_tools_started_at: account?.premium_tools_started_at
   })
 }
 
@@ -98,7 +127,7 @@ export async function assertCanPublishProperty(ownerUserId: string) {
     throw createError({
       statusCode: 402,
       message:
-        "Un forfait Hostiv actif est requis pour publier votre site. Réglez le paiement annuel depuis votre backoffice."
+        "Votre forfait Hostiv a expiré. Renouvelez-le pour publier votre site."
     })
   }
 }

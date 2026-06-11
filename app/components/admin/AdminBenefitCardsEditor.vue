@@ -3,6 +3,7 @@ import AdminBenefitCardDeleteModal from "./AdminBenefitCardDeleteModal.vue"
 import AdminBenefitCardEditModal from "./AdminBenefitCardEditModal.vue"
 import AdminBenefitIcon from "./AdminBenefitIcon.vue"
 import AdminIcon from "./AdminIcon.vue"
+import { adminUiFormat } from "../../data/admin-ui"
 import { DEFAULT_BENEFIT_ICON } from "../../data/benefit-icons"
 import type { PropertyBenefitCard } from "../../types/property-site"
 
@@ -13,6 +14,8 @@ const props = defineProps<{
 const emit = defineEmits<{
   "update:modelValue": [value: PropertyBenefitCard[]]
 }>()
+
+const { ui } = useAdminUi()
 
 const editModalOpen = ref(false)
 const deleteModalOpen = ref(false)
@@ -43,11 +46,14 @@ const deletingCard = computed(() =>
 )
 
 function cardTitle(card: PropertyBenefitCard, index: number) {
-  return card.title.trim() || `Atout ${index + 1}`
+  return (
+    card.title.trim() ||
+    adminUiFormat(ui.value.editors.shared.benefitFallback, { index: index + 1 })
+  )
 }
 
 function cardDescriptionPreview(card: PropertyBenefitCard) {
-  return card.text.trim() || "Aucune description"
+  return card.text.trim() || ui.value.editors.shared.noDescription
 }
 
 function openAdd() {
@@ -158,15 +164,15 @@ function onDrop(index: number, event: DragEvent) {
 <template>
   <div class="admin-benefit-cards">
     <div class="admin-subpanel__head admin-benefit-cards__head">
-      <h3>Cartes atouts</h3>
+      <h3>{{ ui.editors.benefitCards.title }}</h3>
       <button type="button" class="admin-btn admin-btn--secondary admin-btn--sm" @click="openAdd">
         <AdminIcon name="plus" :size="16" />
-        Ajouter un atout
+        {{ ui.editors.benefitCards.addButton }}
       </button>
     </div>
 
     <p v-if="!modelValue.length" class="admin-benefit-cards__empty">
-      Aucun atout. Utilisez « Ajouter un atout » pour en créer un.
+      {{ ui.editors.benefitCards.empty }}
     </p>
 
     <ul v-else class="admin-benefit-cards__list">
@@ -184,7 +190,7 @@ function onDrop(index: number, event: DragEvent) {
         <button
           type="button"
           class="admin-sortable-list__drag-handle"
-          aria-label="Glisser pour réordonner"
+          :aria-label="ui.editors.shared.dragToReorder"
           draggable="true"
           @dragstart="onDragStart(index, $event)"
           @dragend="onDragEnd"
@@ -203,7 +209,7 @@ function onDrop(index: number, event: DragEvent) {
           <button
             type="button"
             class="admin-btn admin-btn--secondary admin-btn--sm admin-btn--icon-only"
-            aria-label="Modifier"
+            :aria-label="ui.editors.shared.edit"
             @click="openEdit(index)"
           >
             <AdminIcon name="pencil" :size="16" />
@@ -211,7 +217,7 @@ function onDrop(index: number, event: DragEvent) {
           <button
             type="button"
             class="admin-btn admin-btn--ghost admin-btn--danger-ghost admin-btn--sm admin-btn--icon-only"
-            aria-label="Supprimer"
+            :aria-label="ui.common.delete"
             @click="openDelete(index)"
           >
             <AdminIcon name="trash" :size="16" />
@@ -231,7 +237,7 @@ function onDrop(index: number, event: DragEvent) {
 
     <AdminBenefitCardDeleteModal
       :open="deleteModalOpen"
-      :card-title="deletingCard ? cardTitle(deletingCard, deletingIndex ?? 0) : 'Cet atout'"
+      :card-title="deletingCard ? cardTitle(deletingCard, deletingIndex ?? 0) : ui.editors.shared.thisBenefit"
       @cancel="closeDelete"
       @confirm="confirmDelete"
     />

@@ -11,6 +11,8 @@ const emit = defineEmits<{
   confirm: []
 }>()
 
+const { ui } = useAdminUi()
+
 watch(
   () => props.open,
   (isOpen) => {
@@ -64,8 +66,8 @@ function onKeydown(event: KeyboardEvent) {
             <span class="hostiv-modal__accent" aria-hidden="true" />
             <span class="hostiv-modal__glow" aria-hidden="true" />
 
-            <button type="button" class="hostiv-modal__close" aria-label="Fermer" @click="emit('cancel')">
-              <span class="sr-only">Fermer</span>
+            <button type="button" class="hostiv-modal__close" :aria-label="ui.common.close" @click="emit('cancel')">
+              <span class="sr-only">{{ ui.common.close }}</span>
               <X :size="18" stroke-width="2" />
             </button>
 
@@ -75,21 +77,22 @@ function onKeydown(event: KeyboardEvent) {
               </span>
               <div class="hostiv-modal__head-text">
                 <h2 id="admin-neighborhood-highlight-delete-title" class="hostiv-modal__title">
-                  Supprimer ce point ?
+                  {{ ui.modals.delete.neighborhoodHighlight.title }}
                 </h2>
                 <p id="admin-neighborhood-highlight-delete-desc" class="hostiv-modal__subtitle">
-                  <strong>{{ pointTitle }}</strong> sera retiré des points du quartier affichés sur votre site.
-                  Cette action est irréversible.
+                  <strong>{{ pointTitle }}</strong
+                  >{{ ui.modals.delete.neighborhoodHighlight.descriptionTail }}
+                  {{ ui.modals.delete.irreversible }}
                 </p>
               </div>
             </header>
 
             <footer class="hostiv-modal__danger-footer">
               <button type="button" class="hostiv-btn hostiv-btn--secondary" @click="emit('cancel')">
-                Annuler
+                {{ ui.common.cancel }}
               </button>
               <button type="button" class="hostiv-btn hostiv-btn--accent" @click="emit('confirm')">
-                Supprimer
+                {{ ui.common.delete }}
               </button>
             </footer>
           </div>

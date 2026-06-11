@@ -1,48 +1,54 @@
 <script setup lang="ts">
-import AdminField from "./AdminField.vue"
+import { adminUiFormat } from "../../data/admin-ui"
+import AdminEmptyState from "./AdminEmptyState.vue"
+import AdminGallerySectionDeleteModal from "./AdminGallerySectionDeleteModal.vue"
+import AdminGallerySectionPanel from "./AdminGallerySectionPanel.vue"
 import AdminIcon from "./AdminIcon.vue"
-import AdminImageUpload from "./AdminImageUpload.vue"
-import AdminOnboardingFieldExamples from "./AdminOnboardingFieldExamples.vue"
+import { adminEditorContextKey } from "../../composables/admin-editor-context"
 import type { PropertyAdminRecord } from "../../types/property-admin"
 import type { PropertyGalleryCategory } from "../../types/property-site"
+import {
+  asGalleryText,
+  createGalleryCategory,
+  isGalleryCategoryPublishable
+} from "../../utils/gallery-category-admin"
 
 const props = defineProps<{
   modelValue: PropertyAdminRecord
   upload: (file: File, path: string) => Promise<{ path: string; publicUrl: string }>
   previewUrl: (path: string) => string
+  saveDraft?: () => Promise<boolean>
   markRequired?: boolean
   showFieldExamples?: boolean
 }>()
-
-const galleryTitleExamples = ["Salon", "Chambre principale"]
-
-const gallerySubtitleExamples = [
-  "Espace de vie lumineux, canapé et cheminée",
-  "Suite parentale avec salle de bain attenante"
-]
-
-const galleryImageExamples = [
-  "Vue d’ensemble de la pièce",
-  "Détail qui met en valeur l’espace (lumière, matière)"
-]
 
 const emit = defineEmits<{
   "update:modelValue": [value: PropertyAdminRecord]
 }>()
 
+const { ui } = useAdminUi()
+const ext = computed(() => ui.value.extended)
+const editorCtx = inject(adminEditorContextKey, null)
+const siteEditLocale = editorCtx?.siteEditLocale
+
 const activeIndex = ref<number | null>(null)
+const deleteModalOpen = ref(false)
+const deletingIndex = ref<number | null>(null)
 
-function asText(value: unknown) {
-  return typeof value === "string" ? value : ""
-}
-
-const galleryCategories = computed(() => props.modelValue.content?.space_gallery_categories ?? [])
+const galleryCategories = computed(() =>
+  editorCtx
+    ? editorCtx.getContentList("space_gallery_categories")
+    : (props.modelValue.content?.space_gallery_categories ?? [])
+)
 
 const sidebarSections = computed(() =>
   galleryCategories.value.map((category, index) => ({
     id: index,
-    label: asText(category.title).trim() || `Section ${index + 1}`,
-    imageCount: (category.images ?? []).filter((image) => asText(image).trim()).length
+    label:
+      asGalleryText(category.title).trim() ||
+      adminUiFormat(ui.value.gallery.sectionFallback, { index: index + 1 }),
+    description: asGalleryText(category.description).trim(),
+    imageCount: (category.images ?? []).filter((image) => asGalleryText(image).trim()).length
   }))
 )
 
@@ -54,126 +60,94 @@ const activeCategory = computed(() => {
   return galleryCategories.value[activeIndex.value] ?? null
 })
 
-const activeImages = computed(() => activeCategory.value?.images ?? [])
+const deletingSection = computed(() =>
+  deletingIndex.value === null ? null : galleryCategories.value[deletingIndex.value]
+)
 
-function patchContent(partial: Partial<PropertyAdminRecord["content"]>) {
+function patchGalleryCategories(categories: PropertyGalleryCategory[]) {
+  if (editorCtx) {
+    editorCtx.patchContentList("space_gallery_categories", categories)
+    return
+  }
+
   emit("update:modelValue", {
     ...props.modelValue,
     content: {
       ...props.modelValue.content,
-      ...partial
+      space_gallery_categories: categories
     }
   })
 }
 
-function patchGalleryCategories(categories: PropertyGalleryCategory[]) {
-  patchContent({ space_gallery_categories: categories })
-}
-
-function defaultGalleryImagePath(
-  category: PropertyGalleryCategory,
-  categoryIndex: number,
-  imageIndex: number,
-  current: string | null | undefined
-) {
-  const trimmed = asText(current).trim().replace(/^\/+/, "")
-
-  if (trimmed) {
-    return trimmed
-  }
-
-  const categoryId = asText(category.id).trim() || `section-${categoryIndex + 1}`
-
-  return `gallery/espaces/${categoryId}/${String(imageIndex + 1).padStart(2, "0")}.jpeg`
-}
-
-function createGalleryCategory(): PropertyGalleryCategory {
-  const existingIds = new Set(galleryCategories.value.map((category) => category.id))
-  let index = galleryCategories.value.length + 1
-  let id = `section-images-${index}`
-
-  while (existingIds.has(id)) {
-    index += 1
-    id = `section-images-${index}`
-  }
-
-  return {
-    id,
-    title: "",
-    description: "",
-    images: [""]
-  }
+function sectionTitle(section: PropertyGalleryCategory, index: number) {
+  return (
+    asGalleryText(section.title).trim() ||
+    adminUiFormat(ui.value.gallery.sectionFallback, { index: index + 1 })
+  )
 }
 
 function addGalleryCategory() {
-  const categories = [...galleryCategories.value, createGalleryCategory()]
+  const categories = [...galleryCategories.value, createGalleryCategory(galleryCategories.value)]
 
   patchGalleryCategories(categories)
   activeIndex.value = categories.length - 1
 }
 
-function removeActiveCategory() {
-  if (activeIndex.value === null || !activeCategory.value) {
-    return
-  }
-
-  const categories = galleryCategories.value.filter((_, index) => index !== activeIndex.value)
-
-  patchGalleryCategories(categories)
-
-  if (!categories.length) {
-    activeIndex.value = null
-    return
-  }
-
-  activeIndex.value = Math.max(0, Math.min(activeIndex.value, categories.length - 1))
+function selectSection(index: number) {
+  activeIndex.value = index
 }
 
-function updateActiveCategory(partial: Partial<PropertyGalleryCategory>) {
+function updateActiveCategory(value: PropertyGalleryCategory) {
   if (activeIndex.value === null) {
     return
   }
 
   const categories = galleryCategories.value.map((category, index) =>
-    index === activeIndex.value ? { ...category, ...partial } : category
+    index === activeIndex.value ? value : category
   )
 
   patchGalleryCategories(categories)
 }
 
-function updateGalleryImage(imageIndex: number, image: string) {
-  if (!activeCategory.value) {
+function openDeleteActive() {
+  if (activeIndex.value === null) {
     return
   }
 
-  const images = activeCategory.value.images ?? []
-  const nextImages = images.map((currentImage, currentImageIndex) =>
-    currentImageIndex === imageIndex ? image : currentImage
-  )
-
-  updateActiveCategory({ images: nextImages })
+  deletingIndex.value = activeIndex.value
+  deleteModalOpen.value = true
 }
 
-function addGalleryImage() {
-  if (!activeCategory.value) {
+function closeDelete() {
+  deleteModalOpen.value = false
+  deletingIndex.value = null
+}
+
+function confirmDelete() {
+  if (deletingIndex.value === null) {
     return
   }
 
-  updateActiveCategory({ images: [...(activeCategory.value.images ?? []), ""] })
-}
+  const removedIndex = deletingIndex.value
+  const categories = galleryCategories.value.filter((_, index) => index !== removedIndex)
 
-function removeGalleryImage(imageIndex: number) {
-  if (!activeCategory.value) {
-    return
+  patchGalleryCategories(categories)
+
+  if (props.saveDraft) {
+    void props.saveDraft()
   }
 
-  updateActiveCategory({
-    images: (activeCategory.value.images ?? []).filter((_, index) => index !== imageIndex)
-  })
-}
+  if (!categories.length) {
+    activeIndex.value = null
+  } else if (activeIndex.value !== null) {
+    if (activeIndex.value >= categories.length) {
+      activeIndex.value = categories.length - 1
+    } else if (activeIndex.value === removedIndex) {
+      activeIndex.value = Math.min(removedIndex, categories.length - 1)
+    }
+  }
 
-function selectSection(index: number) {
-  activeIndex.value = index
+  closeDelete()
 }
 
 watch(
@@ -199,154 +173,117 @@ watch(
 
 <template>
   <div class="admin-general-images admin-gallery-editor">
-    <div class="admin-gallery-editor__layout">
-      <aside class="admin-gallery-editor__sidebar">
-        <div class="admin-gallery-editor__sidebar-head">
-          <p class="admin-gallery-editor__sidebar-label">Sections</p>
-          <button
-            type="button"
-            class="admin-btn admin-btn--secondary admin-btn--sm admin-gallery-editor__sidebar-add"
-            aria-label="Ajouter une section"
-            title="Ajouter une section"
-            @click="addGalleryCategory"
-          >
-            <AdminIcon name="plus" :size="16" />
-          </button>
-        </div>
+    <div
+      v-if="siteEditLocale || galleryCategories.length"
+      class="admin-gallery-editor__toolbar"
+    >
+      <button
+        v-if="galleryCategories.length"
+        type="button"
+        class="admin-btn admin-btn--secondary admin-btn--sm admin-gallery-editor__toolbar-add"
+        @click="addGalleryCategory"
+      >
+        <AdminIcon name="plus" :size="16" />
+        {{ ui.gallery.addSection }}
+      </button>
 
-        <nav
-          v-if="sidebarSections.length"
-          class="admin-gallery-editor__nav"
-          aria-label="Sections de galerie"
-        >
+      <HostivLocalePillToggle
+        v-if="siteEditLocale"
+        v-model="siteEditLocale"
+        class="admin-gallery-editor__toolbar-locale"
+        :aria-label="ext.liveEditor.galleryLocalePillAria"
+      />
+    </div>
+
+    <div v-if="galleryCategories.length" class="admin-gallery-editor__layout">
+      <aside class="admin-gallery-editor__sidebar">
+        <nav class="admin-gallery-editor__nav" :aria-label="ui.gallery.sectionsNav">
           <button
             v-for="section in sidebarSections"
             :key="section.id"
             type="button"
             class="admin-gallery-editor__nav-item"
-            :class="{ 'admin-gallery-editor__nav-item--active': activeIndex === section.id }"
+            :class="{
+              'admin-gallery-editor__nav-item--active': activeIndex === section.id
+            }"
             :aria-current="activeIndex === section.id ? 'true' : undefined"
             @click="selectSection(section.id)"
           >
-            <span class="admin-gallery-editor__nav-label">{{ section.label }}</span>
-            <span v-if="section.imageCount" class="admin-gallery-editor__nav-count">
-              {{ section.imageCount }}
+            <span class="admin-gallery-editor__nav-copy">
+              <span class="admin-gallery-editor__nav-title-row">
+                <span class="admin-gallery-editor__nav-label">{{ section.label }}</span>
+                <span v-if="section.imageCount" class="admin-gallery-editor__nav-count">
+                  {{ section.imageCount }}
+                </span>
+              </span>
+              <span
+                class="admin-gallery-editor__nav-description"
+                :class="{ 'admin-gallery-editor__nav-description--empty': !section.description }"
+              >
+                {{ section.description || ui.common.noSubtitle }}
+              </span>
             </span>
           </button>
         </nav>
-
-        <p v-else class="admin-gallery-editor__sidebar-empty">Aucune section</p>
       </aside>
 
       <main class="admin-gallery-editor__main">
-        <div v-if="!galleryCategories.length" class="admin-gallery-editor__placeholder">
-          <div class="admin-gallery-editor__placeholder-icon" aria-hidden="true">
-            <AdminIcon name="image" :size="28" />
-          </div>
-          <h3>Aucune section photo</h3>
-          <p>
-            Créez une première section pour regrouper vos images par espace (salon, chambre, extérieur…).
-          </p>
-          <button type="button" class="admin-btn admin-btn--secondary" @click="addGalleryCategory">
-            <AdminIcon name="plus" :size="16" />
-            Ajouter une section
-          </button>
-        </div>
-
         <article
-          v-else-if="activeCategory && activeIndex !== null"
+          v-if="activeCategory && activeIndex !== null"
           class="admin-gallery-editor__detail"
         >
           <header class="admin-gallery-editor__detail-head">
-            <div
-              class="admin-gallery-editor__fields"
-              :class="{ 'admin-gallery-editor__fields--with-examples': showFieldExamples }"
-            >
-              <div class="admin-onboarding-fields__field-block">
-                <AdminField
-                  label="Titre de la section"
-                  :required="markRequired"
-                  :model-value="asText(activeCategory.title)"
-                  full-width
-                  @update:model-value="updateActiveCategory({ title: $event as string })"
-                />
-                <AdminOnboardingFieldExamples
-                  v-if="showFieldExamples"
-                  :examples="galleryTitleExamples"
-                />
-              </div>
-              <div class="admin-onboarding-fields__field-block">
-                <AdminField
-                  label="Description"
-                  :required="markRequired"
-                  :model-value="asText(activeCategory.description)"
-                  type="textarea"
-                  :rows="3"
-                  full-width
-                  @update:model-value="updateActiveCategory({ description: $event as string })"
-                />
-                <AdminOnboardingFieldExamples
-                  v-if="showFieldExamples"
-                  :examples="gallerySubtitleExamples"
-                />
-              </div>
+            <div class="admin-gallery-editor__detail-copy">
+              <h3>{{ sectionTitle(activeCategory, activeIndex) }}</h3>
+              <p v-if="!isGalleryCategoryPublishable(activeCategory)" class="admin-gallery-editor__detail-hint">
+                {{ ui.gallery.sectionCompleteHint }}
+              </p>
             </div>
             <button
               type="button"
               class="admin-btn admin-btn--ghost admin-btn--danger-ghost admin-btn--sm admin-gallery-editor__delete-section"
-              title="Supprimer cette section"
-              @click="removeActiveCategory"
+              :title="ui.gallery.deleteSection"
+              @click="openDeleteActive"
             >
               <AdminIcon name="trash" :size="16" />
-              Supprimer
+              {{ ui.common.delete }}
             </button>
           </header>
 
-          <div class="admin-gallery-editor__photos">
-            <article
-              v-for="(image, imageIndex) in activeImages"
-              :key="`${activeCategory.id}-${imageIndex}`"
-              class="admin-gallery-editor__photo"
-              :class="{ 'admin-gallery-editor__photo--with-examples': showFieldExamples }"
-            >
-              <div class="admin-gallery-editor__photo-main">
-                <AdminImageUpload
-                  cover
-                  :label="`Photo ${imageIndex + 1}`"
-                  :required="markRequired && imageIndex === 0"
-                  :model-value="asText(image)"
-                  :default-path="defaultGalleryImagePath(activeCategory, activeIndex, imageIndex, image)"
-                  :upload="upload"
-                  :preview-url="previewUrl"
-                  @update:model-value="updateGalleryImage(imageIndex, $event as string)"
-                />
-                <button
-                  type="button"
-                  class="admin-gallery-editor__photo-remove"
-                  aria-label="Retirer la photo"
-                  title="Retirer la photo"
-                  @click="removeGalleryImage(imageIndex)"
-                >
-                  <AdminIcon name="trash" :size="15" />
-                </button>
-                <AdminOnboardingFieldExamples
-                  v-if="showFieldExamples && imageIndex === 0"
-                  :examples="galleryImageExamples"
-                />
-              </div>
-            </article>
-
-            <button
-              type="button"
-              class="admin-gallery-editor__photo-add"
-              @click="addGalleryImage"
-            >
-              <AdminIcon name="plus" :size="18" />
-              <span>Ajouter une photo</span>
-            </button>
-          </div>
+          <AdminGallerySectionPanel
+            :model-value="activeCategory"
+            :section-index="activeIndex"
+            :mark-required="markRequired"
+            :show-field-examples="showFieldExamples"
+            :upload="upload"
+            :preview-url="previewUrl"
+            :save-draft="saveDraft"
+            @update:model-value="updateActiveCategory"
+          />
         </article>
       </main>
     </div>
+
+    <div v-else class="admin-gallery-editor__empty">
+      <AdminEmptyState
+        icon="image"
+        :title="ui.gallery.emptyTitle"
+        :description="ui.gallery.emptyDescription"
+      >
+        <button type="button" class="admin-btn admin-btn--secondary" @click="addGalleryCategory">
+          <AdminIcon name="plus" :size="16" />
+          {{ ui.gallery.addSection }}
+        </button>
+      </AdminEmptyState>
+    </div>
+
+    <AdminGallerySectionDeleteModal
+      :open="deleteModalOpen"
+      :section-title="
+        deletingSection ? sectionTitle(deletingSection, deletingIndex ?? 0) : ui.gallery.thisSection
+      "
+      @cancel="closeDelete"
+      @confirm="confirmDelete"
+    />
   </div>
 </template>

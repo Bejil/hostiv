@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import type { NuxtError } from "#app"
+import { adminUiFormat } from "./data/admin-ui"
+import { getHostivLanding } from "./data/hostivLanding"
 import HostivAccountModal from "./components/hostiv/HostivAccountModal.vue"
 import HostivNotFound from "./components/hostiv/HostivNotFound.vue"
 import HostivNav from "./components/hostiv/HostivNav.vue"
+import { resolveHostivNotFoundKind } from "./utils/hostiv-not-found"
 
 const props = defineProps<{
   error: NuxtError
@@ -10,27 +13,31 @@ const props = defineProps<{
 
 useHostivMarketingHead()
 
+const { locale, homePath } = useHostivLocale()
+const landing = computed(() => getHostivLanding(locale.value))
+const notFoundUi = computed(() => landing.value.notFound)
+
 const is404 = computed(() => props.error.statusCode === 404)
 
-const notFoundTitle = computed(() => {
-  const message = props.error.statusMessage || ""
+const notFoundKind = computed(() => resolveHostivNotFoundKind(props.error))
 
-  if (message.toLowerCase().includes("backoffice")) {
-    return "Backoffice introuvable"
+const notFoundTitle = computed(() => notFoundUi.value.titles[notFoundKind.value])
+
+const notFoundMessage = computed(() => {
+  const data = props.error.data as { notFoundKind?: string } | undefined
+
+  if (data?.notFoundKind) {
+    return notFoundUi.value.messages[notFoundKind.value]
   }
 
-  if (message.toLowerCase().includes("site introuvable")) {
-    return "Site introuvable"
+  const message = props.error.statusMessage?.trim()
+
+  if (message) {
+    return message
   }
 
-  return "Page introuvable"
+  return notFoundUi.value.messages[notFoundKind.value]
 })
-
-const notFoundMessage = computed(
-  () =>
-    props.error.statusMessage ||
-    "Cette adresse n’existe pas ou le lien est incorrect."
-)
 
 const requestedSlug = computed(() => {
   const path = useRoute().path
@@ -39,13 +46,22 @@ const requestedSlug = computed(() => {
   return match?.[1] && match[1] !== "admin" ? match[1] : ""
 })
 
+const genericErrorEyebrow = computed(() =>
+  adminUiFormat(notFoundUi.value.error.eyebrow, {
+    code: props.error.statusCode || 500
+  })
+)
+
 useSeoMeta({
-  title: () => (is404.value ? `${notFoundTitle.value} | Hostiv` : "Erreur | Hostiv"),
+  title: () =>
+    is404.value
+      ? `${notFoundTitle.value}${notFoundUi.value.seoTitleSuffix}`
+      : notFoundUi.value.error.seoTitle,
   robots: "noindex, nofollow"
 })
 
 function goHome() {
-  clearError({ redirect: "/" })
+  clearError({ redirect: homePath.value })
 }
 </script>
 
@@ -60,14 +76,14 @@ function goHome() {
     />
     <main v-else class="hostiv-not-found">
       <div class="hostiv-container hostiv-not-found__inner">
-        <p class="hostiv-eyebrow hostiv-eyebrow--pill">Erreur {{ error.statusCode || 500 }}</p>
-        <h1 class="hostiv-h2 hostiv-not-found__title">Une erreur est survenue</h1>
+        <p class="hostiv-eyebrow hostiv-eyebrow--pill">{{ genericErrorEyebrow }}</p>
+        <h1 class="hostiv-h2 hostiv-not-found__title">{{ notFoundUi.error.title }}</h1>
         <p class="hostiv-not-found__message">
-          {{ error.statusMessage || "Réessayez dans quelques instants ou revenez à l’accueil." }}
+          {{ error.statusMessage || notFoundUi.error.message }}
         </p>
         <div class="hostiv-not-found__actions">
           <button type="button" class="hostiv-btn hostiv-btn--primary" @click="goHome">
-            Retour à l’accueil
+            {{ notFoundUi.error.backHome }}
           </button>
         </div>
       </div>

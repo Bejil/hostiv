@@ -1,6 +1,8 @@
 import type { MaybeRefOrGetter } from "vue"
 import { toValue } from "vue"
 import type { PropertySiteRecord } from "../types/property-site"
+import { derivePropertySeo } from "../utils/derive-property-seo"
+import { resolveSiteSeoKeywords } from "../utils/seo-keywords"
 import { faviconMimeType } from "../utils/favicon-mime"
 
 export function usePropertySiteSeo(options: {
@@ -12,15 +14,14 @@ export function usePropertySiteSeo(options: {
 
   const site = computed(() => toValue(options.site))
   const slug = computed(() => toValue(options.slug))
+  const { locale } = useHostivLocale()
 
-  const ogTitle = computed(() => site.value.seo_og_title.trim() || site.value.seo_title)
-  const ogDescription = computed(
-    () => site.value.seo_og_description.trim() || site.value.seo_description
-  )
+  const derivedSeo = computed(() => derivePropertySeo(site.value))
 
-  const ogImagePath = computed(
-    () => site.value.seo_og_image_path.trim() || site.value.hero_image_path
-  )
+  const ogTitle = computed(() => derivedSeo.value.seo_og_title)
+  const ogDescription = computed(() => derivedSeo.value.seo_og_description)
+
+  const ogImagePath = computed(() => derivedSeo.value.seo_og_image_path)
 
   const ogImageUrl = computed(() => {
     const href = options.propertyAsset(ogImagePath.value)
@@ -59,21 +60,17 @@ export function usePropertySiteSeo(options: {
     return ""
   })
 
-  const keywords = computed(() => {
-    const raw = site.value.seo_keywords.trim()
-
-    return raw.length ? raw : undefined
-  })
+  const keywords = computed(() => resolveSiteSeoKeywords(site.value, locale.value))
 
   useSeoMeta({
-    title: () => site.value.seo_title,
-    description: () => site.value.seo_description,
+    title: () => derivedSeo.value.seo_title,
+    description: () => derivedSeo.value.seo_description,
     keywords,
     robots,
     ogTitle: () => ogTitle.value,
     ogDescription: () => ogDescription.value,
     ogType: "website",
-    ogLocale: "fr_FR",
+    ogLocale: () => (locale.value === "en" ? "en_GB" : "fr_FR"),
     ogSiteName: () => site.value.brand_name,
     ogImage: () => ogImageUrl.value,
     twitterCard: () => site.value.seo_twitter_card,
@@ -84,7 +81,7 @@ export function usePropertySiteSeo(options: {
 
   useHead({
     htmlAttrs: {
-      lang: "fr"
+      lang: () => locale.value
     },
     link: computed(() => {
       const links: Array<{ rel: string; href: string; type?: string }> = []

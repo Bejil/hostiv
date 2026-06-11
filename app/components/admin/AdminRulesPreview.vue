@@ -13,24 +13,32 @@ const props = defineProps<{
   checkOutTime: string
 }>()
 
-const displayEyebrow = computed(() => props.eyebrow.trim() || "Sur-titre")
-const displayTitle = computed(() => props.title.trim() || "Titre de la section")
-const displayIntro = computed(() => props.intro.trim() || "Introduction de la section.")
+const { ui } = useAdminUi()
+
+const displayEyebrow = computed(
+  () => props.eyebrow.trim() || ui.value.previews.common.eyebrow
+)
+const displayTitle = computed(
+  () => props.title.trim() || ui.value.previews.common.sectionTitle
+)
+const displayIntro = computed(
+  () => props.intro.trim() || ui.value.previews.common.intro
+)
 
 const displayRules = computed(() =>
   props.houseRules
     .map((rule) => ({
       ...rule,
-      title: rule.title.trim() || "Règle",
-      text: rule.text.trim() || "Description de la règle."
+      title: rule.title.trim() || ui.value.previews.rules.ruleTitle,
+      text: rule.text.trim() || ui.value.previews.rules.ruleText
     }))
     .filter((rule) => rule.title || rule.text)
 )
 </script>
 
 <template>
-  <div class="admin-rules-preview" aria-label="Aperçu section règlement">
-    <p class="admin-rules-preview__label">Aperçu</p>
+  <div class="admin-rules-preview" :aria-label="ui.previews.rules.ariaLabel">
+    <p class="admin-rules-preview__label">{{ ui.previews.common.label }}</p>
     <section class="admin-rules-preview__section">
       <div class="admin-rules-preview__head">
         <p class="admin-rules-preview__eyebrow">{{ displayEyebrow }}</p>
@@ -42,17 +50,17 @@ const displayRules = computed(() =>
 
       <div class="admin-rules-preview__schedule">
         <article class="admin-rules-preview__schedule-item">
-          <span>{{ checkInLabel.trim() || "Arrivée" }}</span>
-          <strong>{{ checkInTime.trim() || "—" }}</strong>
+          <span>{{ checkInLabel.trim() || ui.previews.rules.checkIn }}</span>
+          <strong>{{ checkInTime.trim() || ui.previews.common.emDash }}</strong>
         </article>
         <article class="admin-rules-preview__schedule-item">
-          <span>{{ checkOutLabel.trim() || "Départ" }}</span>
-          <strong>{{ checkOutTime.trim() || "—" }}</strong>
+          <span>{{ checkOutLabel.trim() || ui.previews.rules.checkOut }}</span>
+          <strong>{{ checkOutTime.trim() || ui.previews.common.emDash }}</strong>
         </article>
       </div>
 
       <p v-if="!displayRules.length" class="admin-rules-preview__empty">
-        Renseignez au moins une règle pour afficher la grille.
+        {{ ui.previews.rules.empty }}
       </p>
 
       <div v-else class="admin-rules-preview__grid">

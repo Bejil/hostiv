@@ -56,7 +56,7 @@ export function requireSupabaseAdmin() {
   if (!client) {
     throw createError({
       statusCode: 503,
-      statusMessage:
+      message:
         "Supabase non configuré : définissez SUPABASE_URL et SUPABASE_SERVICE_ROLE_KEY dans .env"
     })
   }

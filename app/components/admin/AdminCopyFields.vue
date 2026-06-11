@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import AdminField from "./AdminField.vue"
-import { adminCopySections } from "../../data/admin-copy-sections"
+import { getAdminCopySections } from "../../data/admin-copy-sections"
+import { useAdminEditorContext } from "../../composables/admin-editor-context"
 import { fromTimeInputValue, toTimeInputValue } from "../../utils/house-rules-time"
 
 const props = defineProps<{
@@ -12,7 +13,11 @@ const props = defineProps<{
   patchCopySection: (sectionId: string, fieldKey: string, value: string) => void
 }>()
 
-const section = computed(() => adminCopySections.find((item) => item.id === props.sectionId))
+const ctx = useAdminEditorContext()
+
+const section = computed(() =>
+  getAdminCopySections(ctx.siteEditLocale.value).find((item) => item.id === props.sectionId)
+)
 
 const visibleFields = computed(() => {
   if (!section.value) {
@@ -65,6 +70,7 @@ function onFieldUpdate(field: { key: string; type?: string }, value: string) {
         :rows="field.type === 'textarea' ? 3 : undefined"
         :step="field.type === 'time' ? 60 : undefined"
         :full-width="columns === 2 ? false : true"
+        :examples="field.examples"
         :model-value="fieldModelValue(field)"
         @update:model-value="onFieldUpdate(field, $event as string)"
       />

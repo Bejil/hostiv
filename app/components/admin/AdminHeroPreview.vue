@@ -10,6 +10,8 @@ const props = defineProps<{
   previewUrl: (path: string) => string
 }>()
 
+const { ui } = useAdminUi()
+
 const heroImagePathRef = toRef(props, "heroImagePath")
 const heroRevisionRef = toRef(props, "heroRevision")
 const eyebrowRef = toRef(props, "eyebrow")
@@ -29,15 +31,23 @@ const imageSrc = computed(() => {
   return `${base}${separator}r=${heroRevisionRef.value}`
 })
 
-const displayEyebrow = computed(() => eyebrowRef.value.trim() || "Sur-titre")
-const displayTitle = computed(() => titleRef.value.trim() || "Titre principal")
-const displayText = computed(() => textRef.value.trim() || "Texte d’introduction du hero.")
-const displayAlt = computed(() => titleRef.value.trim() || "Image hero")
+const displayEyebrow = computed(
+  () => eyebrowRef.value.trim() || ui.value.previews.common.eyebrow
+)
+const displayTitle = computed(
+  () => titleRef.value.trim() || ui.value.previews.hero.mainTitle
+)
+const displayText = computed(
+  () => textRef.value.trim() || ui.value.previews.hero.introText
+)
+const displayAlt = computed(
+  () => titleRef.value.trim() || ui.value.previews.hero.imageAlt
+)
 </script>
 
 <template>
-  <div class="admin-hero-preview" aria-label="Aperçu du moteur de recherche">
-    <p class="admin-hero-preview__label">Aperçu</p>
+  <div class="admin-hero-preview" :aria-label="ui.previews.hero.ariaLabel">
+    <p class="admin-hero-preview__label">{{ ui.previews.common.label }}</p>
     <section class="admin-hero-preview__card">
       <div class="admin-hero-preview__media" aria-hidden="true">
         <img
@@ -59,14 +69,14 @@ const displayAlt = computed(() => titleRef.value.trim() || "Image hero")
 
       <div class="admin-hero-preview__booking" aria-hidden="true">
         <span class="admin-hero-preview__booking-item">
-          <span>Dates</span>
-          <strong>Choisir</strong>
+          <span>{{ ui.previews.hero.dates }}</span>
+          <strong>{{ ui.previews.hero.choose }}</strong>
         </span>
         <span class="admin-hero-preview__booking-item">
-          <span>Voyageurs</span>
+          <span>{{ ui.previews.hero.guests }}</span>
           <strong>4</strong>
         </span>
-        <span class="admin-hero-preview__booking-cta">Réserver</span>
+        <span class="admin-hero-preview__booking-cta">{{ ui.previews.common.book }}</span>
       </div>
     </section>
   </div>

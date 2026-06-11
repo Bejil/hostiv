@@ -12,9 +12,14 @@ export async function sendBookingReservationEmails(
     notifyTo: string
     resendApiKey: string
     from: string
+    /** false en aperçu propriétaire / site non publié */
+    publishedOnly?: boolean
   }
 ) {
-  const parsed = await parseBookingRequestBody(reservationToEmailPayload(data))
+  const publishedOnly = config.publishedOnly !== false
+  const parsed = await parseBookingRequestBody(reservationToEmailPayload(data), {
+    publishedOnly
+  })
 
   if (!parsed.ok) {
     throw new Error(parsed.message)

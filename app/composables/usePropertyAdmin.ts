@@ -1,8 +1,14 @@
+import { getAdminUi } from "../data/admin-ui"
 import type { PropertyAdminRecord } from "../types/property-admin"
 import { clonePropertyAdminRecord, normalizePropertyAdminRecord } from "../utils/normalize-property-admin"
+import { versionedPropertyAssetUploadPath } from "../utils/property-asset-upload-path"
+import { useHostivLocale } from "./useHostivLocale"
 import { useSupabaseClient } from "./useSupabaseClient"
 
 export function usePropertyAdmin(slug: Ref<string> | string) {
+  const { locale } = useHostivLocale()
+  const shellLabels = computed(() => getAdminUi(locale.value).shell)
+
   const slugRef = computed(() => {
     const value = typeof slug === "string" ? slug : slug.value
 
@@ -67,6 +73,8 @@ export function usePropertyAdmin(slug: Ref<string> | string) {
     userEmail.value = null
     loading.value = false
     error.value = null
+
+    await navigateTo("/")
   }
 
   async function fetchSite(options: { forceLoading?: boolean } = {}) {
@@ -119,20 +127,21 @@ export function usePropertyAdmin(slug: Ref<string> | string) {
       site.value = null
 
       if (e.statusCode === 401 || e.statusCode === 403) {
-        error.value = e.data?.message || e.message || "Accès refusé."
+        error.value = e.data?.message || e.message || shellLabels.value.accessDenied
         return
       }
 
       if (e.statusCode === 404) {
         showError({
           statusCode: 404,
-          statusMessage: "Ce backoffice n’existe pas.",
+          statusMessage: shellLabels.value.propertyNotFound,
+          data: { notFoundKind: "backoffice" as const },
           fatal: true
         })
         return
       }
 
-      error.value = e.data?.message || e.message || "Impossible de charger le site."
+      error.value = e.data?.message || e.message || shellLabels.value.loadSiteFailed
     } finally {
       if (generation === fetchGeneration) {
         loading.value = false
@@ -216,6 +225,10 @@ export function usePropertyAdmin(slug: Ref<string> | string) {
         })
       )
 
+      if (import.meta.client) {
+        clearNuxtData(`property-site-${slugRef.value}`)
+      }
+
       return true
     } catch (err: unknown) {
       const e = err as { data?: { message?: string }; message?: string }
@@ -228,10 +241,11 @@ export function usePropertyAdmin(slug: Ref<string> | string) {
   }
 
   async function uploadAsset(file: File, path: string) {
+    const storagePath = versionedPropertyAssetUploadPath(path, file)
     const form = new FormData()
 
     form.append("file", file)
-    form.append("path", path)
+    form.append("path", storagePath)
 
     const headers = await authHeaders()
 

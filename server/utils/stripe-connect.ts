@@ -8,7 +8,10 @@ import {
   updatePropertyStripeStatus,
   type PropertyStripeRow
 } from "./property-stripe-repository"
+import { getPropertyOwnerUserId } from "./property-admin-repository"
+import { getPropertySiteBySlug } from "./property-site-repository"
 import { getStripeClient } from "./stripe-client"
+import { getUserEmailById, sendHostivStripeConnectReadyEmail } from "./transactional-email"
 
 export function normalizePlatformFeePercent(value: unknown): number {
   const parsed = Number(value)
@@ -133,6 +136,22 @@ export async function syncStripeAccountToProperty(
     stripe_onboarding_completed_at:
       existing?.stripe_onboarding_completed_at ?? onboardingCompletedAt
   })
+
+  if (chargesEnabled && !wasChargesEnabled) {
+    const ownerUserId = await getPropertyOwnerUserId(slug)
+    const ownerEmail = ownerUserId ? await getUserEmailById(ownerUserId) : null
+
+    if (ownerEmail) {
+      const site = await getPropertySiteBySlug(slug, { publishedOnly: false })
+      const brandName = site?.brand_name?.trim() || slug
+
+      void sendHostivStripeConnectReadyEmail({
+        to: ownerEmail,
+        slug,
+        brandName
+      })
+    }
+  }
 
   return stripeStatusFromRow(row, platformFeePercent, { requirements, secretKey })
 }
@@ -337,4 +356,20 @@ export async function syncStripeAccountById(
   }
 
   await syncStripeAccountToProperty(stripe, row.slug, accountId)
+}
+
+export async function assertStripeReadyForPublish(slug: string) {
+  const row = await getPropertyStripeBySlug(slug)
+
+  if (!row) {
+    throw createError({ statusCode: 404, message: "Site introuvable." })
+  }
+
+  if (!row.stripe_account_id || !row.stripe_charges_enabled) {
+    throw createError({
+      statusCode: 422,
+      message:
+        "Configurez Stripe Connect dans Comptabilité avant de publier votre site. Les paiements par carte doivent être activés."
+    })
+  }
 }

@@ -92,36 +92,72 @@ export async function saveConfirmedBookingReservation(
     }
 
     const supabase = requireSupabaseAdmin()
-    const { error } = await supabase.from("booking_reservations").upsert(
-      {
-        property_id: propertyId,
-        property_slug: reservation.propertySlug,
-        stripe_payment_intent_id: stripePaymentIntentId,
-        status: "confirmed",
-        arrival_date: reservation.arrivalDate,
-        departure_date: reservation.departureDate,
-        stay_nights: reservation.stayNights,
-        adults: reservation.adults,
-        children: reservation.children,
-        babies: reservation.babies,
-        main_guests: reservation.mainGuests,
-        guest_first_name: reservation.firstName,
-        guest_last_name: reservation.lastName,
-        guest_email: reservation.guestEmail,
-        guest_phone: reservation.phone,
-        message: reservation.message,
-        total_eur: reservation.totalEur
-      },
-      { onConflict: "stripe_payment_intent_id" }
-    )
+    const { data, error } = await supabase
+      .from("booking_reservations")
+      .upsert(
+        {
+          property_id: propertyId,
+          property_slug: reservation.propertySlug,
+          stripe_payment_intent_id: stripePaymentIntentId,
+          status: "confirmed",
+          arrival_date: reservation.arrivalDate,
+          departure_date: reservation.departureDate,
+          stay_nights: reservation.stayNights,
+          adults: reservation.adults,
+          children: reservation.children,
+          babies: reservation.babies,
+          main_guests: reservation.mainGuests,
+          guest_first_name: reservation.firstName,
+          guest_last_name: reservation.lastName,
+          guest_email: reservation.guestEmail,
+          guest_phone: reservation.phone,
+          message: reservation.message,
+          total_eur: reservation.totalEur
+        },
+        { onConflict: "stripe_payment_intent_id" }
+      )
+      .select(BOOKING_RESERVATION_SELECT)
+      .single()
 
     if (error) {
       throw error
     }
+
+    return mapReservationRow(data as Record<string, unknown>)
   } catch (error) {
     const detail = error instanceof Error ? error.message : "Erreur inconnue"
     console.error("[booking-reservations] save:", detail)
   }
+
+  return null
+}
+
+export async function getAdminBookingReservationByPaymentIntentId(
+  paymentIntentId: string
+): Promise<AdminBookingReservation | null> {
+  const normalizedId = paymentIntentId.trim()
+
+  if (!normalizedId) {
+    return null
+  }
+
+  const supabase = requireSupabaseAdmin()
+  const { data, error } = await supabase
+    .from("booking_reservations")
+    .select(BOOKING_RESERVATION_SELECT)
+    .eq("stripe_payment_intent_id", normalizedId)
+    .maybeSingle()
+
+  if (error) {
+    console.error("[booking-reservations] by payment intent:", error.message)
+    return null
+  }
+
+  if (!data) {
+    return null
+  }
+
+  return mapReservationRow(data as Record<string, unknown>)
 }
 
 export async function listAdminBookingReservations(slug: string) {

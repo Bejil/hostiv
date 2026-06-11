@@ -14,7 +14,9 @@ export const DEFAULT_BOOKING_CONFIG: PropertyBookingConfig = {
   month_min_nights: 28,
   month_discount_rate: 0.2,
   included_main_guests: 3,
-  extra_main_guest_per_night_eur: 15
+  extra_main_guest_per_night_eur: 15,
+  cancellation_refund_percent: 0,
+  cancellation_days_before_checkin: 7
 }
 
 function normalizeNumber(value: unknown, fallback: number) {
@@ -68,6 +70,24 @@ export function normalizeBookingConfig(config: Partial<PropertyBookingConfig> | 
     extra_main_guest_per_night_eur: normalizeNumber(
       config?.extra_main_guest_per_night_eur,
       DEFAULT_BOOKING_CONFIG.extra_main_guest_per_night_eur
+    ),
+    cancellation_refund_percent: Math.min(
+      100,
+      Math.max(0, Math.round(
+        normalizeNumber(
+          config?.cancellation_refund_percent,
+          DEFAULT_BOOKING_CONFIG.cancellation_refund_percent
+        )
+      ))
+    ),
+    cancellation_days_before_checkin: Math.max(
+      0,
+      Math.round(
+        normalizeNumber(
+          config?.cancellation_days_before_checkin,
+          DEFAULT_BOOKING_CONFIG.cancellation_days_before_checkin
+        )
+      )
     )
   }
 }

@@ -10,6 +10,11 @@ import { deletePropertyStorageAssets } from "./property-storage-cleanup"
 import { requireSupabaseAdmin } from "./supabase"
 import { getStripeClient } from "./stripe-client"
 import { formatStripeErrorMessage } from "./stripe-error"
+import {
+  sendHostivAccountDeletedEmail,
+  sendHostivEmailChangedEmails,
+  sendHostivPasswordChangedEmail
+} from "./transactional-email"
 
 export function hostivAccountProfileFromUser(user: User): HostivAccountProfile {
   const profile = profileFromUserMetadata(user.user_metadata as Record<string, unknown> | undefined)
@@ -25,7 +30,11 @@ export function hostivAccountProfileFromUser(user: User): HostivAccountProfile {
 export async function updateHostivAccount(
   user: User,
   body: HostivAccountUpdateBody
-): Promise<{ profile: HostivAccountProfile; emailChanged: boolean }> {
+): Promise<{
+  profile: HostivAccountProfile
+  emailChanged: boolean
+  passwordChanged: boolean
+}> {
   const supabase = requireSupabaseAdmin()
   const firstName = typeof body.first_name === "string" ? body.first_name.trim() : ""
   const lastName = typeof body.last_name === "string" ? body.last_name.trim() : ""
@@ -61,7 +70,9 @@ export async function updateHostivAccount(
     user_metadata: metadata
   }
 
-  const emailChanged = nextEmail !== (user.email ?? "").toLowerCase()
+  const previousEmail = (user.email ?? "").trim().toLowerCase()
+  const emailChanged = nextEmail !== previousEmail
+  const passwordChanged = Boolean(nextPassword)
 
   if (emailChanged) {
     update.email = nextEmail
@@ -89,9 +100,24 @@ export async function updateHostivAccount(
     throw createError({ statusCode: 502, message: "Mise à jour du compte impossible." })
   }
 
+  const profile = hostivAccountProfileFromUser(data.user)
+  const notifyEmail = profile.email.trim().toLowerCase() || nextEmail
+
+  if (emailChanged && previousEmail) {
+    void sendHostivEmailChangedEmails({
+      previousEmail,
+      nextEmail
+    })
+  }
+
+  if (passwordChanged && notifyEmail) {
+    void sendHostivPasswordChangedEmail({ to: notifyEmail })
+  }
+
   return {
-    profile: hostivAccountProfileFromUser(data.user),
-    emailChanged
+    profile,
+    emailChanged,
+    passwordChanged
   }
 }
 
@@ -150,6 +176,9 @@ export async function deleteHostivAccountForProperty(slug: string, userId: strin
     })
   }
 
+  const { data: ownerAuth, error: ownerAuthError } = await supabase.auth.admin.getUserById(userId)
+  const ownerEmail = ownerAuthError ? "" : ownerAuth.user?.email?.trim() ?? ""
+
   const stripeAccountId =
     typeof property.stripe_account_id === "string" ? property.stripe_account_id.trim() : ""
 
@@ -190,5 +219,9 @@ export async function deleteHostivAccountForProperty(slug: string, userId: strin
       statusCode: 502,
       message: "Le site a été supprimé mais le compte utilisateur n’a pas pu être effacé. Contactez le support."
     })
+  }
+
+  if (ownerEmail) {
+    void sendHostivAccountDeletedEmail({ to: ownerEmail, slug: normalizedSlug })
   }
 }

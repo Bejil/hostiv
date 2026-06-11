@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onUnmounted, ref, watch } from "vue"
+import { adminUiFormat } from "../../data/admin-ui"
 import AmenityIcon from "../AmenityIcon.vue"
 import AdminIcon from "./AdminIcon.vue"
 import { AMENITY_ICON_OPTIONS } from "../../data/amenity-icons"
@@ -17,6 +18,8 @@ const props = withDefaults(
 const emit = defineEmits<{
   "update:modelValue": [value: string]
 }>()
+
+const { ui } = useAdminUi()
 
 const rootRef = ref<HTMLElement | null>(null)
 const triggerRef = ref<HTMLButtonElement | null>(null)
@@ -50,7 +53,17 @@ const filteredOptions = computed(() => {
 })
 
 const activeLabel = computed(
-  () => AMENITY_ICON_OPTIONS.find((option) => option.value === props.modelValue)?.label ?? "Icône"
+  () =>
+    AMENITY_ICON_OPTIONS.find((option) => option.value === props.modelValue)?.label ??
+    ui.value.common.iconFallback
+)
+
+const changeIconLabel = computed(() =>
+  adminUiFormat(ui.value.common.changeIcon, { label: activeLabel.value })
+)
+
+const iconsAvailableLabel = computed(() =>
+  adminUiFormat(ui.value.common.iconsAvailable, { label: activeLabel.value })
 )
 
 function updatePopoverPosition() {
@@ -182,7 +195,7 @@ onUnmounted(() => {
       class="admin-amenity-icon-picker__trigger"
       :aria-expanded="isOpen"
       aria-haspopup="listbox"
-      :aria-label="`Changer l’icône — ${activeLabel}`"
+      :aria-label="changeIconLabel"
       :title="activeLabel"
       @click="togglePanel"
     >
@@ -193,7 +206,7 @@ onUnmounted(() => {
       <div class="admin-amenity-icon-picker__canvas">
         <div class="admin-amenity-icon-picker__scrim admin-amenity-icon-picker__scrim--top" aria-hidden="true" />
         <div class="admin-amenity-icon-picker__scrim admin-amenity-icon-picker__scrim--bottom" aria-hidden="true" />
-        <p class="admin-amenity-icon-picker__label">Icône</p>
+        <p class="admin-amenity-icon-picker__label">{{ ui.common.icon }}</p>
 
         <div class="admin-amenity-icon-picker__center">
           <div class="admin-amenity-icon-picker__preview" aria-hidden="true">
@@ -210,7 +223,7 @@ onUnmounted(() => {
           @click="togglePanel"
         >
           <AdminIcon name="layout" :size="16" />
-          {{ isOpen ? "Fermer" : "Choisir" }}
+          {{ isOpen ? ui.common.close : ui.common.choose }}
         </button>
       </div>
     </template>
@@ -222,28 +235,28 @@ onUnmounted(() => {
         class="admin-amenity-icon-picker__popover admin-amenity-icon-picker__popover--floating"
         :style="popoverPosition"
         role="dialog"
-        aria-label="Choisir une icône"
+        :aria-label="ui.common.chooseIcon"
       >
         <label class="admin-amenity-icon-picker__filter">
-          <span class="visually-hidden">Rechercher une icône</span>
+          <span class="visually-hidden">{{ ui.common.searchIcon }}</span>
           <input
             v-model="filter"
             type="search"
             class="admin-amenity-icon-picker__filter-input"
-            placeholder="Rechercher…"
+            :placeholder="ui.common.search"
             autocomplete="off"
           />
         </label>
 
         <p v-if="!filteredOptions.length" class="admin-amenity-icon-picker__empty">
-          Aucune icône pour cette recherche.
+          {{ ui.common.noIconResults }}
         </p>
 
         <div
           v-else
           class="admin-amenity-icon-picker__grid admin-amenity-icon-picker__grid--compact"
           role="listbox"
-          :aria-label="`Icônes disponibles — ${activeLabel}`"
+          :aria-label="iconsAvailableLabel"
         >
           <button
             v-for="option in filteredOptions"
@@ -268,28 +281,28 @@ onUnmounted(() => {
       v-if="!inline && isOpen"
       class="admin-amenity-icon-picker__popover"
       role="dialog"
-      aria-label="Choisir une icône"
+      :aria-label="ui.common.chooseIcon"
     >
       <label class="admin-amenity-icon-picker__filter">
-        <span class="visually-hidden">Rechercher une icône</span>
+        <span class="visually-hidden">{{ ui.common.searchIcon }}</span>
         <input
           v-model="filter"
           type="search"
           class="admin-amenity-icon-picker__filter-input"
-          placeholder="Rechercher…"
+          :placeholder="ui.common.search"
           autocomplete="off"
         />
       </label>
 
       <p v-if="!filteredOptions.length" class="admin-amenity-icon-picker__empty">
-        Aucune icône pour cette recherche.
+        {{ ui.common.noIconResults }}
       </p>
 
       <div
         v-else
         class="admin-amenity-icon-picker__grid"
         role="listbox"
-        :aria-label="`Icônes disponibles — ${activeLabel}`"
+        :aria-label="iconsAvailableLabel"
       >
         <button
           v-for="option in filteredOptions"

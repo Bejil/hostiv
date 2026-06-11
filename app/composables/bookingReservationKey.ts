@@ -1,4 +1,6 @@
-import type { InjectionKey, Ref } from "vue"
+import type { ComputedRef, InjectionKey, Ref } from "vue"
+import type { SiteBookingModalLabels } from "../data/site-booking-modal-labels"
+import type { SiteUiLabels } from "../data/site-ui-labels"
 
 export type BookingPopover = "dates" | "guests" | null
 export type CalendarSelectionStep = "arrival" | "departure"
@@ -52,6 +54,11 @@ export type BookingReservationContext = {
   updateGuests: (type: GuestType, delta: 1 | -1) => void
   shiftCalendarMonths: (offset: number) => void
   selectCalendarDate: (isoDate: string) => void
+  bookingLabels: ComputedRef<SiteUiLabels["booking"]>
+  bookAheadNoticeText: ComputedRef<string>
+  travelersLimitNote: ComputedRef<string>
+  bookingDatesPopoverNote: ComputedRef<string>
+  bookingModalLabels: ComputedRef<SiteBookingModalLabels>
 }
 
 export const BOOKING_RESERVATION_KEY: InjectionKey<BookingReservationContext> =

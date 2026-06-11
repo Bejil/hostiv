@@ -1,4 +1,9 @@
 import {
+  bookingSiteQueryOptions,
+  isOwnerBookingPreview,
+  readBookingPropertySlug
+} from "../../utils/booking-owner-preview"
+import {
   parseBookingRequestBody,
   sendBookingRequestEmail,
   sendResendEmail
@@ -19,7 +24,9 @@ export default defineEventHandler(async (event) => {
   }
 
   const body = await readBody(event)
-  const parsed = await parseBookingRequestBody(body)
+  const propertySlug = readBookingPropertySlug(body)
+  const ownerPreview = propertySlug ? await isOwnerBookingPreview(event, propertySlug) : false
+  const parsed = await parseBookingRequestBody(body, bookingSiteQueryOptions(ownerPreview))
 
   if (!parsed.ok) {
     throw createError({
@@ -28,7 +35,9 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const notifyTo = await getPropertyBookingNotifyEmail(parsed.propertySlug)
+  const notifyTo = await getPropertyBookingNotifyEmail(parsed.propertySlug, {
+    publishedOnly: !ownerPreview
+  })
 
   if (!notifyTo) {
     throw createError({

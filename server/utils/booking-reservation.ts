@@ -108,7 +108,10 @@ export type ParsedBookingReservation = {
   estimateLabel: string
 }
 
-export async function parseBookingReservationBody(body: unknown) {
+export async function parseBookingReservationBody(
+  body: unknown,
+  options?: { publishedOnly?: boolean }
+) {
   if (!body || typeof body !== "object") {
     return { ok: false as const, message: "Corps de requête invalide." }
   }
@@ -123,10 +126,16 @@ export async function parseBookingReservationBody(body: unknown) {
     return { ok: false as const, message: "Site de réservation non précisé." }
   }
 
-  const site = await getPropertySiteBySlug(propertySlug)
+  const publishedOnly = options?.publishedOnly !== false
+  const site = await getPropertySiteBySlug(propertySlug, { publishedOnly })
 
   if (!site) {
-    return { ok: false as const, message: "Site de réservation introuvable." }
+    return {
+      ok: false as const,
+      message: publishedOnly
+        ? "Site de réservation introuvable."
+        : "Site de réservation introuvable ou aperçu non autorisé."
+    }
   }
 
   const booking = site.booking_config

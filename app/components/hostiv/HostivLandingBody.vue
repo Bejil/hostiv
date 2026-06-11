@@ -12,15 +12,15 @@ import {
   Link2,
   Sparkles
 } from "@lucide/vue"
-import {
-  hostivCommissionCompare,
-  hostivCta,
-  hostivFeatures,
-  hostivShowcaseExamples,
-  hostivSteps
-} from "../../data/hostivLanding"
-
+const { landing } = useHostivLocale()
 const { openSignup } = useHostivAccountModal()
+
+const hostivCommissionCompare = computed(() => landing.value.commissionCompare)
+const hostivCta = computed(() => landing.value.cta)
+const hostivFeatures = computed(() => landing.value.features)
+const hostivShowcaseExamples = computed(() => landing.value.showcaseExamples)
+const hostivSteps = computed(() => landing.value.steps)
+const landingSections = computed(() => landing.value.landingSections)
 const { publicAsset } = usePublicAsset()
 const ctaIllustrationSrc = publicAsset("/hostiv/cta-welcome.png")
 
@@ -28,7 +28,7 @@ const {
   rootRef: commissionCompareRef,
   revealed: commissionRevealed,
   displayPercent: commissionPlatformPercent
-} = useHostivCommissionReveal(hostivCommissionCompare.platform.meterPercent)
+} = useHostivCommissionReveal(hostivCommissionCompare.value.platform.meterPercent)
 
 const featureIcons = {
   Globe,
@@ -53,11 +53,12 @@ type StepIconKey = keyof typeof stepIcons
         class="hostiv-section__head hostiv-section__head--center"
         v-scroll-reveal="{ rootMargin: '0px 0px -6% 0px' }"
       >
-        <p class="hostiv-eyebrow hostiv-eyebrow--pill">L’essentiel</p>
-        <h2 class="hostiv-h2">Le direct,<br />sans la commission OTA</h2>
+        <p class="hostiv-eyebrow hostiv-eyebrow--pill">{{ landingSections.features.eyebrow }}</p>
+        <h2 class="hostiv-h2">
+          {{ landingSections.features.title }}<br />{{ landingSections.features.titleLine2 }}
+        </h2>
         <p class="hostiv-section__intro">
-          Gardez la marge sur vos nuitées directes — et continuez à promouvoir votre annonce sur les
-          plateformes pour toucher plus de voyageurs.
+          {{ landingSections.features.intro }}
         </p>
       </header>
 
@@ -118,7 +119,7 @@ type StepIconKey = keyof typeof stepIcons
                 <span class="hostiv-commission-card__label">{{ hostivCommissionCompare.platform.label }}</span>
                 <span class="hostiv-commission-card__examples">{{ hostivCommissionCompare.platform.examples }}</span>
                 <p class="hostiv-commission-card__fee">
-                  Jusqu'à ~<span class="hostiv-commission-card__fee-number">{{ commissionPlatformPercent }}</span>
+                  {{ landingSections.commission.feePrefix }}<span class="hostiv-commission-card__fee-number">{{ commissionPlatformPercent }}</span>
                   %
                 </p>
                 <div class="hostiv-commission-card__meter-wrap">
@@ -149,7 +150,7 @@ type StepIconKey = keyof typeof stepIcons
             </div>
 
             <article class="hostiv-commission-card hostiv-commission-card--hostiv">
-              <span class="hostiv-commission-card__ribbon">Recommandé</span>
+              <span class="hostiv-commission-card__ribbon">{{ landingSections.commission.recommendedLabel }}</span>
               <div class="hostiv-commission-card__icon" aria-hidden="true">
                 <BadgePercent :size="22" stroke-width="1.75" />
               </div>
@@ -218,7 +219,7 @@ type StepIconKey = keyof typeof stepIcons
               <img
                 v-if="example.imageSrc"
                 :src="example.imageSrc"
-                :alt="`Aperçu du style ${example.title}`"
+                :alt="`${landingSections.showcase.imageAltPrefix} ${example.title}`"
                 class="hostiv-showcase__img"
                 :width="example.imageWidth"
                 :height="example.imageHeight"
@@ -227,7 +228,7 @@ type StepIconKey = keyof typeof stepIcons
               />
               <div v-else class="hostiv-showcase__placeholder" aria-hidden="true">
                 <ImageIcon :size="28" stroke-width="1.5" />
-                <span>Capture à ajouter</span>
+                <span>{{ landingSections.showcase.placeholder }}</span>
               </div>
             </div>
             <figcaption class="hostiv-showcase__caption">
@@ -246,11 +247,10 @@ type StepIconKey = keyof typeof stepIcons
         class="hostiv-section__head hostiv-section__head--center"
         v-scroll-reveal="{ rootMargin: '0px 0px -6% 0px' }"
       >
-        <p class="hostiv-eyebrow hostiv-eyebrow--pill">Comment ça marche</p>
-        <h2 class="hostiv-h2">En trois étapes</h2>
+        <p class="hostiv-eyebrow hostiv-eyebrow--pill">{{ landingSections.steps.eyebrow }}</p>
+        <h2 class="hostiv-h2">{{ landingSections.steps.title }}</h2>
         <p class="hostiv-section__intro">
-          De la mise en ligne à la première réservation directe — sans reverser de commission à
-          Hostiv.
+          {{ landingSections.steps.intro }}
         </p>
       </header>
 

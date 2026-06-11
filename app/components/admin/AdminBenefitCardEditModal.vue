@@ -5,6 +5,7 @@ import AdminField from "./AdminField.vue"
 import { DEFAULT_BENEFIT_ICON } from "../../data/benefit-icons"
 import type { BenefitIconId } from "../../data/benefit-icons"
 import type { PropertyBenefitCard } from "../../types/property-site"
+import { getAdminCustomizationCardExamples } from "../../data/admin-customization-field-examples"
 
 const props = defineProps<{
   open: boolean
@@ -17,11 +18,19 @@ const emit = defineEmits<{
   save: [value: PropertyBenefitCard]
 }>()
 
+const { ui, locale } = useAdminUi()
+
+const cardExamples = computed(() => getAdminCustomizationCardExamples(locale.value))
+
 const draft = ref<PropertyBenefitCard>({ ...props.card })
 
 const canSave = computed(() => Boolean(draft.value.title.trim()))
 
-const modalTitle = computed(() => (props.isNew ? "Ajouter un atout" : "Modifier l’atout"))
+const modalTitle = computed(() =>
+  props.isNew
+    ? ui.value.editors.benefitCards.modal.addTitle
+    : ui.value.editors.benefitCards.modal.editTitle
+)
 
 watch(
   () => [props.open, props.card] as const,
@@ -102,8 +111,8 @@ function save() {
             <span class="hostiv-modal__accent" aria-hidden="true" />
             <span class="hostiv-modal__glow" aria-hidden="true" />
 
-            <button type="button" class="hostiv-modal__close" aria-label="Fermer" @click="emit('close')">
-              <span class="sr-only">Fermer</span>
+            <button type="button" class="hostiv-modal__close" :aria-label="ui.common.close" @click="emit('close')">
+              <span class="sr-only">{{ ui.common.close }}</span>
               <X :size="18" stroke-width="2" />
             </button>
 
@@ -113,7 +122,7 @@ function save() {
                   {{ modalTitle }}
                 </h2>
                 <p class="hostiv-modal__subtitle">
-                  {{ draft.title.trim() || "Sans titre" }}
+                  {{ draft.title.trim() || ui.editors.shared.untitled }}
                 </p>
               </div>
             </header>
@@ -124,29 +133,31 @@ function save() {
                 @update:model-value="patchDraft({ icon: $event as BenefitIconId })"
               />
               <AdminField
-                label="Titre"
+                :label="ui.editors.shared.title"
                 required
                 full-width
+                :examples="[...cardExamples.benefitTitle]"
                 :model-value="draft.title"
                 @update:model-value="patchDraft({ title: $event as string })"
               />
               <AdminField
-                label="Description"
+                :label="ui.editors.shared.description"
                 type="textarea"
                 :rows="4"
                 full-width
+                :examples="[...cardExamples.benefitText]"
                 :model-value="draft.text"
                 @update:model-value="patchDraft({ text: $event as string })"
               />
             </div>
 
             <p v-if="!canSave" class="admin-benefit-card-modal__hint">
-              Le titre est obligatoire pour enregistrer.
+              {{ ui.editors.benefitCards.modal.saveHint }}
             </p>
 
             <footer class="admin-benefit-card-modal__footer">
               <button type="button" class="hostiv-btn hostiv-btn--secondary" @click="emit('close')">
-                Annuler
+                {{ ui.common.cancel }}
               </button>
               <button
                 type="button"
@@ -154,7 +165,7 @@ function save() {
                 :disabled="!canSave"
                 @click="save"
               >
-                Enregistrer
+                {{ ui.common.save }}
               </button>
             </footer>
           </div>

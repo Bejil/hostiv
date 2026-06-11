@@ -1,18 +1,45 @@
 <script setup lang="ts">
 import AdminCustomizationPanel from "./AdminCustomizationPanel.vue"
 import AdminGeneralImagesEditor from "./AdminGeneralImagesEditor.vue"
+import AdminGuestReviewsEditor from "./AdminGuestReviewsEditor.vue"
 import AdminReservationsEditor from "./AdminReservationsEditor.vue"
 import AdminPayoutsEditor from "./AdminPayoutsEditor.vue"
+import AdminWelcomeGuideEditor from "./AdminWelcomeGuideEditor.vue"
 import AdminField from "./AdminField.vue"
 import AdminIcon from "./AdminIcon.vue"
 import AdminImageUpload from "./AdminImageUpload.vue"
 import AdminToggle from "./AdminToggle.vue"
-import AdminPublishPaywall from "./AdminPublishPaywall.vue"
+import AdminGeneralSubscriptionCard from "./AdminGeneralSubscriptionCard.vue"
+import AdminPublishStripeRequiredModal from "./AdminPublishStripeRequiredModal.vue"
 import AdminOnboarding from "./AdminOnboarding.vue"
+import { useAdminProFeatureGate } from "../../composables/admin-pro-feature-context"
 import { adminEditorContextKey } from "../../composables/admin-editor-context"
+import { useAdminLiveEditorContext } from "../../composables/admin-live-editor-context"
 import { adminSectionNavKey } from "../../composables/admin-section-nav-context"
 import type { PropertyAdminRecord } from "../../types/property-admin"
+import type { HostivSubscriptionAccess } from "../../utils/hostiv-subscription-access"
 import { findAdminNavMeta } from "../../data/admin-nav-sections"
+import { getHostivLanding } from "../../data/hostivLanding"
+import { adminUiFormat } from "../../data/admin-ui"
+import AdminSeoKeywordsPanel from "./AdminSeoKeywordsPanel.vue"
+import type { HostivLocale } from "../../types/hostiv-locale"
+import type { PropertySiteCopy } from "../../types/property-site"
+import {
+  getSiteContentList,
+  localizedSiteCopyKey,
+  localizedSiteListKey,
+  mergeSiteCopyOverride,
+  mergeSiteCopyPrimaryFirst,
+  seedLocalizedSiteLists,
+  type LocalizedSiteListKey
+} from "../../utils/site-content-locale"
+import type { PropertyWelcomeGuide } from "../../types/welcome-guide"
+import {
+  getActiveWelcomeGuide,
+  getStoredWelcomeGuide,
+  localizedWelcomeGuideKey,
+  seedWelcomeGuide
+} from "../../utils/welcome-guide-locale"
 
 const props = defineProps<{
   modelValue: PropertyAdminRecord
@@ -58,44 +85,33 @@ onUnmounted(() => {
   registerEditorScrollRoot(null)
 })
 
-function seoLengthHint(length: number, ideal: number) {
-  if (!length) {
-    return `Recommandé : environ ${ideal} caractères`
-  }
+const { ui, locale } = useAdminUi()
+const ext = computed(() => ui.value.extended)
 
-  if (length > ideal) {
-    return `${length} car. — au-delà de ~${ideal} caractères`
-  }
+const liveEditor = useAdminLiveEditorContext()
+const fallbackSiteEditLocale = ref<HostivLocale>("fr")
+const siteEditLocale = liveEditor?.siteEditLocale ?? fallbackSiteEditLocale
 
-  return `${length} car. — idéal ~${ideal}`
-}
+const activeSeoKeywordLocale = ref<HostivLocale>(locale.value)
 
-const seoSearchPreviewTitle = computed(
-  () => record.value.seo_title.trim() || record.value.brand_name
-)
-const seoSearchPreviewDescription = computed(
-  () => record.value.seo_description.trim() || record.value.brand_meta
-)
-const seoSocialPreviewTitle = computed(
-  () =>
-    record.value.seo_og_title.trim() ||
-    record.value.seo_title.trim() ||
-    record.value.brand_name
-)
-const seoSocialPreviewDescription = computed(
-  () => record.value.seo_og_description.trim() || record.value.seo_description.trim()
-)
-const seoSocialPreviewImage = computed(() => {
-  const path = record.value.seo_og_image_path.trim() || record.value.hero_image_path
-
-  return path ? props.previewUrl(path) : ""
+watch(locale, (value) => {
+  activeSeoKeywordLocale.value = value
 })
+
+const starterPlusPrice = computed(
+  () => getHostivLanding(locale.value).pricing.premiumAddon.price
+)
+
+const welcomeGuideLockedLead = computed(() =>
+  adminUiFormat(ext.value.welcomeGuide.lockedLead, { price: starterPlusPrice.value })
+)
 
 const activeSectionMeta = computed(() =>
   findAdminNavMeta(
     activeMenuSection.value === "customization" && activeCustomizationBlock.value
       ? activeCustomizationBlock.value
-      : activeMenuSection.value
+      : activeMenuSection.value,
+    locale.value
   )
 )
 
@@ -103,35 +119,49 @@ function patch(partial: Partial<PropertyAdminRecord>) {
   record.value = { ...record.value, ...partial }
 }
 
-const publishPaywallOpen = ref(false)
-const onboardingRef = ref<InstanceType<typeof AdminOnboarding> | null>(null)
-
-const subscriptionAccess = computed(
+const subscriptionAccess = computed<HostivSubscriptionAccess>(
   () =>
     record.value.subscription_access ?? {
       plan: record.value.subscription_plan ?? "pro",
-      active: false,
+      active: true,
       paid_until: null,
-      requires_payment: true
+      subscription_started_at: null,
+      premium_tools_until: null,
+      premium_tools_started_at: null,
+      has_premium_tools: false,
+      has_starter_plus: false,
+      requires_payment: false
     }
 )
 
+const publishStripeModalOpen = ref(false)
+const onboardingRef = ref<InstanceType<typeof AdminOnboarding> | null>(null)
+const route = useRoute()
+const router = useRouter()
+
+const proFeatureGate = useAdminProFeatureGate()
+
+const stripeBlocksPublish = computed(
+  () =>
+    sectionNav.stripeConnectLoading.value || sectionNav.stripeConnectNeedsAttention.value
+)
+
 function onPublishedChange(value: boolean) {
-  if (value && subscriptionAccess.value.requires_payment) {
-    publishPaywallOpen.value = true
+  if (value && stripeBlocksPublish.value) {
+    publishStripeModalOpen.value = true
     return
   }
 
   patch({ published: value })
 }
 
-function onPaywallPlanUpdated(plan: PropertyAdminRecord["subscription_plan"]) {
-  patch({
-    subscription_plan: plan,
-    subscription_access: {
-      ...subscriptionAccess.value,
-      plan
-    }
+function openStripeSetupFromPublishModal() {
+  publishStripeModalOpen.value = false
+  selectSection("payouts")
+
+  router.replace({
+    path: route.path,
+    query: { ...route.query, section: "payouts", accounting: "payments" }
   })
 }
 
@@ -139,7 +169,80 @@ function replaceRecord(value: PropertyAdminRecord) {
   record.value = value
 }
 
+function activeCopyRoot(): PropertySiteCopy {
+  const content = record.value.content
+
+  if (siteEditLocale.value === "en") {
+    return mergeSiteCopyOverride(content.copy, content.copy_en)
+  }
+
+  return mergeSiteCopyPrimaryFirst(content.copy, content.copy_en)
+}
+
+function ensureLocalizedCopyExists(locale: HostivLocale) {
+  if (locale !== "en" || record.value.content.copy_en) {
+    return
+  }
+
+  patchContent("copy_en", JSON.parse(JSON.stringify(record.value.content.copy)))
+}
+
+function ensureLocalizedWelcomeGuideExists(locale: HostivLocale) {
+  const seededGuide = seedWelcomeGuide(record.value.content, locale)
+
+  if (seededGuide) {
+    patch({ content: seededGuide })
+  }
+}
+
+function seedLocalizedContentForLocale(locale: HostivLocale) {
+  ensureLocalizedCopyExists(locale)
+  ensureLocalizedWelcomeGuideExists(locale)
+
+  const seededLists = seedLocalizedSiteLists(record.value.content, locale)
+
+  if (seededLists) {
+    patch({ content: seededLists })
+  }
+}
+
+watch(siteEditLocale, (locale) => {
+  if (!liveEditor) {
+    return
+  }
+
+  seedLocalizedContentForLocale(locale)
+})
+
+function patchActiveCopy(nextCopy: PropertySiteCopy) {
+  const copyKey = localizedSiteCopyKey(siteEditLocale.value)
+  patchContent(copyKey, nextCopy as PropertyAdminRecord["content"][typeof copyKey])
+}
+
+function getBrandName() {
+  return activeCopyRoot().header?.brand_name ?? record.value.brand_name
+}
+
+function getBrandMeta() {
+  return activeCopyRoot().header?.brand_meta ?? record.value.brand_meta
+}
+
 function patchBrandName(value: string) {
+  if (siteEditLocale.value === "en") {
+    const copy = { ...activeCopyRoot() }
+    const header = { ...(copy.header ?? { brand_name: "", brand_meta: "", logo_alt: "" }) }
+
+    patchActiveCopy({
+      ...copy,
+      header: {
+        ...header,
+        brand_name: value,
+        logo_alt: value
+      }
+    })
+    return
+  }
+
   const copy = { ...record.value.content.copy }
   const header = { ...(copy.header ?? { brand_name: "", brand_meta: "", logo_alt: "" }) }
 
@@ -161,6 +264,20 @@ function patchBrandName(value: string) {
 }
 
 function patchBrandMeta(value: string) {
+  if (siteEditLocale.value === "en") {
+    const copy = { ...activeCopyRoot() }
+    const header = { ...(copy.header ?? { brand_name: "", brand_meta: "", logo_alt: "" }) }
+
+    patchActiveCopy({
+      ...copy,
+      header: {
+        ...header,
+        brand_meta: value
+      }
+    })
+    return
+  }
+
   const copy = { ...record.value.content.copy }
   const header = { ...(copy.header ?? { brand_name: "", brand_meta: "", logo_alt: "" }) }
 
@@ -191,16 +308,28 @@ function patchContent<K extends keyof PropertyAdminRecord["content"]>(
 }
 
 function getCopyField(sectionId: string, fieldKey: string) {
-  const section = (record.value.content.copy as Record<string, Record<string, string> | undefined>)[
-    sectionId
-  ]
+  const copy = activeCopyRoot()
+  const section = (copy as Record<string, Record<string, string> | undefined>)[sectionId]
 
   return section?.[fieldKey] ?? ""
 }
 
 function patchHeroTitle(value: string) {
-  const copy = { ...record.value.content.copy }
+  const copy = { ...activeCopyRoot() }
   const hero = { ...(copy.hero ?? { eyebrow: "", title: "", text: "", image_alt: "" }) }
+  const nextHero = {
+    ...hero,
+    title: value,
+    image_alt: value
+  }
+
+  if (siteEditLocale.value === "en") {
+    patchActiveCopy({
+      ...copy,
+      hero: nextHero
+    })
+    return
+  }
 
   record.value = {
     ...record.value,
@@ -209,18 +338,14 @@ function patchHeroTitle(value: string) {
       ...record.value.content,
       copy: {
         ...copy,
-        hero: {
-          ...hero,
-          title: value,
-          image_alt: value
-        }
+        hero: nextHero
       } as PropertyAdminRecord["content"]["copy"]
     }
   }
 }
 
 function patchHostCaption(value: string) {
-  const copy = { ...record.value.content.copy }
+  const copy = { ...activeCopyRoot() }
   const host = {
     ...(copy.host ?? {
       caption: "",
@@ -236,10 +361,10 @@ function patchHostCaption(value: string) {
     image_alt: value
   }
 
-  patchContent("copy", {
+  patchActiveCopy({
     ...copy,
     host
-  } as PropertyAdminRecord["content"]["copy"])
+  })
 }
 
 function patchCopySection(sectionId: string, fieldKey: string, value: string) {
@@ -248,7 +373,7 @@ function patchCopySection(sectionId: string, fieldKey: string, value: string) {
     return
   }
 
-  const copy = { ...record.value.content.copy }
+  const copy = { ...activeCopyRoot() }
   const existing = (copy as Record<string, Record<string, string>>)[sectionId] ?? {}
 
   ;(copy as Record<string, Record<string, string>>)[sectionId] = {
@@ -256,7 +381,37 @@ function patchCopySection(sectionId: string, fieldKey: string, value: string) {
     [fieldKey]: value
   }
 
-  patchContent("copy", copy as PropertyAdminRecord["content"]["copy"])
+  patchActiveCopy(copy)
+}
+
+function getContentList<K extends LocalizedSiteListKey>(key: K) {
+  return getSiteContentList(record.value.content, key, siteEditLocale.value)
+}
+
+function patchContentList<K extends LocalizedSiteListKey>(
+  key: K,
+  value: PropertyAdminRecord["content"][K] | PropertyAdminRecord["content"][`${K}_en`]
+) {
+  const storageKey = localizedSiteListKey(key, siteEditLocale.value)
+  patchContent(storageKey as keyof PropertyAdminRecord["content"], value)
+}
+
+function getWelcomeGuide(): PropertyWelcomeGuide {
+  return getActiveWelcomeGuide(record.value.content, siteEditLocale.value, record.value)
+}
+
+function patchWelcomeGuide(partial: Partial<PropertyWelcomeGuide>) {
+  if (siteEditLocale.value === "en") {
+    ensureLocalizedWelcomeGuideExists("en")
+  }
+
+  const storageKey = localizedWelcomeGuideKey(siteEditLocale.value)
+  const stored = getStoredWelcomeGuide(record.value.content, siteEditLocale.value)
+
+  patchContent(storageKey, {
+    ...stored,
+    ...partial
+  })
 }
 
 provide(adminEditorContextKey, {
@@ -271,8 +426,16 @@ provide(adminEditorContextKey, {
   patchBrandMeta,
   patchHeroTitle,
   patchHostCaption,
+  siteEditLocale,
+  getBrandName,
+  getBrandMeta,
   getCopyField,
   patchCopySection,
+  getContentList,
+  patchContentList,
+  getWelcomeGuide,
+  patchWelcomeGuide,
+  saveDraft: props.saveDraft,
   subscriptionAccess,
   onPublishedChange
 })
@@ -307,27 +470,25 @@ defineExpose({
         <section v-if="activeMenuSection === 'general'" class="admin-panel admin-panel--general">
           <div class="admin-general-layout admin-general-layout--single">
             <div class="admin-general-main">
+              <AdminGeneralSubscriptionCard :access="subscriptionAccess" />
+
               <div class="admin-subpanel admin-general-card admin-general-card--publication">
                 <div class="admin-subpanel__head admin-general-card__head">
                   <div>
-                    <p class="admin-general-card__kicker">Statut</p>
-                    <h3>Publication</h3>
+                    <p class="admin-general-card__kicker">{{ ext.general.statusKicker }}</p>
+                    <h3>{{ ext.general.publicationTitle }}</h3>
                   </div>
                   <span
                     class="admin-general-status"
                     :class="record.published ? 'admin-general-status--on' : 'admin-general-status--off'"
                   >
-                    {{ record.published ? "Publié" : "Brouillon" }}
+                    {{ record.published ? ext.general.publishedOn : ext.general.publishedOff }}
                   </span>
                 </div>
                 <AdminToggle
                   :model-value="record.published"
-                  label="Site publié"
-                  :hint="
-                    subscriptionAccess.requires_payment
-                      ? 'Forfait Hostiv requis pour publier (12 mois). Vous pouvez personnaliser en brouillon.'
-                      : 'Visible par les visiteurs sur l’URL publique.'
-                  "
+                  :label="ext.general.publishedToggleLabel"
+                  :hint="ext.general.publishedToggleHint"
                   @update:model-value="onPublishedChange"
                 />
               </div>
@@ -335,146 +496,20 @@ defineExpose({
               <div class="admin-subpanel admin-general-card admin-general-card--seo">
                 <div class="admin-subpanel__head admin-general-card__head">
                   <div>
-                    <p class="admin-general-card__kicker">Référencement</p>
-                    <h3>SEO</h3>
+                    <p class="admin-general-card__kicker">{{ ext.general.seoKicker }}</p>
+                    <h3>{{ ext.general.seoTitle }}</h3>
                   </div>
-                  <p class="admin-general-card__hint">
-                    Métadonnées pour Google, l’onglet du navigateur et le partage sur les réseaux sociaux.
-                  </p>
+                  <HostivLocalePillToggle
+                    v-model="activeSeoKeywordLocale"
+                    :aria-label="ext.seoKeywords.pillAria"
+                  />
                 </div>
 
-                <div class="admin-general-seo">
-                  <div class="admin-general-seo__block">
-                    <p class="admin-general-seo__heading">Recherche Google</p>
-                    <div class="admin-general-fields-grid">
-                      <AdminField
-                        label="Titre SEO"
-                        :model-value="record.seo_title"
-                        :hint="seoLengthHint(record.seo_title.length, 60)"
-                        placeholder="Ex. The Grand Appartement | Proche Versailles"
-                        full-width
-                        @update:model-value="patch({ seo_title: $event as string })"
-                      />
-                      <AdminField
-                        label="Description SEO"
-                        :model-value="record.seo_description"
-                        type="textarea"
-                        :rows="3"
-                        :hint="seoLengthHint(record.seo_description.length, 160)"
-                        placeholder="Résumé du logement pour les résultats de recherche."
-                        full-width
-                        @update:model-value="patch({ seo_description: $event as string })"
-                      />
-                      <AdminField
-                        label="Mots-clés"
-                        :model-value="record.seo_keywords"
-                        :hint="'Séparez par des virgules (ex. location, Versailles, appartement familial).'"
-                        placeholder="location courte durée, Versailles, appartement familial"
-                        full-width
-                        @update:model-value="patch({ seo_keywords: $event as string })"
-                      />
-                    </div>
-                    <div class="admin-general-preview">
-                      <p class="admin-general-preview__label">Aperçu Google</p>
-                      <div class="admin-general-preview__card admin-general-preview__card--search">
-                        <div class="admin-general-preview__content">
-                          <p class="admin-general-preview__status">Résultat de recherche</p>
-                          <h3>{{ seoSearchPreviewTitle }}</h3>
-                          <p>{{ seoSearchPreviewDescription || "Ajoutez une description pour apparaître sous le titre." }}</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="admin-general-seo__block">
-                    <p class="admin-general-seo__heading">Partage social (Open Graph)</p>
-                    <p class="admin-general-seo__intro">
-                      Utilisé par Facebook, LinkedIn, iMessage, etc. Laissez vide pour reprendre le titre et la description SEO.
-                    </p>
-                    <div class="admin-general-fields-grid">
-                      <AdminField
-                        label="Titre de partage"
-                        :model-value="record.seo_og_title"
-                        :hint="seoLengthHint(record.seo_og_title.length, 60)"
-                        placeholder="Optionnel — sinon titre SEO"
-                        full-width
-                        @update:model-value="patch({ seo_og_title: $event as string })"
-                      />
-                      <AdminField
-                        label="Description de partage"
-                        :model-value="record.seo_og_description"
-                        type="textarea"
-                        :rows="3"
-                        :hint="seoLengthHint(record.seo_og_description.length, 160)"
-                        placeholder="Optionnel — sinon description SEO"
-                        full-width
-                        @update:model-value="patch({ seo_og_description: $event as string })"
-                      />
-                      <label class="admin-field admin-field--full">
-                        <span class="admin-field__label">Carte Twitter / X</span>
-                        <select
-                          class="admin-field__control"
-                          :value="record.seo_twitter_card"
-                          @change="
-                            patch({
-                              seo_twitter_card: ($event.target as HTMLSelectElement).value as
-                                | 'summary'
-                                | 'summary_large_image'
-                            })
-                          "
-                        >
-                          <option value="summary_large_image">Grande image (recommandé)</option>
-                          <option value="summary">Petite vignette</option>
-                        </select>
-                        <span class="admin-field__hint">
-                          Format de l’aperçu lors du partage sur X (Twitter).
-                        </span>
-                      </label>
-                    </div>
-                    <AdminImageUpload
-                      compact
-                      label="Image de partage"
-                      :model-value="record.seo_og_image_path"
-                      default-path="seo/og-share.jpeg"
-                      :upload="upload"
-                      :preview-url="previewUrl"
-                      @update:model-value="patch({ seo_og_image_path: $event })"
-                    />
-                    <p class="admin-general-seo__intro admin-general-seo__intro--tight">
-                      Sans image dédiée, l’image hero du site est utilisée (1200×630 px recommandé).
-                    </p>
-                    <div class="admin-general-preview">
-                      <p class="admin-general-preview__label">Aperçu partage</p>
-                      <div class="admin-general-preview__card admin-general-preview__card--social">
-                        <div
-                          v-if="seoSocialPreviewImage"
-                          class="admin-general-preview__og-image"
-                        >
-                          <img :src="seoSocialPreviewImage" alt="" />
-                        </div>
-                        <div class="admin-general-preview__content">
-                          <p class="admin-general-preview__status">{{ record.brand_name }}</p>
-                          <h3>{{ seoSocialPreviewTitle }}</h3>
-                          <p>
-                            {{
-                              seoSocialPreviewDescription ||
-                                "Ajoutez une description pour enrichir l’aperçu."
-                            }}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="admin-general-seo__block admin-general-seo__block--robots">
-                    <AdminToggle
-                      :model-value="record.seo_noindex"
-                      label="Demander aux moteurs de ne pas indexer"
-                      hint="Ajoute noindex,nofollow. Un site en brouillon n’est jamais indexé, même si cette option est désactivée."
-                      @update:model-value="patch({ seo_noindex: $event })"
-                    />
-                  </div>
-                </div>
+                <AdminSeoKeywordsPanel
+                  v-model:keyword-locale="activeSeoKeywordLocale"
+                  :record="record"
+                  @patch="patch"
+                />
               </div>
 
             </div>
@@ -487,11 +522,35 @@ defineExpose({
           @update:open-block-id="onCustomizationAccordionChange"
         />
 
+        <AdminWelcomeGuideEditor
+          v-else-if="activeMenuSection === 'welcome-guide' && proFeatureGate.isProPlan.value"
+        />
+
+        <section
+          v-else-if="activeMenuSection === 'welcome-guide'"
+          class="admin-panel admin-panel--welcome-guide-locked"
+        >
+          <div class="admin-empty admin-empty--inline">
+            <h2 class="admin-empty__title">{{ ext.welcomeGuide.lockedTitle }}</h2>
+            <p>
+              {{ welcomeGuideLockedLead }}
+            </p>
+            <button
+              type="button"
+              class="admin-btn admin-btn--primary"
+              @click="proFeatureGate.openProUpgrade('welcome-guide')"
+            >
+              {{ ext.welcomeGuide.unlockCta }}
+            </button>
+          </div>
+        </section>
+
         <section v-else-if="activeMenuSection === 'images'" class="admin-panel admin-panel--general-images">
           <AdminGeneralImagesEditor
             :model-value="record"
             :upload="upload"
             :preview-url="previewUrl"
+            :save-draft="saveDraft"
             @update:model-value="replaceRecord"
           />
         </section>
@@ -500,9 +559,17 @@ defineExpose({
           <AdminReservationsEditor
             :slug="slug"
             :model-value="record.calendar_config"
+            :save-draft="saveDraft"
             @update:model-value="patch({ calendar_config: $event })"
             @reservations-changed="loadUpcomingReservationCount"
           />
+        </section>
+
+        <section
+          v-else-if="activeMenuSection === 'guest-reviews'"
+          class="admin-panel admin-panel--guest-reviews"
+        >
+          <AdminGuestReviewsEditor :slug="slug" />
         </section>
 
         <section v-else-if="activeMenuSection === 'payouts'" class="admin-panel admin-panel--payouts">
@@ -512,12 +579,10 @@ defineExpose({
       </div>
     </div>
 
-    <AdminPublishPaywall
-      :open="publishPaywallOpen"
-      :access="subscriptionAccess"
-      :slug="slug"
-      @close="publishPaywallOpen = false"
-      @plan-updated="onPaywallPlanUpdated"
+    <AdminPublishStripeRequiredModal
+      :open="publishStripeModalOpen"
+      @close="publishStripeModalOpen = false"
+      @configure="openStripeSetupFromPublishModal"
     />
   </div>
 </template>

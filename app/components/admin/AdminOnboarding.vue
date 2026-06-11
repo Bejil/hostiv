@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ArrowLeft, ArrowRight, Check, PartyPopper, Rocket, Sparkles } from "@lucide/vue"
+import { adminUiFormat } from "../../data/admin-ui"
 import {
-  adminOnboardingSteps,
+  getAdminOnboardingSteps,
   getOnboardingStepMissingLabels
 } from "../../data/admin-onboarding-steps"
 import type { AdminSectionId } from "../../data/admin-nav-sections"
@@ -20,6 +21,9 @@ const props = defineProps<{
 
 const recordRef = computed(() => props.record)
 const stepSaving = ref(false)
+const { ui, locale } = useAdminUi()
+
+const onboardingSteps = computed(() => getAdminOnboardingSteps(locale.value))
 
 const {
   phase,
@@ -42,8 +46,10 @@ const {
   saveDraft: props.saveDraft
 })
 
-const progressSteps = adminOnboardingSteps.filter((step) => step.id !== "welcome")
-const displayStepTotal = progressSteps.length
+const progressSteps = computed(() =>
+  onboardingSteps.value.filter((step) => step.id !== "welcome")
+)
+const displayStepTotal = computed(() => progressSteps.value.length)
 
 const displayStepNumber = computed(() => {
   if (phase.value === "welcome") {
@@ -51,25 +57,28 @@ const displayStepNumber = computed(() => {
   }
 
   if (phase.value === "celebration") {
-    return displayStepTotal
+    return displayStepTotal.value
   }
 
   return Math.max(stepIndex.value, 1)
 })
 
-const modalOpen = computed(() => phase.value !== "hidden")
-
-const progressLabel = computed(() => {
+const progressLabelText = computed(() => {
   if (phase.value === "welcome") {
-    return "Configuration obligatoire de votre site"
+    return ui.value.onboardingUi.progressWelcome
   }
 
   if (phase.value === "celebration") {
-    return "Configuration terminée"
+    return ui.value.onboardingUi.progressDone
   }
 
-  return `Étape ${displayStepNumber.value} sur ${displayStepTotal}`
+  return adminUiFormat(ui.value.onboardingUi.progressStep, {
+    current: String(displayStepNumber.value),
+    total: String(displayStepTotal.value)
+  })
 })
+
+const modalOpen = computed(() => phase.value !== "hidden")
 
 const showStepFields = computed(
   () =>
@@ -81,10 +90,10 @@ const showStepFields = computed(
 const isFinishStep = computed(() => phase.value === "active" && currentStep.value.id === "finish")
 
 function isStepDotComplete(index: number) {
-  const step = progressSteps[index]
+  const step = progressSteps.value[index]
 
   return step
-    ? getOnboardingStepMissingLabels(props.record, step.id).length === 0
+    ? getOnboardingStepMissingLabels(props.record, step.id, locale.value).length === 0
     : false
 }
 
@@ -184,7 +193,7 @@ defineExpose({
         >
           <header class="admin-onboarding-wizard__head">
             <div class="admin-onboarding-wizard__progress-wrap">
-              <p class="admin-onboarding-wizard__kicker">{{ progressLabel }}</p>
+              <p class="admin-onboarding-wizard__kicker">{{ progressLabelText }}</p>
               <div
                 class="admin-onboarding-wizard__progress"
                 role="progressbar"
@@ -225,22 +234,25 @@ defineExpose({
               >
                 <div class="admin-onboarding-wizard__badge">
                   <Sparkles :size="20" />
-                  <span>Bienvenue sur Hostiv</span>
+                  <span>{{ ui.onboardingUi.badge }}</span>
                 </div>
                 <h2
                   id="admin-onboarding-title-welcome"
                   class="admin-onboarding-wizard__title"
                 >
-                  Votre nouveau site
+                  {{ ui.onboardingUi.welcomeTitle }}
                 </h2>
                 <p class="admin-onboarding-wizard__lead">
-                  Complétez les {{ displayStepTotal }} étapes ci-dessous pour activer votre
-                  backoffice. La configuration est obligatoire avant de continuer.
+                  {{
+                    adminUiFormat(ui.onboardingUi.welcomeLead, {
+                      total: String(displayStepTotal.value)
+                    })
+                  }}
                 </p>
                 <ul class="admin-onboarding-wizard__highlights">
-                  <li><Check :size="15" /> <span>Formulaires intégrés à chaque étape</span></li>
-                  <li><Check :size="15" /> <span>Validation avant de passer à la suite</span></li>
-                  <li><Check :size="15" /> <span>Champs obligatoires marqués d’un astérisque</span></li>
+                  <li><Check :size="15" /> <span>{{ ui.onboardingUi.highlightForms }}</span></li>
+                  <li><Check :size="15" /> <span>{{ ui.onboardingUi.highlightValidation }}</span></li>
+                  <li><Check :size="15" /> <span>{{ ui.onboardingUi.highlightRequired }}</span></li>
                 </ul>
               </div>
 
@@ -253,11 +265,14 @@ defineExpose({
                   <PartyPopper :size="34" />
                 </div>
                 <h2 id="admin-onboarding-title-done" class="admin-onboarding-wizard__title">
-                  Configuration terminée
+                  {{ ui.onboardingUi.celebrationTitle }}
                 </h2>
                 <p class="admin-onboarding-wizard__lead">
-                  Les {{ displayStepTotal }} étapes obligatoires sont complètes. Vos modifications
-                  ont été enregistrées — affinez votre site dans le menu latéral.
+                  {{
+                    adminUiFormat(ui.onboardingUi.celebrationLead, {
+                      total: String(displayStepTotal.value)
+                    })
+                  }}
                 </p>
               </div>
 
@@ -295,7 +310,7 @@ defineExpose({
               @click="prevStep"
             >
               <ArrowLeft :size="16" />
-              Précédent
+              {{ ui.onboardingUi.previous }}
             </button>
 
             <div class="admin-onboarding-wizard__foot-spacer" />
@@ -307,7 +322,7 @@ defineExpose({
               @click="startTour"
             >
               <Rocket :size="17" />
-              Commencer
+              {{ ui.onboardingUi.start }}
             </button>
 
             <button
@@ -317,7 +332,7 @@ defineExpose({
               :disabled="stepSaving"
               @click="onCloseCelebration"
             >
-              {{ stepSaving ? "Enregistrement…" : "Accéder au backoffice" }}
+              {{ stepSaving ? ui.common.saving : ui.onboardingUi.openBackoffice }}
             </button>
 
             <button
@@ -329,10 +344,10 @@ defineExpose({
             >
               {{
                 stepSaving
-                  ? "Enregistrement…"
+                  ? ui.common.saving
                   : currentStep.id === "finish"
-                    ? "Terminer le parcours"
-                    : "Étape suivante"
+                    ? ui.onboardingUi.finishTour
+                    : ui.onboardingUi.nextStep
               }}
               <ArrowRight :size="16" />
             </button>

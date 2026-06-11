@@ -1,6 +1,11 @@
 import type { MaybeRefOrGetter } from "vue"
 import { toValue } from "vue"
 import type { AdminBookingReservation } from "../types/booking-reservation"
+import type { StripeConnectStatus } from "../types/stripe-connect"
+import {
+  isProductionAdminHost,
+  stripeConnectNeedsAttention
+} from "../utils/admin-stripe-connect-attention"
 import {
   isAdminCustomizationBlockId,
   isAdminTopSectionId,
@@ -44,6 +49,29 @@ export function useAdminSectionNavigation(slug: MaybeRefOrGetter<string>) {
   const activeMenuSection = ref<AdminTopSectionId>(parseRouteSections().menu)
   const activeCustomizationBlock = ref<AdminNavSectionId | null>(parseRouteSections().block)
   const upcomingReservationCount = ref(0)
+  const stripeConnectStatus = ref<StripeConnectStatus | null>(null)
+  const stripeConnectLoading = ref(false)
+  const stripeConnectLoadError = ref(false)
+
+  const stripeConnectNeedsAttentionFlag = computed(() => {
+    if (stripeConnectLoading.value) {
+      return false
+    }
+
+    return stripeConnectNeedsAttention(stripeConnectStatus.value, {
+      hasLoadError: stripeConnectLoadError.value,
+      isProductionHost: isProductionAdminHost()
+    })
+  })
+
+  function updateStripeConnectStatus(
+    status: StripeConnectStatus | null,
+    options?: { loadError?: boolean }
+  ) {
+    stripeConnectStatus.value = status
+    stripeConnectLoadError.value = options?.loadError ?? false
+    stripeConnectLoading.value = false
+  }
 
   function registerEditorScrollRoot(element: HTMLElement | null) {
     editorScrollRef.value = element
@@ -179,6 +207,7 @@ export function useAdminSectionNavigation(slug: MaybeRefOrGetter<string>) {
     () => toValue(slug),
     () => {
       void loadUpcomingReservationCount()
+      void loadStripeConnectStatus()
     }
   )
 
@@ -214,6 +243,31 @@ export function useAdminSectionNavigation(slug: MaybeRefOrGetter<string>) {
     }
   }
 
+  async function loadStripeConnectStatus() {
+    const normalizedSlug = toValue(slug).trim()
+
+    if (!normalizedSlug) {
+      updateStripeConnectStatus(null)
+      return
+    }
+
+    stripeConnectLoading.value = true
+    stripeConnectLoadError.value = false
+
+    try {
+      const response = await $fetch<StripeConnectStatus>(
+        `/api/admin/${normalizedSlug}/stripe-connect`,
+        {
+          headers: await authHeaders()
+        }
+      )
+
+      updateStripeConnectStatus(response)
+    } catch {
+      updateStripeConnectStatus(null, { loadError: true })
+    }
+  }
+
   function syncFromRouteOnMount() {
     const parsed = parseRouteSections()
 
@@ -232,12 +286,17 @@ export function useAdminSectionNavigation(slug: MaybeRefOrGetter<string>) {
     }
 
     void loadUpcomingReservationCount()
+    void loadStripeConnectStatus()
   }
 
   return {
     activeMenuSection,
     activeCustomizationBlock,
     upcomingReservationCount,
+    stripeConnectStatus,
+    stripeConnectLoading,
+    stripeConnectLoadError,
+    stripeConnectNeedsAttention: stripeConnectNeedsAttentionFlag,
     registerEditorScrollRoot,
     selectSection,
     openCustomization,
@@ -245,6 +304,8 @@ export function useAdminSectionNavigation(slug: MaybeRefOrGetter<string>) {
     onCustomizationAccordionChange,
     scrollToCustomizationBlock,
     loadUpcomingReservationCount,
+    loadStripeConnectStatus,
+    updateStripeConnectStatus,
     syncFromRouteOnMount
   }
 }

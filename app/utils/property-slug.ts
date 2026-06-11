@@ -12,6 +12,7 @@ export const RESERVED_PROPERTY_SLUGS = new Set([
   "hestia",
   "login",
   "hostiv",
+  "inscription",
   "mentions-legales",
   "politique-de-confidentialite",
   "preview",

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { AlertTriangle, X } from "@lucide/vue"
+import { adminUiFormat } from "../../data/admin-ui"
 
 const props = defineProps<{
   open: boolean
@@ -15,10 +16,19 @@ const emit = defineEmits<{
   confirm: []
 }>()
 
+const { ui } = useAdminUi()
+const ext = computed(() => ui.value.extended)
+
 const normalizedSlug = computed(() => props.slug.trim().toLowerCase())
 
 const slugMatches = computed(
   () => props.confirmSlug.trim().toLowerCase() === normalizedSlug.value
+)
+
+const deleteItems = computed(() =>
+  ext.value.account.deleteModal.items.map((item) =>
+    adminUiFormat(item, { slug: props.slug })
+  )
 )
 
 function onBackdropClick(event: MouseEvent) {
@@ -68,10 +78,10 @@ function onKeydown(event: KeyboardEvent) {
             type="button"
             class="hostiv-modal__close"
             :disabled="loading"
-            aria-label="Fermer"
+            :aria-label="ui.common.close"
             @click="emit('cancel')"
           >
-            <span class="sr-only">Fermer</span>
+            <span class="sr-only">{{ ui.common.close }}</span>
             <X :size="18" stroke-width="2" />
           </button>
 
@@ -81,31 +91,25 @@ function onKeydown(event: KeyboardEvent) {
             </span>
             <div class="hostiv-modal__head-text">
               <h2 id="admin-account-delete-modal-title" class="hostiv-modal__title">
-                Supprimer définitivement votre compte ?
+                {{ ext.account.deleteModal.title }}
               </h2>
               <p id="admin-account-delete-modal-desc" class="hostiv-modal__subtitle">
-                Cette action est irréversible. Les éléments suivants seront supprimés :
+                {{ ext.account.deleteModal.subtitle }}
               </p>
             </div>
           </header>
 
           <ul class="hostiv-modal__danger-list">
-            <li>Votre compte Hostiv et votre accès au backoffice</li>
-            <li>
-              Votre site <strong>/{{ slug }}</strong> et tous ses contenus
-            </li>
-            <li>Les fichiers et images associés</li>
-            <li>Votre compte Stripe Connect</li>
-            <li>L’historique des réservations enregistrées sur ce site</li>
+            <li v-for="(item, index) in deleteItems" :key="index">{{ item }}</li>
           </ul>
 
           <div class="hostiv-modal__danger-confirm">
             <p class="hostiv-modal__danger-confirm-label">
-              Pour confirmer, saisissez l’adresse de votre site :
+              {{ ext.account.deleteModal.confirmLabel }}
             </p>
             <code class="hostiv-modal__danger-slug">{{ slug }}</code>
             <label class="hostiv-modal__field">
-              <span>Confirmation</span>
+              <span>{{ ext.account.deleteModal.confirmation }}</span>
               <input
                 :value="confirmSlug"
                 type="text"
@@ -132,7 +136,7 @@ function onKeydown(event: KeyboardEvent) {
               :disabled="loading"
               @click="emit('cancel')"
             >
-              Annuler
+              {{ ui.common.cancel }}
             </button>
             <button
               type="button"
@@ -140,7 +144,7 @@ function onKeydown(event: KeyboardEvent) {
               :disabled="loading || !slugMatches"
               @click="emit('confirm')"
             >
-              {{ loading ? "Suppression…" : "Supprimer mon compte" }}
+              {{ loading ? ext.account.deleteModal.deleting : ext.account.deleteModal.confirmCta }}
             </button>
           </footer>
         </div>

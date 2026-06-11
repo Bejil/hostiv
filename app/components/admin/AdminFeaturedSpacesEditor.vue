@@ -2,6 +2,7 @@
 import AdminFeaturedSpaceDeleteModal from "./AdminFeaturedSpaceDeleteModal.vue"
 import AdminFeaturedSpaceEditModal from "./AdminFeaturedSpaceEditModal.vue"
 import AdminIcon from "./AdminIcon.vue"
+import { adminUiFormat } from "../../data/admin-ui"
 import type { PropertyFeaturedSpace } from "../../types/property-site"
 
 const props = defineProps<{
@@ -13,6 +14,8 @@ const props = defineProps<{
 const emit = defineEmits<{
   "update:modelValue": [value: PropertyFeaturedSpace[]]
 }>()
+
+const { ui } = useAdminUi()
 
 const editModalOpen = ref(false)
 const deleteModalOpen = ref(false)
@@ -61,11 +64,14 @@ function cardImageSrc(space: PropertyFeaturedSpace, index: number) {
 }
 
 function cardTitle(space: PropertyFeaturedSpace, index: number) {
-  return space.title.trim() || `Carte ${index + 1}`
+  return (
+    space.title.trim() ||
+    adminUiFormat(ui.value.editors.shared.cardFallback, { index: index + 1 })
+  )
 }
 
 function cardDescriptionPreview(space: PropertyFeaturedSpace) {
-  return space.text.trim() || "Aucune description"
+  return space.text.trim() || ui.value.editors.shared.noDescription
 }
 
 function openAdd() {
@@ -176,15 +182,15 @@ function onDrop(index: number, event: DragEvent) {
 <template>
   <div class="admin-featured-spaces">
     <div class="admin-subpanel__head admin-featured-spaces__head">
-      <h3>Espaces mis en avant</h3>
+      <h3>{{ ui.editors.featuredSpaces.title }}</h3>
       <button type="button" class="admin-btn admin-btn--secondary admin-btn--sm" @click="openAdd">
         <AdminIcon name="plus" :size="16" />
-        Ajouter une carte
+        {{ ui.editors.featuredSpaces.addButton }}
       </button>
     </div>
 
     <p v-if="!modelValue.length" class="admin-featured-spaces__empty">
-      Aucune carte. Utilisez « Ajouter une carte » pour en créer une.
+      {{ ui.editors.featuredSpaces.empty }}
     </p>
 
     <ul v-else class="admin-featured-spaces__list">
@@ -202,7 +208,7 @@ function onDrop(index: number, event: DragEvent) {
         <button
           type="button"
           class="admin-sortable-list__drag-handle"
-          aria-label="Glisser pour réordonner"
+          :aria-label="ui.editors.shared.dragToReorder"
           draggable="true"
           @dragstart="onDragStart(index, $event)"
           @dragend="onDragEnd"
@@ -219,6 +225,7 @@ function onDrop(index: number, event: DragEvent) {
         </div>
 
         <div class="admin-featured-spaces__item-body">
+          <p v-if="space.tag.trim()" class="admin-featured-spaces__item-tag">{{ space.tag }}</p>
           <p class="admin-featured-spaces__item-title">{{ cardTitle(space, index) }}</p>
           <p class="admin-featured-spaces__item-text">{{ cardDescriptionPreview(space) }}</p>
         </div>
@@ -227,7 +234,7 @@ function onDrop(index: number, event: DragEvent) {
           <button
             type="button"
             class="admin-btn admin-btn--secondary admin-btn--sm admin-btn--icon-only"
-            aria-label="Modifier"
+            :aria-label="ui.editors.shared.edit"
             @click="openEdit(index)"
           >
             <AdminIcon name="pencil" :size="16" />
@@ -235,7 +242,7 @@ function onDrop(index: number, event: DragEvent) {
           <button
             type="button"
             class="admin-btn admin-btn--ghost admin-btn--danger-ghost admin-btn--sm admin-btn--icon-only"
-            aria-label="Supprimer"
+            :aria-label="ui.common.delete"
             @click="openDelete(index)"
           >
             <AdminIcon name="trash" :size="16" />
@@ -258,7 +265,7 @@ function onDrop(index: number, event: DragEvent) {
 
     <AdminFeaturedSpaceDeleteModal
       :open="deleteModalOpen"
-      :card-title="deletingSpace ? cardTitle(deletingSpace, deletingIndex ?? 0) : 'Cette carte'"
+      :card-title="deletingSpace ? cardTitle(deletingSpace, deletingIndex ?? 0) : ui.editors.shared.thisCard"
       @cancel="closeDelete"
       @confirm="confirmDelete"
     />

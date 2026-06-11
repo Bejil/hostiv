@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { X } from "@lucide/vue"
+import { adminUiFormat } from "../../data/admin-ui"
 import AdminAccountDeleteModal from "./AdminAccountDeleteModal.vue"
 import AdminAccountEditor from "./AdminAccountEditor.vue"
 import { useSupabaseClient } from "../../composables/useSupabaseClient"
@@ -12,6 +13,9 @@ const props = defineProps<{
 const emit = defineEmits<{
   close: []
 }>()
+
+const { ui } = useAdminUi()
+const ext = computed(() => ui.value.extended)
 
 const deleteModalOpen = ref(false)
 const deleteConfirmSlug = ref("")
@@ -64,7 +68,7 @@ async function onDeleteAccount() {
   deleteError.value = null
 
   if (deleteConfirmSlug.value.trim().toLowerCase() !== props.slug.trim().toLowerCase()) {
-    deleteError.value = `Saisissez exactement « ${props.slug} » pour confirmer.`
+    deleteError.value = adminUiFormat(ext.value.account.deleteSlugMismatch, { slug: props.slug })
     return
   }
 
@@ -88,7 +92,7 @@ async function onDeleteAccount() {
   } catch (err: unknown) {
     const e = err as { data?: { message?: string }; message?: string }
 
-    deleteError.value = e.data?.message || e.message || "Impossible de supprimer le compte."
+    deleteError.value = e.data?.message || e.message || ext.value.account.deleteFailed
   } finally {
     deleting.value = false
   }
@@ -140,8 +144,13 @@ onUnmounted(() => {
             <span class="hostiv-modal__accent" aria-hidden="true" />
             <span class="hostiv-modal__glow" aria-hidden="true" />
 
-            <button type="button" class="hostiv-modal__close" aria-label="Fermer" @click="emit('close')">
-              <span class="sr-only">Fermer</span>
+            <button
+              type="button"
+              class="hostiv-modal__close"
+              :aria-label="ui.common.close"
+              @click="emit('close')"
+            >
+              <span class="sr-only">{{ ui.common.close }}</span>
               <X :size="18" stroke-width="2" />
             </button>
 
@@ -157,11 +166,10 @@ onUnmounted(() => {
               </span>
               <div class="hostiv-modal__head-text">
                 <h2 id="admin-account-settings-modal-title" class="hostiv-modal__title">
-                  Paramètres du compte
+                  {{ ext.account.settingsTitle }}
                 </h2>
                 <p class="hostiv-modal__subtitle">
-                  Gérez vos informations Hostiv, votre mot de passe et la suppression de compte. Les
-                  demandes et réservations sont envoyées à l’e-mail de ce compte.
+                  {{ ext.account.settingsSubtitle }}
                 </p>
               </div>
             </header>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import PropertySitePageView from "../../../components/site/PropertySitePageView.vue"
+import type { HostivLocale } from "../../../types/hostiv-locale"
 import type { PropertySiteRecord } from "../../../types/property-site"
 import {
   ADMIN_LIVE_PREVIEW_MESSAGE,
@@ -43,6 +44,9 @@ useHead({
 })
 const site = ref<PropertySiteRecord | null>(null)
 const scrollAnchor = ref<string | null>(null)
+const contentLocale = ref<HostivLocale>("fr")
+const assetRevision = ref(0)
+const previewNonce = ref(0)
 
 let heightObserver: ResizeObserver | null = null
 let heightReportFrame = 0
@@ -84,6 +88,9 @@ function onParentMessage(event: MessageEvent) {
 
   site.value = event.data.site
   scrollAnchor.value = event.data.scrollAnchor
+  contentLocale.value = event.data.locale
+  assetRevision.value = event.data.assetRevision ?? 0
+  previewNonce.value = event.data.previewNonce ?? 0
   nextTick(reportHeight)
 }
 
@@ -126,7 +133,10 @@ watch(site, () => {
     :site="site"
     :slug="slug"
     live-preview
+    :content-locale="contentLocale"
     :preview-scroll-anchor="scrollAnchor"
+    :preview-asset-revision="assetRevision"
+    :preview-nonce="previewNonce"
   />
 </template>
 

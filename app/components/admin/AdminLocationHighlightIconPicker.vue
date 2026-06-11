@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref, watch } from "vue"
+import { adminUiFormat } from "../../data/admin-ui"
 import LocationHighlightIcon from "../LocationHighlightIcon.vue"
 import AdminIcon from "./AdminIcon.vue"
 import {
@@ -16,10 +17,16 @@ const emit = defineEmits<{
   "update:modelValue": [value: LocationHighlightIconId]
 }>()
 
+const { ui } = useAdminUi()
+
 const rootRef = ref<HTMLElement | null>(null)
 const isOpen = ref(false)
 
 const activeLabel = computed(() => locationHighlightIconLabel(props.modelValue))
+
+const iconsAvailableLabel = computed(() =>
+  adminUiFormat(ui.value.common.iconsAvailable, { label: activeLabel.value })
+)
 
 function togglePanel() {
   isOpen.value = !isOpen.value
@@ -82,7 +89,7 @@ onUnmounted(() => {
     <div class="admin-benefit-icon-picker__canvas">
       <div class="admin-benefit-icon-picker__scrim admin-benefit-icon-picker__scrim--top" aria-hidden="true" />
       <div class="admin-benefit-icon-picker__scrim admin-benefit-icon-picker__scrim--bottom" aria-hidden="true" />
-      <p class="admin-benefit-icon-picker__label">Icône</p>
+      <p class="admin-benefit-icon-picker__label">{{ ui.common.icon }}</p>
 
       <div class="admin-benefit-icon-picker__center">
         <div class="admin-benefit-icon-picker__preview" aria-hidden="true">
@@ -99,7 +106,7 @@ onUnmounted(() => {
         @click="togglePanel"
       >
         <AdminIcon name="layout" :size="16" />
-        {{ isOpen ? "Fermer" : "Choisir" }}
+        {{ isOpen ? ui.common.close : ui.common.choose }}
       </button>
     </div>
 
@@ -107,12 +114,12 @@ onUnmounted(() => {
       v-if="isOpen"
       class="admin-benefit-icon-picker__popover"
       role="dialog"
-      aria-label="Choisir une icône"
+      :aria-label="ui.common.chooseIcon"
     >
       <div
         class="admin-benefit-icon-picker__grid admin-benefit-icon-picker__grid--compact"
         role="listbox"
-        :aria-label="`Icônes disponibles — ${activeLabel}`"
+        :aria-label="iconsAvailableLabel"
       >
         <button
           v-for="option in LOCATION_HIGHLIGHT_ICON_OPTIONS"

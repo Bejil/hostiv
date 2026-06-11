@@ -1,3 +1,6 @@
+import { getSiteBookingModalLabels } from "../data/site-booking-modal-labels"
+import { siteUiFormat } from "../data/site-ui-labels"
+import type { HostivLocale } from "../types/hostiv-locale"
 import type { PropertyBookingConfig } from "../types/property-site"
 import { normalizeBookingConfig } from "./booking-config"
 
@@ -15,7 +18,8 @@ export type BookingPriceEstimate = {
 export function computeBookingPriceEstimate(
   nights: number,
   mainGuests: number,
-  config: PropertyBookingConfig
+  config: PropertyBookingConfig,
+  locale: HostivLocale = "fr"
 ): BookingPriceEstimate {
   const normalizedConfig = normalizeBookingConfig(config)
   const safeNights = Math.max(1, Math.round(nights))
@@ -26,12 +30,20 @@ export function computeBookingPriceEstimate(
   let discountRate = 0
   let discountLabel: string | null = null
 
+  const modalLabels = getSiteBookingModalLabels(locale)
+
   if (normalizedConfig.month_discount_enabled && safeNights >= normalizedConfig.month_min_nights) {
     discountRate = normalizedConfig.month_discount_rate
-    discountLabel = `Remise long séjour (−${Math.round(normalizedConfig.month_discount_rate * 100)} %, ${normalizedConfig.month_min_nights} nuits et +)`
+    discountLabel = siteUiFormat(modalLabels.monthDiscount, {
+      percent: Math.round(normalizedConfig.month_discount_rate * 100),
+      min: normalizedConfig.month_min_nights
+    })
   } else if (normalizedConfig.week_discount_enabled && safeNights >= normalizedConfig.week_min_nights) {
     discountRate = normalizedConfig.week_discount_rate
-    discountLabel = `Remise semaine (−${Math.round(normalizedConfig.week_discount_rate * 100)} %, à partir de ${normalizedConfig.week_min_nights} nuits)`
+    discountLabel = siteUiFormat(modalLabels.weekDiscount, {
+      percent: Math.round(normalizedConfig.week_discount_rate * 100),
+      min: normalizedConfig.week_min_nights
+    })
   }
 
   const lodgingAfterDiscountEur = Math.round(baseLodgingEur * (1 - discountRate))
@@ -55,8 +67,8 @@ export function computeBookingPriceEstimate(
   }
 }
 
-export function formatEuro(amount: number) {
-  return new Intl.NumberFormat("fr-FR", {
+export function formatEuro(amount: number, locale: HostivLocale = "fr") {
+  return new Intl.NumberFormat(locale === "en" ? "en-GB" : "fr-FR", {
     style: "currency",
     currency: "EUR",
     maximumFractionDigits: 0

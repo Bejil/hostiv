@@ -11,6 +11,8 @@ const emit = defineEmits<{
   confirm: []
 }>()
 
+const { ui } = useAdminUi()
+
 watch(
   () => props.open,
   (isOpen) => {
@@ -64,8 +66,8 @@ function onKeydown(event: KeyboardEvent) {
             <span class="hostiv-modal__accent" aria-hidden="true" />
             <span class="hostiv-modal__glow" aria-hidden="true" />
 
-            <button type="button" class="hostiv-modal__close" aria-label="Fermer" @click="emit('cancel')">
-              <span class="sr-only">Fermer</span>
+            <button type="button" class="hostiv-modal__close" :aria-label="ui.common.close" @click="emit('cancel')">
+              <span class="sr-only">{{ ui.common.close }}</span>
               <X :size="18" stroke-width="2" />
             </button>
 
@@ -75,21 +77,21 @@ function onKeydown(event: KeyboardEvent) {
               </span>
               <div class="hostiv-modal__head-text">
                 <h2 id="admin-benefit-card-delete-title" class="hostiv-modal__title">
-                  Supprimer cet atout ?
+                  {{ ui.modals.delete.benefitCard.title }}
                 </h2>
                 <p id="admin-benefit-card-delete-desc" class="hostiv-modal__subtitle">
-                  <strong>{{ cardTitle }}</strong> sera retiré des atouts affichés sur votre site.
-                  Cette action est irréversible.
+                  <strong>{{ cardTitle }}</strong>{{ ui.modals.delete.benefitCard.descriptionTail }}
+                  {{ ui.modals.delete.irreversible }}
                 </p>
               </div>
             </header>
 
             <footer class="hostiv-modal__danger-footer">
               <button type="button" class="hostiv-btn hostiv-btn--secondary" @click="emit('cancel')">
-                Annuler
+                {{ ui.common.cancel }}
               </button>
               <button type="button" class="hostiv-btn hostiv-btn--accent" @click="emit('confirm')">
-                Supprimer
+                {{ ui.common.delete }}
               </button>
             </footer>
           </div>

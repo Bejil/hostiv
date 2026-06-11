@@ -2,7 +2,7 @@ import { extname } from "node:path"
 import { DEFAULT_PROPERTY_ASSETS_BUCKET, resolvePropertyAssetUrl } from "../../app/utils/property-asset-url"
 import { requireSupabaseAdmin } from "./supabase"
 
-const ALLOWED_ROOTS = new Set(["gallery", "branding", "about", "platforms"])
+const ALLOWED_ROOTS = new Set(["gallery", "branding", "about", "platforms", "guide"])
 
 const MIME_BY_EXT: Record<string, string> = {
   ".jpg": "image/jpeg",
@@ -53,7 +53,7 @@ export async function uploadPropertyAsset(
   if (!safeRelative) {
     throw createError({
       statusCode: 400,
-      message: "Chemin de fichier invalide (gallery, branding, about ou platforms)."
+      message: "Chemin de fichier invalide (gallery, branding, about, platforms ou guide)."
     })
   }
 
@@ -67,7 +67,7 @@ export async function uploadPropertyAsset(
   const { error } = await supabase.storage.from(bucket).upload(storageKey, file.data, {
     upsert: true,
     contentType,
-    cacheControl: "31536000"
+    cacheControl: "3600"
   })
 
   if (error) {
@@ -78,10 +78,12 @@ export async function uploadPropertyAsset(
   }
 
   const supabaseUrl = process.env.SUPABASE_URL?.trim() || ""
+  const cacheRevision = Date.now()
   const publicUrl = resolvePropertyAssetUrl(`/${safeRelative}`, {
     slug: normalizedSlug,
     supabaseUrl,
-    bucket
+    bucket,
+    cacheRevision
   })
 
   return {

@@ -1,3 +1,5 @@
+import type { HostivLocale } from "../types/hostiv-locale"
+import { getAdminUi } from "./admin-ui"
 import type { AdminNavSectionId, AdminSectionId } from "./admin-nav-sections"
 
 /** Ancre DOM dans PropertySitePageView (`data-live-section`). */
@@ -30,13 +32,20 @@ export function adminLivePreviewAnchorFor(
 
 export type AdminLivePreviewViewport = "desktop" | "tablet" | "mobile"
 
-/** Largeur « design » du viewport (px) — utilisée dans l’iframe pour des media queries réalistes. */
-export const ADMIN_LIVE_PREVIEW_VIEWPORTS: {
-  id: AdminLivePreviewViewport
-  label: string
-  widthPx: number
-}[] = [
-  { id: "desktop", label: "Bureau", widthPx: 1280 },
-  { id: "tablet", label: "Tablette", widthPx: 768 },
-  { id: "mobile", label: "Mobile", widthPx: 390 }
-]
+export function getAdminLivePreviewViewports(locale: HostivLocale = "fr") {
+  const labels = getAdminUi(locale).preview.viewports
+  const widths: Record<AdminLivePreviewViewport, number> = {
+    desktop: 1280,
+    tablet: 768,
+    mobile: 390
+  }
+
+  return labels.map((item) => ({
+    id: item.id as AdminLivePreviewViewport,
+    label: item.label,
+    widthPx: widths[item.id as AdminLivePreviewViewport]
+  }))
+}
+
+/** @deprecated Utiliser getAdminLivePreviewViewports(locale) */
+export const ADMIN_LIVE_PREVIEW_VIEWPORTS = getAdminLivePreviewViewports("fr")

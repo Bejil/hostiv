@@ -157,5 +157,24 @@ const size = computed(() => props.size ?? 18)
       />
       <circle cx="12" cy="10" r="3" />
     </template>
+    <template v-else-if="name === 'baby'">
+      <path d="M9 12h.01M15 12h.01" />
+      <path d="M10 16c.5 2.5 1.2 4 2 4s1.5-1.5 2-4" />
+      <path d="M12 2a4 4 0 0 1 4 4v1" />
+    </template>
+    <template v-else-if="name === 'child'">
+      <circle cx="12" cy="8.5" r="2.75" />
+      <path d="M7 19.5v-1a5 5 0 0 1 10 0v1" />
+    </template>
+    <template v-else-if="name === 'file'">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" />
+      <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" />
+    </template>
+    <template v-else-if="name === 'sparkles'">
+      <path
+        d="M9.937 15.5A2 2 0 0 0 8.5 14.5l-6.135-1.582a.5.5 0 0 1-.365-.365l-1.582-6.135A2 2 0 0 0 .5 4.5l1.582-6.135a.5.5 0 0 1 .365-.365L8.5.418a2 2 0 0 0 1 5 0l6.135 1.582a.5.5 0 0 1 .365.365l1.582 6.135a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.365.365L14.5 8.5a2 2 0 0 0-1.437 1.437Z"
+      />
+      <path d="M20 3v4M22 5h-4M4 17v4M2 19h4" />
+    </template>
   </svg>
 </template>

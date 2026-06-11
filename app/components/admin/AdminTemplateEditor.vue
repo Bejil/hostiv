@@ -1,14 +1,19 @@
 <script setup lang="ts">
 import { ChevronDown } from "@lucide/vue"
+import { adminUiFormat } from "../../data/admin-ui"
 import {
   DEFAULT_SITE_TEMPLATE_ID,
-  siteTemplateOptions,
+  getSiteTemplateOptions,
   type SiteTemplateId
 } from "../../data/site-templates"
 
 const props = defineProps<{
   modelValue: SiteTemplateId | null
 }>()
+
+const { ui, locale } = useAdminUi()
+const ext = computed(() => ui.value.extended)
+const templateOptions = computed(() => getSiteTemplateOptions(locale.value))
 
 const emit = defineEmits<{
   "update:modelValue": [value: SiteTemplateId]
@@ -20,15 +25,15 @@ const triggerRef = ref<HTMLButtonElement | null>(null)
 const panelStyle = ref<Record<string, string>>({})
 
 const selectedOption = computed(() => {
-  const match = siteTemplateOptions.find((option) => option.id === props.modelValue)
+  const options = templateOptions.value
+  const match = options.find((option) => option.id === props.modelValue)
 
   if (match) {
     return match
   }
 
   return (
-    siteTemplateOptions.find((option) => option.id === DEFAULT_SITE_TEMPLATE_ID) ??
-    siteTemplateOptions[0]
+    options.find((option) => option.id === DEFAULT_SITE_TEMPLATE_ID) ?? options[0]
   )
 })
 
@@ -117,7 +122,7 @@ onUnmounted(() => {
       :class="[`admin-template-item--${selectedOption.id}`]"
       aria-haspopup="listbox"
       :aria-expanded="open"
-      :aria-label="`Thème du site : ${selectedOption.name}`"
+      :aria-label="adminUiFormat(ext.template.ariaSelected, { name: selectedOption.name })"
       @click.stop="toggleOpen"
     >
       <span class="admin-template-item__swatch" aria-hidden="true" />
@@ -139,10 +144,10 @@ onUnmounted(() => {
         class="admin-template-editor admin-template-select__panel"
         :style="panelStyle"
         role="listbox"
-        aria-label="Choisir un thème"
+        :aria-label="ext.template.listAria"
       >
         <li
-          v-for="option in siteTemplateOptions"
+          v-for="option in templateOptions"
           :key="option.id"
           class="admin-template-item"
           :class="{
@@ -166,7 +171,7 @@ onUnmounted(() => {
               <span class="admin-template-item__description">{{ option.description }}</span>
             </span>
             <span class="admin-template-item__status">
-              {{ modelValue === option.id ? "Actif" : "Choisir" }}
+              {{ modelValue === option.id ? ext.template.statusActive : ext.template.choose }}
             </span>
           </button>
         </li>

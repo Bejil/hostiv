@@ -2,6 +2,7 @@
 import { X } from "@lucide/vue"
 import AdminField from "./AdminField.vue"
 import type { PropertyHouseRule } from "../../types/property-site"
+import { getAdminCustomizationCardExamples } from "../../data/admin-customization-field-examples"
 
 const props = defineProps<{
   open: boolean
@@ -14,11 +15,19 @@ const emit = defineEmits<{
   save: [value: PropertyHouseRule]
 }>()
 
+const { ui, locale } = useAdminUi()
+
+const cardExamples = computed(() => getAdminCustomizationCardExamples(locale.value))
+
 const draft = ref<PropertyHouseRule>({ ...props.rule })
 
 const canSave = computed(() => Boolean(draft.value.title.trim() && draft.value.text.trim()))
 
-const modalTitle = computed(() => (props.isNew ? "Ajouter une règle" : "Modifier la règle"))
+const modalTitle = computed(() =>
+  props.isNew
+    ? ui.value.editors.houseRules.modal.addTitle
+    : ui.value.editors.houseRules.modal.editTitle
+)
 
 watch(
   () => [props.open, props.rule] as const,
@@ -98,8 +107,8 @@ function save() {
             <span class="hostiv-modal__accent" aria-hidden="true" />
             <span class="hostiv-modal__glow" aria-hidden="true" />
 
-            <button type="button" class="hostiv-modal__close" aria-label="Fermer" @click="emit('close')">
-              <span class="sr-only">Fermer</span>
+            <button type="button" class="hostiv-modal__close" :aria-label="ui.common.close" @click="emit('close')">
+              <span class="sr-only">{{ ui.common.close }}</span>
               <X :size="18" stroke-width="2" />
             </button>
 
@@ -109,37 +118,39 @@ function save() {
                   {{ modalTitle }}
                 </h2>
                 <p class="hostiv-modal__subtitle">
-                  {{ draft.title.trim() || "Sans titre" }}
+                  {{ draft.title.trim() || ui.editors.shared.untitled }}
                 </p>
               </div>
             </header>
 
             <div class="admin-house-rule-modal__fields">
               <AdminField
-                label="Titre"
+                :label="ui.editors.shared.title"
                 required
                 full-width
+                :examples="[...cardExamples.houseRuleTitle]"
                 :model-value="draft.title"
                 @update:model-value="patchDraft({ title: $event as string })"
               />
               <AdminField
-                label="Texte"
+                :label="ui.editors.shared.text"
                 required
                 type="textarea"
                 :rows="4"
                 full-width
+                :examples="[...cardExamples.houseRuleText]"
                 :model-value="draft.text"
                 @update:model-value="patchDraft({ text: $event as string })"
               />
             </div>
 
             <p v-if="!canSave" class="admin-house-rule-modal__hint">
-              Le titre et le texte sont obligatoires pour enregistrer.
+              {{ ui.editors.houseRules.modal.saveHint }}
             </p>
 
             <footer class="admin-house-rule-modal__footer">
               <button type="button" class="hostiv-btn hostiv-btn--secondary" @click="emit('close')">
-                Annuler
+                {{ ui.common.cancel }}
               </button>
               <button
                 type="button"
@@ -147,7 +158,7 @@ function save() {
                 :disabled="!canSave"
                 @click="save"
               >
-                Enregistrer
+                {{ ui.common.save }}
               </button>
             </footer>
           </div>

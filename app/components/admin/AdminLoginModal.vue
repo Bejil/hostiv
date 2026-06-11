@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Loader2 } from "@lucide/vue"
+import { adminUiFormat } from "../../data/admin-ui"
 
 const props = defineProps<{
   open: boolean
@@ -19,16 +20,21 @@ const emit = defineEmits<{
   submit: []
 }>()
 
+const { ui } = useAdminUi()
+
 const modalTitle = computed(() =>
-  props.checking ? "Vérification de la session" : "Connexion"
+  props.checking ? ui.value.login.checkingTitle : ui.value.login.title
 )
 
 const modalSubtitle = computed(() => {
   if (props.checking) {
-    return "Nous vérifions que vous êtes toujours connecté…"
+    return ui.value.login.checkingSubtitle
   }
 
-  return `Accédez au backoffice de ${props.brandLabel} (/${props.slug}) avec votre compte Hostiv.`
+  return adminUiFormat(ui.value.login.subtitle, {
+    name: props.brandLabel,
+    slug: props.slug
+  })
 })
 
 watch(
@@ -117,27 +123,27 @@ function onKeydown(event: KeyboardEvent) {
 
             <div v-if="checking" class="hostiv-modal__session-check" aria-live="polite">
               <Loader2 :size="28" stroke-width="1.75" class="hostiv-modal__submit-spinner" />
-              <p>Vérification de la session…</p>
+              <p>{{ ui.login.checkingSession }}</p>
             </div>
 
             <form v-else class="hostiv-modal__form" @submit.prevent="emit('submit')">
               <label class="hostiv-modal__field">
-                <span>E-mail</span>
+                <span>{{ ui.login.email }}</span>
                 <input
                   v-model="email"
                   type="email"
                   autocomplete="email"
-                  placeholder="vous@exemple.com"
+                  :placeholder="ui.login.emailPlaceholder"
                   required
                 />
               </label>
               <label class="hostiv-modal__field">
-                <span>Mot de passe</span>
+                <span>{{ ui.login.password }}</span>
                 <input
                   v-model="password"
                   type="password"
                   autocomplete="current-password"
-                  placeholder="Votre mot de passe"
+                  :placeholder="ui.login.passwordPlaceholder"
                   required
                 />
               </label>
@@ -156,7 +162,7 @@ function onKeydown(event: KeyboardEvent) {
                   class="hostiv-modal__submit-spinner"
                   aria-hidden="true"
                 />
-                {{ submitting ? "Connexion…" : "Se connecter" }}
+                {{ submitting ? ui.login.submitting : ui.login.submit }}
               </button>
             </form>
           </div>

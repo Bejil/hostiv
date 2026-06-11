@@ -1,6 +1,6 @@
 import {
-  adminOnboardingStepCount,
-  adminOnboardingSteps,
+  getAdminOnboardingStepCount,
+  getAdminOnboardingSteps,
   evaluateOnboardingStep,
   getFirstIncompleteOnboardingStepIndex,
   isOnboardingRequired,
@@ -28,6 +28,10 @@ export function useAdminOnboarding(options: {
   const syncSidebar = options.syncSidebar ?? true
   const route = useRoute()
   const router = useRouter()
+  const { locale } = useHostivLocale()
+
+  const onboardingSteps = computed(() => getAdminOnboardingSteps(locale.value))
+  const onboardingStepCount = computed(() => getAdminOnboardingStepCount(locale.value))
 
   const phase = ref<AdminOnboardingPhase>("hidden")
   const stepIndex = ref(0)
@@ -35,12 +39,12 @@ export function useAdminOnboarding(options: {
   let autoLaunchDone = false
 
   const currentStep = computed(
-    () => adminOnboardingSteps[stepIndex.value] ?? adminOnboardingSteps[0]
+    () => onboardingSteps.value[stepIndex.value] ?? onboardingSteps.value[0]
   )
 
   const progressPercent = computed(() => {
     const done = storage.value.completedStepIds.length
-    const total = Math.max(adminOnboardingStepCount - 1, 1)
+    const total = Math.max(onboardingStepCount.value - 1, 1)
 
     return Math.min(100, Math.round((done / total) * 100))
   })
@@ -52,7 +56,7 @@ export function useAdminOnboarding(options: {
       return false
     }
 
-    return evaluateOnboardingStep(record, currentStep.value.id)
+    return evaluateOnboardingStep(record, currentStep.value.id, locale.value)
   })
 
   const completedCount = computed(() => storage.value.completedStepIds.length)
@@ -74,7 +78,7 @@ export function useAdminOnboarding(options: {
   }
 
   function goToStep(index: number) {
-    const step = adminOnboardingSteps[index]
+    const step = onboardingSteps.value[index]
 
     if (!step) {
       return
@@ -120,7 +124,7 @@ export function useAdminOnboarding(options: {
   async function nextStep() {
     const record = options.record.value
 
-    if (!record || !evaluateOnboardingStep(record, currentStep.value.id)) {
+    if (!record || !evaluateOnboardingStep(record, currentStep.value.id, locale.value)) {
       return false
     }
 
@@ -130,7 +134,7 @@ export function useAdminOnboarding(options: {
 
     markStepDone(currentStep.value.id)
 
-    if (stepIndex.value >= adminOnboardingSteps.length - 1) {
+    if (stepIndex.value >= onboardingSteps.value.length - 1) {
       await finishTour()
       return true
     }
@@ -190,11 +194,11 @@ export function useAdminOnboarding(options: {
     }
 
     phase.value = "active"
-    goToStep(getFirstIncompleteOnboardingStepIndex(record))
+    goToStep(getFirstIncompleteOnboardingStepIndex(record, locale.value))
   }
 
   function markOnboardingCompleteIfDone(record: PropertyAdminRecord) {
-    if (isOnboardingRequired(record)) {
+    if (isOnboardingRequired(record, locale.value)) {
       return false
     }
 
@@ -303,8 +307,8 @@ export function useAdminOnboarding(options: {
     progressPercent,
     currentStepComplete,
     completedCount,
-    steps: adminOnboardingSteps,
-    totalSteps: adminOnboardingStepCount,
+    steps: onboardingSteps,
+    totalSteps: onboardingStepCount,
     startTour,
     nextStep,
     prevStep,

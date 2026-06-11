@@ -4,7 +4,9 @@ import {
   assertCanPublishProperty,
   getSubscriptionAccessForOwner
 } from "../../../utils/hostiv-subscription"
+import { assertStripeReadyForPublish } from "../../../utils/stripe-connect"
 import { getPropertyAdminBySlug, updatePropertyAdmin } from "../../../utils/property-admin-repository"
+import { sendHostivSitePublishedEmail } from "../../../utils/transactional-email"
 
 export default defineEventHandler(async (event) => {
   const slug = getRouterParam(event, "slug")
@@ -31,15 +33,31 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: "Le slug ne peut pas être modifié." })
   }
 
-  if (body.published === true && !existing.published) {
+  if (body.published === true) {
+    await assertStripeReadyForPublish(slug)
     await assertCanPublishProperty(user.id)
   }
+
+  const wasPublished = Boolean(existing.published)
+  const willPublish = body.published === true
 
   const updated = await updatePropertyAdmin(slug, {
     ...body,
     id: existing.id,
     slug: existing.slug
   })
+
+  if (!wasPublished && willPublish && updated.published) {
+    const ownerEmail = user.email?.trim()
+
+    if (ownerEmail) {
+      void sendHostivSitePublishedEmail({
+        to: ownerEmail,
+        brandName: updated.brand_name,
+        slug: updated.slug
+      })
+    }
+  }
 
   const subscription_access = await getSubscriptionAccessForOwner(user.id, slug)
 
