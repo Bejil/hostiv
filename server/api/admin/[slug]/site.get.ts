@@ -1,4 +1,4 @@
-import { requirePropertyOwner } from "../../../utils/admin-auth"
+import { requirePropertyAdminAccess } from "../../../utils/admin-auth"
 import { getSubscriptionAccessForOwner } from "../../../utils/hostiv-subscription"
 import {
   getPropertyAdminBySlug,
@@ -16,9 +16,9 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 404, statusMessage: "Ce backoffice n’existe pas." })
   }
 
-  const user = await requirePropertyOwner(event, slug)
+  const access = await requirePropertyAdminAccess(event, slug)
 
-  const subscription_access = await getSubscriptionAccessForOwner(user.id, slug)
+  const subscription_access = await getSubscriptionAccessForOwner(access.ownerUserId, slug)
 
   const site = await getPropertyAdminBySlug(slug)
 

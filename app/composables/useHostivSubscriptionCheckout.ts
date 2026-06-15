@@ -98,6 +98,7 @@ export async function verifyHostivSignupCheckout(sessionId: string) {
     fulfilled: boolean
     slug: string | null
     email: string | null
+    email_verification_required?: boolean
     already_completed?: boolean
   }>("/api/hostiv/signup-checkout/verify", {
     query: { session_id: sessionId }

@@ -1,9 +1,12 @@
 import { getBlockedNightDates, mergeBlockedNightDates, parseIcalEvents } from "./ical"
 import { getPropertyCalendarConfig } from "./property-site-repository"
+import { assertAllowedCalendarFeedUrl } from "./calendar-feed-url"
 
 const FETCH_TIMEOUT_MS = 12_000
 
 async function fetchCalendarFeed(url: string) {
+  assertAllowedCalendarFeedUrl(url)
+
   return await $fetch<string>(url, {
     timeout: FETCH_TIMEOUT_MS,
     responseType: "text",

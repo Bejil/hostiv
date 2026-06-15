@@ -2,7 +2,8 @@ import type {
   GuestReview,
   GuestReviewListResult,
   GuestReviewSortField,
-  GuestReviewSortOrder
+  GuestReviewSortOrder,
+  GuestReviewSummary
 } from "../../app/types/guest-review"
 import { requireSupabaseAdmin } from "./supabase"
 
@@ -36,6 +37,81 @@ function mapGuestReview(row: GuestReviewRow): GuestReview {
     created_at: String(row.created_at || ""),
     arrival_date: String(row.arrival_date || ""),
     departure_date: String(row.departure_date || "")
+  }
+}
+
+export function createEmptyGuestReviewSummary(): GuestReviewSummary {
+  return {
+    total: 0,
+    averageRating: 0,
+    withComment: 0,
+    distribution: { "1": 0, "2": 0, "3": 0, "4": 0, "5": 0 },
+    latestReviewAt: null
+  }
+}
+
+export async function getGuestReviewSummaryForProperty(slug: string): Promise<GuestReviewSummary> {
+  const normalizedSlug = slug.trim().toLowerCase()
+  const supabase = requireSupabaseAdmin()
+
+  const { data, error } = await supabase
+    .from("guest_reviews")
+    .select("rating, comment, created_at")
+    .eq("property_slug", normalizedSlug)
+
+  if (error) {
+    console.error("[guest-reviews] summary:", error.message)
+
+    throw createError({
+      statusCode: 502,
+      message: "Impossible de charger les statistiques des avis."
+    })
+  }
+
+  const rows = data ?? []
+
+  if (!rows.length) {
+    return createEmptyGuestReviewSummary()
+  }
+
+  const distribution: GuestReviewSummary["distribution"] = {
+    "1": 0,
+    "2": 0,
+    "3": 0,
+    "4": 0,
+    "5": 0
+  }
+
+  let ratingSum = 0
+  let withComment = 0
+  let latestReviewAt: string | null = null
+
+  for (const row of rows) {
+    const rawRating = Number(row.rating)
+    const bucket = Number.isFinite(rawRating)
+      ? (Math.min(5, Math.max(1, Math.trunc(rawRating))) as 1 | 2 | 3 | 4 | 5)
+      : 1
+
+    distribution[String(bucket) as keyof GuestReviewSummary["distribution"]] += 1
+    ratingSum += Number.isFinite(rawRating) ? rawRating : bucket
+
+    if (String(row.comment || "").trim()) {
+      withComment += 1
+    }
+
+    const createdAt = String(row.created_at || "")
+
+    if (createdAt && (!latestReviewAt || createdAt > latestReviewAt)) {
+      latestReviewAt = createdAt
+    }
+  }
+
+  return {
+    total: rows.length,
+    averageRating: Math.round((ratingSum / rows.length) * 10) / 10,
+    withComment,
+    distribution,
+    latestReviewAt
   }
 }
 

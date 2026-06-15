@@ -49,10 +49,12 @@ export default defineNuxtConfig({
     stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET || "",
     /** Secret pour les tâches planifiées (Vercel Cron → /api/cron/subscription-reminders) */
     cronSecret: process.env.CRON_SECRET || "",
-    /** Optionnel — clé dédiée au chiffrement des inscriptions en attente (sinon dérivée de la service role) */
+    /** Clé dédiée au chiffrement des mots de passe en attente d’inscription (obligatoire en production). */
     hostivSignupEncryptionKey: process.env.HOSTIV_SIGNUP_ENCRYPTION_KEY || "",
     /** Commission plateforme sur chaque réservation (0–100 %, défaut 0) */
     hestiaPlatformFeePercent: process.env.HESTIA_PLATFORM_FEE_PERCENT || "0",
+    /** E-mails autorisés pour /admin (séparés par des virgules) */
+    hostivPlatformAdminEmails: process.env.HOSTIV_PLATFORM_ADMIN_EMAILS || "",
     public: {
       /** Clé publique Stripe pour le formulaire de paiement */
       stripePublishableKey: process.env.NUXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || "",

@@ -364,6 +364,7 @@ function patchAmenityPreviewSections(sections: AmenityPreviewSection[]) {
       :patch-copy-section="ctx.patchCopySection"
     />
     <AdminReviewsEditor
+      :slug="ctx.slug.value"
       :model-value="ctx.getContentList('reviews')"
       @update:model-value="ctx.patchContentList('reviews', $event)"
     />

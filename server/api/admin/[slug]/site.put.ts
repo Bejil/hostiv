@@ -1,12 +1,25 @@
 import type { PropertyAdminUpdatePayload } from "../../../../app/types/property-admin"
-import { requirePropertyOwner } from "../../../utils/admin-auth"
+import { requirePropertyAdminAccess } from "../../../utils/admin-auth"
 import {
   assertCanPublishProperty,
   getSubscriptionAccessForOwner
 } from "../../../utils/hostiv-subscription"
 import { assertStripeReadyForPublish } from "../../../utils/stripe-connect"
 import { getPropertyAdminBySlug, updatePropertyAdmin } from "../../../utils/property-admin-repository"
+import { requireSupabaseAdmin } from "../../../utils/supabase"
 import { sendHostivSitePublishedEmail } from "../../../utils/transactional-email"
+import { assertValidCalendarConfigFeeds } from "../../../utils/validate-calendar-config"
+
+async function readOwnerEmail(ownerUserId: string) {
+  const supabase = requireSupabaseAdmin()
+  const { data, error } = await supabase.auth.admin.getUserById(ownerUserId)
+
+  if (error || !data.user?.email) {
+    return ""
+  }
+
+  return data.user.email.trim()
+}
 
 export default defineEventHandler(async (event) => {
   const slug = getRouterParam(event, "slug")
@@ -15,7 +28,8 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: "Slug manquant." })
   }
 
-  const user = await requirePropertyOwner(event, slug)
+  const access = await requirePropertyAdminAccess(event, slug)
+  const { user, ownerUserId } = access
 
   const existing = await getPropertyAdminBySlug(slug)
 
@@ -35,7 +49,11 @@ export default defineEventHandler(async (event) => {
 
   if (body.published === true) {
     await assertStripeReadyForPublish(slug)
-    await assertCanPublishProperty(user.id)
+    await assertCanPublishProperty(ownerUserId)
+  }
+
+  if (body.calendar_config) {
+    assertValidCalendarConfigFeeds(body.calendar_config)
   }
 
   const wasPublished = Boolean(existing.published)
@@ -48,7 +66,9 @@ export default defineEventHandler(async (event) => {
   })
 
   if (!wasPublished && willPublish && updated.published) {
-    const ownerEmail = user.email?.trim()
+    const ownerEmail = access.isPlatformAdmin
+      ? await readOwnerEmail(ownerUserId)
+      : user.email?.trim() ?? ""
 
     if (ownerEmail) {
       void sendHostivSitePublishedEmail({
@@ -59,7 +79,7 @@ export default defineEventHandler(async (event) => {
     }
   }
 
-  const subscription_access = await getSubscriptionAccessForOwner(user.id, slug)
+  const subscription_access = await getSubscriptionAccessForOwner(ownerUserId, slug)
 
   return {
     ...updated,

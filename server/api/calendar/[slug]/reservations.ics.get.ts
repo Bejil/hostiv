@@ -12,7 +12,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: "Slug manquant." })
   }
 
-  if (!verifyReservationsIcsToken(slug, token)) {
+  if (!(await verifyReservationsIcsToken(slug, token))) {
     throw createError({ statusCode: 403, message: "Lien ICS invalide." })
   }
 

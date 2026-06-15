@@ -121,18 +121,26 @@ export function buildHostivWelcomeEmail(options: {
   propertyName: string
   slug: string
   planLabel: string
+  verificationUrl?: string
 }) {
   const adminUrl = `${getHostivMarketingUrl().replace(/\/$/, "")}/${encodeURIComponent(options.slug)}/admin`
   const firstName = firstNameFromFullName(options.fullName)
+  const needsVerification = Boolean(options.verificationUrl?.trim())
 
   const bodyHtml = buildTransactionalBody({
     eyebrow: "Bienvenue",
     title: "Votre compte Hostiv est prêt",
     greeting: `Bonjour ${firstName},`,
-    paragraphs: [
-      "Merci pour votre inscription. Votre espace d’administration est ouvert&nbsp;: personnalisez votre site, configurez les réservations et publiez quand vous êtes prêt.",
-      `Forfait activé&nbsp;: <strong style="color:${C.ink};">${escapeHtmlText(options.planLabel)}</strong>.`
-    ],
+    paragraphs: needsVerification
+      ? [
+          "Merci pour votre inscription. Pour activer votre compte, confirmez d’abord votre adresse e-mail en cliquant sur le bouton ci-dessous.",
+          "Ensuite, personnalisez votre site, configurez les réservations et publiez quand vous êtes prêt.",
+          `Forfait activé&nbsp;: <strong style="color:${C.ink};">${escapeHtmlText(options.planLabel)}</strong>.`
+        ]
+      : [
+          "Merci pour votre inscription. Votre espace d’administration est ouvert&nbsp;: personnalisez votre site, configurez les réservations et publiez quand vous êtes prêt.",
+          `Forfait activé&nbsp;: <strong style="color:${C.ink};">${escapeHtmlText(options.planLabel)}</strong>.`
+        ],
     cards: [
       {
         label: "Votre site",
@@ -140,25 +148,38 @@ export function buildHostivWelcomeEmail(options: {
         secondary: `/${options.slug}`
       }
     ],
-    cta: { label: "Ouvrir mon espace admin", href: adminUrl }
+    cta: needsVerification
+      ? { label: "Confirmer mon e-mail", href: options.verificationUrl! }
+      : { label: "Ouvrir mon espace admin", href: adminUrl }
   })
 
   const text = [
     `Bonjour ${firstName},`,
     "",
     "Votre compte Hostiv est prêt.",
+    needsVerification
+      ? `Confirmez votre e-mail : ${options.verificationUrl}`
+      : "",
     `Site : ${options.propertyName} (/${options.slug})`,
     `Forfait : ${options.planLabel}`,
     "",
     `Espace admin : ${adminUrl}`
-  ].join("\n")
+  ]
+    .filter(Boolean)
+    .join("\n")
 
   return {
-    subject: "Bienvenue sur Hostiv — votre compte est créé",
-    preheader: "Votre espace admin est prêt. Personnalisez et publiez votre site.",
+    subject: needsVerification
+      ? "Bienvenue sur Hostiv — confirmez votre e-mail"
+      : "Bienvenue sur Hostiv — votre compte est créé",
+    preheader: needsVerification
+      ? "Confirmez votre e-mail pour accéder à votre espace admin."
+      : "Votre espace admin est prêt. Personnalisez et publiez votre site.",
     html: buildTransactionalDocument({
       title: "Bienvenue sur Hostiv",
-      preheader: "Votre espace admin est prêt.",
+      preheader: needsVerification
+        ? "Confirmez votre e-mail pour accéder à votre espace admin."
+        : "Votre espace admin est prêt.",
       bodyHtml
     }),
     text

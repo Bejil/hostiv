@@ -45,6 +45,44 @@ const error = ref("")
 const success = ref("")
 const showForgotPassword = ref(false)
 const forgotSuccess = ref(false)
+const modalPanelRef = ref<HTMLElement | null>(null)
+
+function scrollSignupPasswordRulesIntoView() {
+  const run = () => {
+    const panel = modalPanelRef.value
+
+    if (!panel || mode.value !== "signup") {
+      return
+    }
+
+    const rules = panel.querySelector("#hostiv-signup-password-rules")
+
+    if (!rules) {
+      return
+    }
+
+    const panelRect = panel.getBoundingClientRect()
+    const rulesRect = rules.getBoundingClientRect()
+    const overflow = rulesRect.bottom - panelRect.bottom + 12
+
+    if (overflow > 0) {
+      panel.scrollTo({
+        top: panel.scrollTop + overflow,
+        behavior: "smooth"
+      })
+    }
+  }
+
+  nextTick(() => {
+    requestAnimationFrame(run)
+    window.setTimeout(run, 350)
+  })
+}
+
+function onSignupPasswordFocus() {
+  passwordFieldFocused.value = true
+  scrollSignupPasswordRulesIntoView()
+}
 
 const title = computed(() => {
   if (showForgotPassword.value) {
@@ -234,6 +272,7 @@ async function onSignupSubmit() {
   if (!isHostivPasswordValid(pass)) {
     error.value = errors.passwordInvalid
     passwordFieldFocused.value = true
+    scrollSignupPasswordRulesIntoView()
     return
   }
 
@@ -372,6 +411,7 @@ async function onLoginSubmit() {
       >
         <Transition name="hostiv-modal-panel" appear>
           <div
+            ref="modalPanelRef"
             class="hostiv-modal__panel"
             :class="{ 'hostiv-modal__panel--signup': mode === 'signup' }"
             role="dialog"
@@ -549,8 +589,8 @@ async function onLoginSubmit() {
                   autocomplete="new-password"
                   :placeholder="modal.fields.passwordPlaceholderSignup"
                   required
-                  aria-describedby="hostiv-password-rules"
-                  @focus="passwordFieldFocused = true"
+                  aria-describedby="hostiv-signup-password-rules"
+                  @focus="onSignupPasswordFocus"
                   @blur="passwordFieldFocused = false"
                 />
 

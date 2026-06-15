@@ -4,7 +4,6 @@ import AdminField from "./AdminField.vue"
 import AdminGalleryPhotoDeleteModal from "./AdminGalleryPhotoDeleteModal.vue"
 import AdminIcon from "./AdminIcon.vue"
 import AdminImageUpload from "./AdminImageUpload.vue"
-import AdminOnboardingFieldExamples from "./AdminOnboardingFieldExamples.vue"
 import type { PropertyGalleryCategory } from "../../types/property-site"
 import {
   asGalleryText,
@@ -206,34 +205,24 @@ function onPhotoDrop(index: number, event: DragEvent) {
       class="admin-gallery-section-editor__fields"
       :class="{ 'admin-gallery-section-editor__fields--with-examples': showFieldExamples }"
     >
-      <div class="admin-onboarding-fields__field-block">
-        <AdminField
+      <AdminField
           :label="ui.gallery.title"
           :required="markRequired"
           full-width
+          :examples="showFieldExamples ? galleryTitleExamples : undefined"
           :model-value="modelValue.title"
           @update:model-value="patch({ title: $event as string })"
         />
-        <AdminOnboardingFieldExamples
-          v-if="showFieldExamples"
-          :examples="galleryTitleExamples"
-        />
-      </div>
-      <div class="admin-onboarding-fields__field-block">
-        <AdminField
+      <AdminField
           :label="ui.gallery.subtitle"
           :required="markRequired"
           type="textarea"
           :rows="3"
           full-width
+          :examples="showFieldExamples ? gallerySubtitleExamples : undefined"
           :model-value="modelValue.description"
           @update:model-value="patch({ description: $event as string })"
         />
-        <AdminOnboardingFieldExamples
-          v-if="showFieldExamples"
-          :examples="gallerySubtitleExamples"
-        />
-      </div>
     </div>
 
     <div class="admin-gallery-section-editor__photos-head">

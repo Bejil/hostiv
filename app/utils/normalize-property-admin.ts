@@ -95,7 +95,7 @@ function normalizeCopy(copy: PropertySiteCopy | undefined, brandName: string, br
     },
     pricing: base.pricing ?? { eyebrow: "", title: "", intro: "" },
     amenities: base.amenities ?? { eyebrow: "", title: "", intro: "" },
-    reviews: base.reviews ?? { eyebrow: "", title: "" },
+    reviews: base.reviews ?? { eyebrow: "", title: "", intro: "" },
     rules: (() => {
       const rules = base.rules ?? {
         eyebrow: "",

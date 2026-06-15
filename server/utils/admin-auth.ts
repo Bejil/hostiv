@@ -1,6 +1,14 @@
 import { createClient } from "@supabase/supabase-js"
+import type { User } from "@supabase/supabase-js"
 import type { H3Event } from "h3"
 import { getPropertyOwnerUserId } from "./property-admin-repository"
+import { isPlatformAdminEmail } from "./platform-admin-auth"
+
+export type PropertyAdminAccessContext = {
+  user: User
+  ownerUserId: string
+  isPlatformAdmin: boolean
+}
 
 function getBearerToken(event: H3Event) {
   const header = getHeader(event, "authorization") || ""
@@ -12,7 +20,7 @@ function getBearerToken(event: H3Event) {
   return ""
 }
 
-export async function requirePropertyOwner(event: H3Event, slug: string) {
+async function getUserFromBearerToken(event: H3Event) {
   const supabaseUrl = process.env.SUPABASE_URL?.trim()
   const supabaseAnonKey = process.env.SUPABASE_ANON_KEY?.trim()
   const token = getBearerToken(event)
@@ -44,6 +52,14 @@ export async function requirePropertyOwner(event: H3Event, slug: string) {
     })
   }
 
+  return data.user
+}
+
+export async function requirePropertyAdminAccess(
+  event: H3Event,
+  slug: string
+): Promise<PropertyAdminAccessContext> {
+  const user = await getUserFromBearerToken(event)
   const ownerUserId = await getPropertyOwnerUserId(slug)
 
   if (!ownerUserId) {
@@ -53,14 +69,24 @@ export async function requirePropertyOwner(event: H3Event, slug: string) {
     })
   }
 
-  if (ownerUserId !== data.user.id) {
-    throw createError({
-      statusCode: 403,
-      message: "Vous n’êtes pas autorisé à administrer ce site."
-    })
+  if (ownerUserId === user.id) {
+    return { user, ownerUserId, isPlatformAdmin: false }
   }
 
-  return data.user
+  if (isPlatformAdminEmail(user.email)) {
+    return { user, ownerUserId, isPlatformAdmin: true }
+  }
+
+  throw createError({
+    statusCode: 403,
+    message: "Vous n’êtes pas autorisé à administrer ce site."
+  })
+}
+
+export async function requirePropertyOwner(event: H3Event, slug: string) {
+  const access = await requirePropertyAdminAccess(event, slug)
+
+  return access.user
 }
 
 export async function getAuthenticatedUserFromEvent(event: H3Event) {
@@ -85,7 +111,7 @@ export async function getAuthenticatedUserFromEvent(event: H3Event) {
   return data.user
 }
 
-/** true si l’utilisateur connecté est propriétaire du site (slug). */
+/** true si l’utilisateur connecté peut administrer le site (propriétaire ou admin plateforme). */
 export async function isPropertyOwnerUser(event: H3Event, slug: string): Promise<boolean> {
   const user = await getAuthenticatedUserFromEvent(event)
 
@@ -95,5 +121,13 @@ export async function isPropertyOwnerUser(event: H3Event, slug: string): Promise
 
   const ownerUserId = await getPropertyOwnerUserId(slug)
 
-  return Boolean(ownerUserId && ownerUserId === user.id)
+  if (!ownerUserId) {
+    return false
+  }
+
+  if (ownerUserId === user.id) {
+    return true
+  }
+
+  return isPlatformAdminEmail(user.email)
 }

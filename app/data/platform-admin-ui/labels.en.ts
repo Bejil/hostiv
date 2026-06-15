@@ -1,0 +1,307 @@
+import type { PlatformAdminUi } from "./labels.fr"
+
+export const platformAdminUiEn: PlatformAdminUi = {
+  shell: {
+    title: "Hostiv Admin",
+    subtitle: "Platform administration",
+    logout: "Sign out",
+    refresh: "Refresh",
+    loading: "Loading…",
+    errorGeneric: "Something went wrong.",
+    accessDenied: "Access restricted to Hostiv administrators.",
+    notConfigured: "Platform admin not configured (HOSTIV_PLATFORM_ADMIN_EMAILS)."
+  },
+  header: {
+    account: "My account",
+    logout: "Sign out",
+    refresh: "Refresh",
+    platformLabel: "Platform administration"
+  },
+  common: {
+    cancel: "Cancel",
+    close: "Close",
+    save: "Save",
+    saving: "Saving…",
+    delete: "Delete",
+    edit: "Edit"
+  },
+  login: {
+    title: "Admin sign-in",
+    subtitle: "Hostiv team area only",
+    email: "Email",
+    password: "Password",
+    submit: "Sign in",
+    checking: "Checking session…"
+  },
+  dashboard: {
+    title: "Overview",
+    intro: "Run the Hostiv platform at a glance.",
+    hero: {
+      members: "Members",
+      sites: "Sites",
+      activePlans: "Active plans",
+      revenue: "Collected revenue",
+      revenue30d: "Last 30 days"
+    },
+    sections: {
+      plans: "Plan breakdown",
+      activity: "Recent activity",
+      bookings: "Direct bookings",
+      health: "Attention points"
+    },
+    recentPayments: "Latest payments",
+    noRecentPayments: "No payments recorded yet.",
+    estimatedAnnual: "Annual estimate (active plans)",
+    vsLastMonth: "vs last month",
+    kpi: {
+      sites: "Sites",
+      published: "Published",
+      draft: "Drafts",
+      members: "Members",
+      activeSubs: "Active plans",
+      expiredSubs: "Expired plans",
+      unpaidSubs: "Unpaid",
+      pendingSignups: "Pending sign-ups",
+      reservations: "Bookings",
+      gmv: "Booking volume",
+      guestReviews: "Guest reviews",
+      avgRating: "Average rating",
+      estimatedRevenue: "Revenue (est.)",
+      stripeConnect: "Stripe Connect",
+      newMembers30d: "New members (30 d)",
+      newSites30d: "New sites (30 d)",
+      starterActive: "Active Starter",
+      proActive: "Active Pro",
+      starterPlusActive: "Active Starter+",
+      publishedRate: "Publication rate",
+      connectRate: "Stripe Connect set up"
+    },
+    health: {
+      expired: "Expired plans",
+      unpaid: "Unpaid accounts",
+      pendingSignups: "Pending sign-ups",
+      stripeMissing: "Sites without Stripe",
+      drafts: "Draft sites"
+    },
+    checkoutTypes: {
+      hostiv_signup: "Sign-up",
+      hostiv_subscription: "Renewal",
+      hostiv_premium_tools: "Starter+"
+    }
+  },
+  sites: {
+    title: "Sites",
+    intro: "All rental sites hosted on Hostiv.",
+    searchPlaceholder: "Search by name, slug or email…",
+    columns: {
+      site: "Site",
+      member: "Member",
+      plan: "Plan",
+      status: "Status",
+      subscription: "Subscription",
+      reservations: "Bookings",
+      reviews: "Reviews",
+      stripe: "Stripe",
+      created: "Created",
+      actions: "Actions"
+    },
+    published: "Published",
+    draft: "Draft",
+    active: "Active",
+    expired: "Expired",
+    unpaid: "Unpaid",
+    stripeOk: "Connected",
+    stripeMissing: "Not set up",
+    openAdmin: "Site admin",
+    openSite: "View site",
+    deleteSite: "Delete site",
+    empty: "No sites found.",
+    deleteModal: {
+      title: "Delete this site?",
+      subtitle: "This action cannot be undone. The following will be removed:",
+      items: [
+        "Site /{slug} ({brand}) and all its content",
+        "Associated files and images",
+        "The site’s Stripe Connect account",
+        "Booking history stored for this site"
+      ],
+      confirmLabel: "To confirm, type the site address:",
+      confirmation: "Confirmation",
+      deleting: "Deleting…",
+      confirmCta: "Delete site"
+    }
+  },
+  members: {
+    title: "Members",
+    intro: "Hostiv accounts and associated plans.",
+    searchPlaceholder: "Search by email or name…",
+    columns: {
+      member: "Member",
+      plan: "Plan",
+      subscription: "Plan until",
+      starterPlus: "Starter+",
+      site: "Site",
+      registeredAt: "Registration date",
+      stripe: "Stripe",
+      joined: "Joined",
+      actions: "Actions"
+    },
+    yes: "Yes",
+    no: "No",
+    noSite: "—",
+    empty: "No members found.",
+    editMember: "Edit member",
+    deleteMember: "Delete member",
+    viewMember: "View member profile",
+    detailModal: {
+      title: "Member profile",
+      subtitle: "Account and subscription summary.",
+      loadFailed: "Could not load member.",
+      sections: {
+        identity: "Identity",
+        subscription: "Subscription",
+        site: "Site",
+        timeline: "Key dates"
+      },
+      fields: {
+        name: "Name",
+        email: "Email",
+        plan: "Plan",
+        subscription: "Status",
+        paidUntil: "Plan until",
+        premiumUntil: "Starter+ until",
+        site: "Address",
+        siteStatus: "Publication",
+        stripe: "Stripe Connect",
+        joined: "Registered",
+        subscriptionStarted: "Subscribed since"
+      }
+    },
+    deleteModal: {
+      title: "Delete this member?",
+      subtitle: "This action cannot be undone. The following will be removed:",
+      items: [
+        "The Hostiv account and backoffice access",
+        "The associated site if any",
+        "Linked files, images and Stripe Connect data"
+      ],
+      confirmLabel: "To confirm, type the member’s email:",
+      confirmation: "Confirmation",
+      deleting: "Deleting…",
+      confirmCta: "Delete member"
+    },
+    editModal: {
+      title: "Edit member",
+      subtitle: "Update profile and sign-in credentials.",
+      firstName: "First name",
+      lastName: "Last name",
+      email: "Email",
+      newPassword: "New password (optional)",
+      confirmPassword: "Confirm password",
+      loadFailed: "Could not load member.",
+      saveFailed: "Could not save changes.",
+      saved: "Member updated.",
+      passwordMismatch: "Passwords do not match.",
+      passwordInvalid: "Password does not meet all security requirements."
+    }
+  },
+  revenue: {
+    title: "Revenue",
+    intro: "Hostiv Stripe payment history (sign-ups, renewals and Starter+).",
+    summary: {
+      total: "Total collected",
+      payments: "Payments",
+      last30d: "Last 30 days",
+      signup: "Sign-ups",
+      renewal: "Renewals",
+      premiumTools: "Starter+"
+    },
+    columns: {
+      date: "Date",
+      type: "Type",
+      product: "Product",
+      member: "Member",
+      site: "Site",
+      amount: "Amount"
+    },
+    checkoutTypes: {
+      hostiv_signup: "Sign-up",
+      hostiv_subscription: "Renewal",
+      hostiv_premium_tools: "Starter+"
+    },
+    empty: "No payments recorded yet.",
+    historyNote:
+      "Only payments recorded after this history feature was enabled appear here. New Stripe payments are added automatically."
+  },
+  reservations: {
+    title: "Bookings",
+    intro: "Direct bookings across all sites.",
+    summary: {
+      total: "Total",
+      confirmed: "Confirmed",
+      cancelled: "Cancelled",
+      gmv: "Total volume",
+      avg: "Average booking",
+      last30d: "Last 30 days"
+    },
+    columns: {
+      site: "Site",
+      guest: "Guest",
+      dates: "Stay",
+      amount: "Amount",
+      status: "Status",
+      created: "Created"
+    },
+    confirmed: "Confirmed",
+    cancelled: "Cancelled",
+    empty: "No bookings."
+  },
+  signups: {
+    title: "Sign-ups",
+    intro: "Pending or recent sign-ups before/after Stripe payment.",
+    columns: {
+      contact: "Contact",
+      property: "Project",
+      plan: "Plan",
+      status: "Status",
+      created: "Created",
+      expires: "Expires"
+    },
+    status: {
+      pending: "Pending",
+      completed: "Completed",
+      failed: "Failed"
+    },
+    empty: "No sign-ups."
+  },
+  guestReviews: {
+    title: "Guest reviews",
+    intro: "Reviews left by guests after their stay.",
+    columns: {
+      site: "Site",
+      guest: "Guest",
+      rating: "Rating",
+      stay: "Stay",
+      comment: "Comment",
+      date: "Date"
+    },
+    empty: "No reviews."
+  },
+  alerts: {
+    title: "Alerts",
+    intro: "Attention points: expirations, Stripe, drafts, sign-ups.",
+    empty: "No alerts at the moment.",
+    severity: {
+      critical: "Critical",
+      warning: "Warning",
+      info: "Info"
+    }
+  },
+  filters: {
+    all: "All",
+    active: "Active",
+    expired: "Expired",
+    published: "Published",
+    draft: "Drafts"
+  }
+}

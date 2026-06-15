@@ -106,6 +106,8 @@ export type PropertyReview = {
   quote: string
   /** Note libre (ex. 4,97/5, 5/10, 18/50) — convertie en étoiles sur 5 à l’affichage. */
   rating: string
+  /** Lien vers l’avis voyageur source (import admin). */
+  guest_review_id?: string
 }
 
 export type PropertySiteCopy = {

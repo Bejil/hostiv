@@ -14,6 +14,7 @@ export function canUseAdminPremiumTools(access: HostivSubscriptionAccess | null 
 
   return hasHostivPremiumTools({
     plan: access.plan,
+    paid_until: access.paid_until,
     premium_tools_until: access.premium_tools_until
   })
 }

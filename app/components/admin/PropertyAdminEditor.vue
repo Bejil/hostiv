@@ -470,7 +470,7 @@ defineExpose({
         <section v-if="activeMenuSection === 'general'" class="admin-panel admin-panel--general">
           <div class="admin-general-layout admin-general-layout--single">
             <div class="admin-general-main">
-              <AdminGeneralSubscriptionCard :access="subscriptionAccess" />
+              <AdminGeneralSubscriptionCard :slug="slug" :access="subscriptionAccess" />
 
               <div class="admin-subpanel admin-general-card admin-general-card--publication">
                 <div class="admin-subpanel__head admin-general-card__head">

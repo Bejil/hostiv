@@ -146,22 +146,6 @@ const subscriptionNotice = computed(() => {
   return ui.value.shell.subscriptionRequired
 })
 
-function onSubscriptionRenewed(plan: PropertyAdminRecord["subscription_plan"]) {
-  if (!draft.value) {
-    return
-  }
-
-  draft.value = {
-    ...draft.value,
-    subscription_plan: plan,
-    subscription_access: draft.value.subscription_access
-      ? { ...draft.value.subscription_access, plan }
-      : undefined
-  }
-
-  void fetchSite({ forceLoading: true })
-}
-
 async function clearSubscriptionQuery() {
   const query = { ...route.query }
 
@@ -298,24 +282,39 @@ const showLoginModal = computed(
 )
 
 async function ensurePropertyExists() {
+  const onboarding = route.query.onboarding === "1"
+  const maxAttempts = onboarding ? 10 : 1
+  const delayMs = 600
+
   try {
-    await $fetch<{ ok: true }>(`/api/properties/${slug.value}/exists`)
-    propertyExists.value = true
-  } catch (err: unknown) {
-    const e = err as { statusCode?: number; statusMessage?: string; data?: { statusMessage?: string } }
+    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+      try {
+        await $fetch<{ ok: true }>(`/api/properties/${slug.value}/exists`)
+        propertyExists.value = true
+        return
+      } catch (err: unknown) {
+        const e = err as { statusCode?: number; statusMessage?: string; data?: { statusMessage?: string } }
 
-    if (e.statusCode === 404) {
-      showError({
-        statusCode: 404,
-        statusMessage: ui.value.shell.propertyNotFound,
-        data: { notFoundKind: "backoffice" as const },
-        fatal: true
-      })
-      return
+        if (e.statusCode === 404) {
+          if (onboarding && attempt < maxAttempts) {
+            await new Promise((resolve) => window.setTimeout(resolve, delayMs))
+            continue
+          }
+
+          showError({
+            statusCode: 404,
+            statusMessage: ui.value.shell.propertyNotFound,
+            data: { notFoundKind: "backoffice" as const },
+            fatal: true
+          })
+          return
+        }
+
+        configError.value =
+          e.statusMessage || e.data?.statusMessage || ui.value.shell.verifyBackofficeFailed
+        return
+      }
     }
-
-    configError.value =
-      e.statusMessage || e.data?.statusMessage || ui.value.shell.verifyBackofficeFailed
   } finally {
     propertyExistsChecked.value = true
   }
@@ -383,6 +382,13 @@ useHead({
 
     return [
       {
+        key: "favicon-ico",
+        rel: "icon",
+        href,
+        type: faviconMimeType(path)
+      },
+      {
+        key: "favicon-svg",
         rel: "icon",
         href,
         type: faviconMimeType(path)
@@ -908,7 +914,6 @@ useHead({
             variant="access"
             :access="subscriptionAccess"
             :slug="slug"
-            @plan-updated="onSubscriptionRenewed"
           />
 
         </template>

@@ -1,5 +1,8 @@
 import { requirePropertyOwner } from "../../../utils/admin-auth"
-import { buildReservationsIcsFeedUrl } from "../../../utils/reservations-ics-token"
+import {
+  buildReservationsIcsFeedUrl,
+  ensurePropertyReservationsIcsToken
+} from "../../../utils/reservations-ics-token"
 
 export default defineEventHandler(async (event) => {
   const slug = getRouterParam(event, "slug")
@@ -10,7 +13,9 @@ export default defineEventHandler(async (event) => {
 
   await requirePropertyOwner(event, slug)
 
+  const token = await ensurePropertyReservationsIcsToken(slug)
+
   return {
-    url: buildReservationsIcsFeedUrl(event, slug)
+    url: buildReservationsIcsFeedUrl(event, slug, token)
   }
 })

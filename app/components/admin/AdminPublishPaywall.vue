@@ -1,9 +1,8 @@
 <script setup lang="ts">
-import { Loader2, X } from "@lucide/vue"
+import { X } from "@lucide/vue"
 import { getHostivLanding, type HostivPricingPlanId } from "../../data/hostivLanding"
 import { adminUiFormat } from "../../data/admin-ui"
 import type { HostivSubscriptionAccess } from "../../utils/hostiv-subscription-access"
-import type { HostivSubscriptionPlan } from "../../utils/hostiv-subscription-plan"
 import { useSupabaseClient } from "../../composables/useSupabaseClient"
 import { startHostivSubscriptionCheckout } from "../../composables/useHostivSubscriptionCheckout"
 import HostivSignupPlanCard from "../hostiv/HostivSignupPlanCard.vue"
@@ -28,12 +27,10 @@ const isAccessGate = computed(() => props.variant === "access")
 
 const emit = defineEmits<{
   close: []
-  "plan-updated": [plan: HostivSubscriptionPlan]
 }>()
 
 const pricingPlans = computed(() => getHostivLanding(locale.value).pricing.plans)
 const selectedPlanId = ref<HostivPricingPlanId>(props.access.plan)
-const planSaving = ref(false)
 const paying = ref(false)
 const error = ref("")
 
@@ -98,37 +95,13 @@ async function authHeaders(): Promise<Record<string, string>> {
   return token ? { Authorization: `Bearer ${token}` } : {}
 }
 
-async function selectPlan(planId: HostivPricingPlanId) {
-  if (planId === selectedPlanId.value || planSaving.value) {
+function selectPlan(planId: HostivPricingPlanId) {
+  if (planId === selectedPlanId.value || paying.value) {
     return
   }
 
-  const previous = selectedPlanId.value
-
   selectedPlanId.value = planId
-  planSaving.value = true
   error.value = ""
-
-  try {
-    const response = await $fetch<{
-      subscription_plan: HostivSubscriptionPlan
-      subscription_access: HostivSubscriptionAccess
-    }>(`/api/admin/${props.slug}/subscription-plan`, {
-      method: "PUT",
-      headers: await authHeaders(),
-      body: { subscription_plan: planId }
-    })
-
-    selectedPlanId.value = response.subscription_plan
-    emit("plan-updated", response.subscription_plan)
-  } catch (err: unknown) {
-    selectedPlanId.value = previous
-    const e = err as { data?: { message?: string }; message?: string }
-
-    error.value = e.data?.message || e.message || ext.value.publishPaywall.planChangeFailed
-  } finally {
-    planSaving.value = false
-  }
 }
 
 async function onPay() {
@@ -209,14 +182,8 @@ async function onPay() {
                 <HostivSignupPlanCard
                   :plan-id="plan.id"
                   :selected="selectedPlanId === plan.id"
-                  :disabled="planSaving || paying"
+                  :disabled="paying"
                   @select="selectPlan(plan.id as HostivPricingPlanId)"
-                />
-                <Loader2
-                  v-if="planSaving && selectedPlanId === plan.id"
-                  :size="14"
-                  class="admin-publish-paywall__plan-spinner"
-                  aria-hidden="true"
                 />
               </div>
             </div>
@@ -235,15 +202,13 @@ async function onPay() {
             <button
               type="button"
               class="admin-btn admin-btn--primary"
-              :disabled="paying || planSaving"
+              :disabled="paying"
               @click="onPay"
             >
               {{
                 paying
                   ? ext.publishPaywall.paying
-                  : planSaving
-                    ? ext.publishPaywall.planUpdating
-                    : adminUiFormat(ext.publishPaywall.payCta, {
+                  : adminUiFormat(ext.publishPaywall.payCta, {
                         price: String(selectedPlan.price)
                       })
               }}

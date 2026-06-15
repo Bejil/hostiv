@@ -14,12 +14,15 @@ import {
   resolveHostivSignupEncryptionSecret
 } from "./hostiv-pending-signup-crypto"
 import { provisionPropertyForUser } from "./hostiv-provision-property"
+import { generateHostivEmailVerificationLink } from "./hostiv-email-verification"
+import { resolveHostivSiteBaseUrlForSignupFulfillment } from "./hostiv-site-base-url"
 import {
   sendHostivWelcomeEmail,
   sendPlatformNewSignupAlert,
   sendSignupFailureEmails
 } from "./transactional-email"
 import { applyHostivSubscriptionPaymentToAccount } from "./hostiv-subscription-payment"
+import { recordHostivStripeCheckoutPayment } from "./hostiv-stripe-payment-record"
 import { getStripeClient } from "./stripe-client"
 import { requireSupabaseAdmin } from "./supabase"
 
@@ -231,6 +234,80 @@ async function loadPendingSignup(pendingId: string) {
   return data as PendingSignupRow | null
 }
 
+async function loadPendingSignupByStripeSessionId(sessionId: string) {
+  const supabase = requireSupabaseAdmin()
+
+  const { data, error } = await supabase
+    .from("hostiv_pending_signups")
+    .select(
+      "id, email, password_ciphertext, full_name, property_name, property_slug, subscription_plan, stripe_session_id, status, user_id, expires_at"
+    )
+    .eq("stripe_session_id", sessionId)
+    .maybeSingle()
+
+  if (error) {
+    console.error("[hostiv-signup-checkout] load pending by session:", error.message)
+
+    throw createError({
+      statusCode: 502,
+      message: "Impossible de lire votre inscription."
+    })
+  }
+
+  return data as PendingSignupRow | null
+}
+
+async function resolveAlreadyProvisionedSignup(session: Stripe.Checkout.Session) {
+  if (session.payment_status !== "paid" || !isHostivSignupCheckoutSession(session)) {
+    return null
+  }
+
+  const slug = String(session.metadata?.property_slug || "").trim().toLowerCase()
+  const email = String(session.customer_email || session.customer_details?.email || "")
+    .trim()
+    .toLowerCase()
+
+  if (!slug || !email) {
+    return null
+  }
+
+  const supabase = requireSupabaseAdmin()
+
+  const { data: property, error: propertyError } = await supabase
+    .from("properties")
+    .select("owner_user_id")
+    .eq("slug", slug)
+    .maybeSingle()
+
+  if (propertyError) {
+    console.error("[hostiv-signup-checkout] resolve provisioned property:", propertyError.message)
+
+    return null
+  }
+
+  if (!property?.owner_user_id) {
+    return null
+  }
+
+  const { data: authData, error: authError } = await supabase.auth.admin.getUserById(
+    property.owner_user_id
+  )
+
+  if (authError || !authData.user?.email) {
+    return null
+  }
+
+  if (authData.user.email.trim().toLowerCase() !== email) {
+    return null
+  }
+
+  return {
+    slug,
+    email,
+    user_id: property.owner_user_id
+  }
+}
+
 function isHostivSignupCheckoutSession(session: Stripe.Checkout.Session) {
   return session.metadata?.hostiv_checkout === HOSTIV_SIGNUP_CHECKOUT_METADATA_TYPE
 }
@@ -264,10 +341,26 @@ async function markPendingSignupCompleted(pendingId: string, userId: string) {
 
 export async function fulfillHostivSignupCheckoutSession(
   stripe: Stripe,
-  sessionId: string,
-  encryptionSecret: string
+  sessionOrId: Stripe.Checkout.Session | string,
+  encryptionSecret: string,
+  options?: { requestOrigin?: string }
 ) {
-  const session = await stripe.checkout.sessions.retrieve(sessionId)
+  const session =
+    typeof sessionOrId === "string"
+      ? await stripe.checkout.sessions.retrieve(sessionOrId)
+      : sessionOrId
+  const sessionId = session.id
+  const siteBaseUrl = resolveHostivSiteBaseUrlForSignupFulfillment({
+    requestOrigin: options?.requestOrigin,
+    stripeSuccessUrl: session.success_url
+  })
+
+  if (!sessionId) {
+    throw createError({
+      statusCode: 400,
+      message: "Session de paiement invalide."
+    })
+  }
 
   if (!isHostivSignupCheckoutSession(session)) {
     throw createError({
@@ -278,16 +371,33 @@ export async function fulfillHostivSignupCheckoutSession(
 
   const pendingId = String(session.metadata?.pending_signup_id || "").trim()
 
-  if (!pendingId) {
-    throw createError({
-      statusCode: 400,
-      message: "Inscription en attente introuvable."
-    })
-  }
-
-  const pending = await loadPendingSignup(pendingId)
+  let pending = pendingId ? await loadPendingSignup(pendingId) : null
 
   if (!pending) {
+    pending = await loadPendingSignupByStripeSessionId(sessionId)
+  }
+
+  if (!pending) {
+    const recovered = await resolveAlreadyProvisionedSignup(session)
+
+    if (recovered) {
+      await recordHostivStripeCheckoutPayment(session, "hostiv_signup", {
+        userId: recovered.user_id,
+        memberEmail: recovered.email,
+        propertySlug: recovered.slug,
+        subscriptionPlan: session.metadata?.subscription_plan
+      })
+
+      return {
+        fulfilled: true as const,
+        session,
+        user_id: recovered.user_id,
+        slug: recovered.slug,
+        email: recovered.email,
+        already_completed: true as const
+      }
+    }
+
     throw createError({
       statusCode: 404,
       message: "Inscription en attente introuvable ou expirée."
@@ -295,6 +405,13 @@ export async function fulfillHostivSignupCheckoutSession(
   }
 
   if (pending.status === "completed" && pending.user_id) {
+    await recordHostivStripeCheckoutPayment(session, "hostiv_signup", {
+      userId: pending.user_id,
+      memberEmail: pending.email,
+      propertySlug: pending.property_slug,
+      subscriptionPlan: pending.subscription_plan
+    })
+
     return {
       fulfilled: true as const,
       session,
@@ -355,7 +472,7 @@ export async function fulfillHostivSignupCheckoutSession(
   const { data: createdUser, error: createUserError } = await supabase.auth.admin.createUser({
     email: pending.email,
     password,
-    email_confirm: true,
+    email_confirm: false,
     user_metadata: {
       full_name: pending.full_name,
       property_name: pending.property_name,
@@ -396,12 +513,29 @@ export async function fulfillHostivSignupCheckoutSession(
     })
     await markPendingSignupCompleted(pendingId, userId)
 
+    let verificationUrl = ""
+
+    try {
+      verificationUrl = await generateHostivEmailVerificationLink({
+        email: pending.email,
+        password,
+        propertySlug: slug,
+        siteBaseUrl
+      })
+    } catch (verificationError) {
+      const detail =
+        verificationError instanceof Error ? verificationError.message : String(verificationError)
+
+      console.error("[hostiv-signup-checkout] email verification link:", detail)
+    }
+
     void sendHostivWelcomeEmail({
       to: pending.email,
       fullName: pending.full_name,
       propertyName: pending.property_name,
       slug,
-      plan
+      plan,
+      verificationUrl: verificationUrl || undefined
     })
 
     void sendPlatformNewSignupAlert({
@@ -410,6 +544,13 @@ export async function fulfillHostivSignupCheckoutSession(
       propertyName: pending.property_name,
       slug,
       plan
+    })
+
+    await recordHostivStripeCheckoutPayment(session, "hostiv_signup", {
+      userId,
+      memberEmail: pending.email,
+      propertySlug: slug,
+      subscriptionPlan: plan
     })
   } catch (error) {
     console.error("[hostiv-signup-checkout] provision:", error)
@@ -439,6 +580,7 @@ export async function fulfillHostivSignupCheckoutSession(
     slug,
     email: pending.email,
     subscription_plan: plan,
+    email_verification_required: true as const,
     already_completed: false as const
   }
 }

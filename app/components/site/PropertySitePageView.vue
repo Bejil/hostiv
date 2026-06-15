@@ -123,7 +123,7 @@ const copy = computed(() => {
     },
     pricing: content?.copy?.pricing ?? { eyebrow: "", title: "", intro: "" },
     amenities: content?.copy?.amenities ?? { eyebrow: "", title: "", intro: "" },
-    reviews: content?.copy?.reviews ?? { eyebrow: "", title: "" },
+    reviews: content?.copy?.reviews ?? { eyebrow: "", title: "", intro: "" },
     rules: content?.copy?.rules ?? {
       eyebrow: "",
       title: "",
@@ -2905,9 +2905,16 @@ const vReviewQuoteFade: Directive<HTMLElement> = {
       :style="{ '--testimonials-section-bg': testimonialsSectionBg }"
     >
       <div class="page-band__inner">
-        <div class="testimonials-head">
-          <p class="eyebrow eyebrow-light">{{ copy.reviews.eyebrow }}</p>
-          <h2>{{ copy.reviews.title }}</h2>
+        <div class="testimonials-top">
+          <div class="testimonials-head">
+            <p class="eyebrow eyebrow-light">{{ copy.reviews.eyebrow }}</p>
+            <h2>{{ copy.reviews.title }}</h2>
+            <p v-if="copy.reviews.intro.trim()" class="testimonials-intro">
+              {{ copy.reviews.intro }}
+            </p>
+          </div>
+
+          <ReviewsSummaryBlock :reviews="reviews" :locale="contentLocale" variant="site" />
         </div>
 
         <div

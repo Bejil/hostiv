@@ -69,13 +69,29 @@ export const adminUiLabelsExtendedFr = {
     footerStarterPlusUpsell:
       "Starter + : guide d’accueil PDF et factures réservations (+{price}€ / {period}).",
     footerStarterPlusActive:
-      "Guide d’accueil PDF et factures réservations actifs jusqu’à la fin de Starter +."
+      "Guide d’accueil PDF et factures réservations actifs jusqu’à la fin de Starter +.",
+    starterPlusInsightTitle: "Boostez votre forfait Starter",
+    starterPlusInsightKicker: "Option Starter +",
+    starterPlusInsightCta: "Activer Starter + — {price}€ / {period}"
   },
   guestReviews: {
     loading: "Chargement des avis...",
     errors: {
       load: "Impossible de charger les avis.",
       delete: "Suppression impossible."
+    },
+    summary: {
+      ariaLabel: "Synthèse des avis voyageurs",
+      averageRating: "Note moyenne",
+      outOfFive: "sur 5",
+      totalReviews: "Avis reçus",
+      withComment: "Avec commentaire",
+      withCommentRate: "{percent} % du total",
+      latestReview: "Dernier avis",
+      distribution: "Répartition des notes",
+      starCount: "{count} avis",
+      starCountOne: "1 avis",
+      noDate: "—"
     },
     empty: {
       title: "Aucun avis pour le moment",
@@ -98,7 +114,10 @@ export const adminUiLabelsExtendedFr = {
     paginationNext: "Suivant",
     stayDates: "Séjour : {dates}",
     deleteConfirmTitle: "Supprimer cet avis ?",
-    deleteConfirmBody: "Cette action est définitive."
+    deleteConfirmBody: "Cette action est définitive.",
+    addVerbatim: "Ajouter aux verbatims",
+    addVerbatimAlready: "Déjà ajouté",
+    addVerbatimDisabled: "Commentaire vide — impossible d’ajouter ce verbatim."
   },
   reservations: {
     status: {
@@ -239,6 +258,10 @@ export const adminUiLabelsExtendedFr = {
     urlLabel: "URL ICS",
     hint:
       "Collez ce lien dans la section « importer un calendrier » de votre plateforme externe. Seules les réservations confirmées sur votre site y figurent.",
+    rotateHint:
+      "Si ce lien a été partagé par erreur, régénérez-le : l’ancien lien sera immédiatement invalidé.",
+    rotateCta: "Régénérer le lien",
+    rotating: "Régénération…",
     copied: "Copié",
     copyCta: "Copier le lien"
   },
@@ -555,6 +578,8 @@ export const adminUiLabelsExtendedFr = {
     },
     includedGuestsHint: "Nombre de voyageurs couverts par le tarif de base.",
     examples: {
+      brandName: ["The Grand Appartement", "Maison des Lilas"],
+      logo: ["Logo horizontal sur fond clair", "PNG ou SVG, fond transparent de préférence"],
       brandMeta: ["Le Chesnay · Versailles", "Appartement familial · 10 min du centre"],
       heroPhoto: [
         "Salon lumineux vu depuis l’entrée",
@@ -588,7 +613,9 @@ export const adminUiLabelsExtendedFr = {
       hostIntro: [
         "Je m’occupe personnellement de l’accueil et reste disponible pendant votre séjour pour répondre à vos questions.",
         "Nous habitons à proximité : arrivée autonome le soir, conseils sur le quartier le lendemain si besoin."
-      ]
+      ],
+      nightPrice: ["95 € / nuit", "120 € en haute saison"],
+      includedGuests: ["2 voyageurs", "4 voyageurs (famille)"]
     }
   },
   template: {

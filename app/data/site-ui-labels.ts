@@ -23,6 +23,15 @@ export type SiteUiLabels = {
   platform: {
     averageRating: string
   }
+  reviews: {
+    summaryAria: string
+    averageLabel: string
+    starsAria: string
+    reviewCount: string
+    reviewCountPlural: string
+    basedOnRated: string
+    basedOnRatedPlural: string
+  }
   visualGalleryCta: SiteVisualGalleryCta
   rulesSchedule: SiteRulesScheduleLabels
   booking: {
@@ -77,6 +86,15 @@ const SITE_UI_FR: SiteUiLabels = {
   },
   platform: {
     averageRating: "Note moyenne de {rating}"
+  },
+  reviews: {
+    summaryAria: "Synthèse des avis",
+    averageLabel: "Note moyenne",
+    starsAria: "Évaluation {rating}",
+    reviewCount: "{count} avis",
+    reviewCountPlural: "{count} avis",
+    basedOnRated: "Basée sur {count} avis noté",
+    basedOnRatedPlural: "Basée sur {count} avis notés"
   },
   visualGalleryCta: {
     eyebrow: "Galerie complète",
@@ -140,6 +158,15 @@ const SITE_UI_EN: SiteUiLabels = {
   },
   platform: {
     averageRating: "Average rating of {rating}"
+  },
+  reviews: {
+    summaryAria: "Reviews summary",
+    averageLabel: "Average rating",
+    starsAria: "Rating {rating}",
+    reviewCount: "{count} review",
+    reviewCountPlural: "{count} reviews",
+    basedOnRated: "Based on {count} rated review",
+    basedOnRatedPlural: "Based on {count} rated reviews"
   },
   visualGalleryCta: {
     eyebrow: "Full gallery",

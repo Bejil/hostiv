@@ -28,7 +28,8 @@ export default defineEventHandler(async (event) => {
 
   const stripe = getStripeClient(stripeSecretKey)
   const result = await fulfillHostivStripeCheckoutSession(stripe, sessionId, {
-    encryptionSecret
+    encryptionSecret,
+    requestOrigin: getRequestURL(event).origin
   })
 
   if (!("slug" in result) || !result.fulfilled) {
@@ -45,6 +46,8 @@ export default defineEventHandler(async (event) => {
     fulfilled: true,
     slug: result.slug,
     email: result.email,
+    email_verification_required:
+      "email_verification_required" in result ? Boolean(result.email_verification_required) : true,
     already_completed: "already_completed" in result ? result.already_completed : false
   }
 })

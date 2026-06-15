@@ -1,8 +1,8 @@
 import type Stripe from "stripe"
 import { hostivPricing } from "../../app/data/hostivLanding"
 import { applyHostivPremiumToolsPaymentToAccount } from "./hostiv-premium-tools-payment"
+import { recordHostivStripeCheckoutPayment } from "./hostiv-stripe-payment-record"
 import { getStripeClient } from "./stripe-client"
-import { hostivPricing } from "../../app/data/hostivLanding"
 import {
   getUserEmailById,
   sendHostivPremiumToolsPurchasedEmail,
@@ -133,6 +133,12 @@ export async function fulfillHostivPremiumToolsCheckoutSession(
       })
     }
   }
+
+  await recordHostivStripeCheckoutPayment(session, "hostiv_premium_tools", {
+    userId,
+    memberEmail: ownerEmail,
+    propertySlug
+  })
 
   return {
     fulfilled: true as const,

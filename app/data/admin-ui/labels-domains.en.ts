@@ -143,6 +143,25 @@ export const adminUiLabelsDomainsEn = {
       addButton: "Add a review",
       empty: "No reviews yet. Use « Add a review » to create one.",
       lead: "Reviews scroll in a carousel on the page.",
+      addChoice: {
+        title: "Add a review",
+        subtitle: "Create one manually or reuse a review submitted by a guest.",
+        createTitle: "Create manually",
+        createDescription: "Write a review from scratch (author, rating, quote).",
+        fromGuestTitle: "From guest reviews",
+        fromGuestDescription: "Pick a review submitted by a guest after their stay."
+      },
+      guestPicker: {
+        title: "Choose a guest review",
+        subtitle: "Only reviews with a comment that have not been imported yet are listed.",
+        loading: "Loading guest reviews…",
+        select: "Choose",
+        count: "{count} review available",
+        countPlural: "{count} reviews available",
+        emptyTitle: "No reviews to import",
+        emptyDescription:
+          "Reviews already imported or without a comment are hidden here. Check the « Guest reviews » section."
+      },
       modal: {
         addTitle: "Add a review",
         editTitle: "Edit review",

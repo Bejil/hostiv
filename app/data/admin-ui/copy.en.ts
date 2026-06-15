@@ -316,6 +316,14 @@ export const adminCopySectionsEn: AdminCopySection[] = [
           "Very positive experiences around peace and welcome",
           "What guests say after their stay"
         ]
+      },
+      {
+        key: "intro",
+        label: "Introduction",
+        examples: [
+          "Authentic feedback collected after each stay.",
+          "The average rating is calculated automatically from your reviews."
+        ]
       }
     ]
   },

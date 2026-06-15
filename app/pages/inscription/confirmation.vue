@@ -15,7 +15,7 @@ useHostivMarketingHead()
 const route = useRoute()
 const router = useRouter()
 
-const status = ref<"loading" | "signing-in" | "ready" | "pending" | "error">("loading")
+const status = ref<"loading" | "signing-in" | "ready" | "verify-email" | "pending" | "error">("loading")
 const slug = ref<string | null>(null)
 const email = ref<string | null>(null)
 const errorMessage = ref("")
@@ -39,6 +39,16 @@ async function tryAutoLoginToAdmin(propertySlug: string, accountEmail: string | 
     })
 
     if (error) {
+      const message = error.message || ""
+
+      if (/email not confirmed|e-mail not confirmed/i.test(message)) {
+        clearHostivSignupLoginCredentials()
+        slug.value = propertySlug
+        email.value = accountEmail
+        status.value = "verify-email"
+        return true
+      }
+
       return false
     }
 
@@ -73,7 +83,13 @@ async function confirmSignup() {
 
       slug.value = result.slug
       email.value = result.email
-      status.value = "ready"
+
+      if (result.email_verification_required) {
+        status.value = "verify-email"
+      } else {
+        status.value = "ready"
+      }
+
       await router.replace({ path: route.path, query: {} })
       return
     }
@@ -116,6 +132,28 @@ onMounted(() => {
                 : "Nous activons votre forfait et créons votre site. Cela ne prend que quelques secondes."
             }}
           </p>
+        </div>
+
+        <div v-else-if="status === 'verify-email'" class="hostiv-signup-confirmation__card">
+          <h1 class="hostiv-h2">Confirmez votre e-mail</h1>
+          <p class="hostiv-signup-confirmation__lead">
+            Votre compte et votre site sont créés. Un e-mail de confirmation vient de vous être envoyé —
+            cliquez sur le lien pour activer votre accès au backoffice.
+          </p>
+          <p v-if="email" class="hostiv-signup-confirmation__email">
+            E-mail du compte : <strong>{{ email }}</strong>
+          </p>
+          <p class="hostiv-signup-confirmation__lead">
+            Pensez à vérifier vos spams. Une fois confirmé, connectez-vous avec le mot de passe choisi
+            à l’inscription.
+          </p>
+          <NuxtLink
+            v-if="adminPath"
+            :to="adminPath"
+            class="hostiv-btn hostiv-btn--primary hostiv-signup-confirmation__cta"
+          >
+            J’ai confirmé mon e-mail — accéder au backoffice
+          </NuxtLink>
         </div>
 
         <div v-else-if="status === 'ready'" class="hostiv-signup-confirmation__card">
@@ -173,6 +211,11 @@ onMounted(() => {
   background: #fff;
   box-shadow: var(--h-shadow-soft);
   text-align: center;
+  color: var(--h-ink);
+}
+
+.hostiv-signup-confirmation__card .hostiv-h2 {
+  color: var(--h-ink);
 }
 
 .hostiv-signup-confirmation__lead {

@@ -1,12 +1,20 @@
 <script setup lang="ts">
+import AdminReviewAddChoiceModal from "./AdminReviewAddChoiceModal.vue"
 import AdminReviewDeleteModal from "./AdminReviewDeleteModal.vue"
 import AdminReviewEditModal from "./AdminReviewEditModal.vue"
+import AdminReviewGuestPickerModal from "./AdminReviewGuestPickerModal.vue"
 import AdminIcon from "./AdminIcon.vue"
 import { adminUiFormat } from "../../data/admin-ui"
+import type { GuestReview } from "../../types/guest-review"
 import type { PropertyReview } from "../../types/property-site"
+import {
+  createPropertyReviewId,
+  mapGuestReviewToPropertyReview
+} from "../../utils/guest-review-verbatim"
 import { ratingToStars } from "../../utils/platform-rating-stars"
 
 const props = defineProps<{
+  slug: string
   modelValue: PropertyReview[]
 }>()
 
@@ -14,23 +22,22 @@ const emit = defineEmits<{
   "update:modelValue": [value: PropertyReview[]]
 }>()
 
-const { ui } = useAdminUi()
+const { ui, locale } = useAdminUi()
 
+const addChoiceOpen = ref(false)
+const guestPickerOpen = ref(false)
 const editModalOpen = ref(false)
 const deleteModalOpen = ref(false)
 const editingIndex = ref(0)
 const deletingIndex = ref<number | null>(null)
 const isCreatingNew = ref(false)
+const prefillReview = ref<PropertyReview | null>(null)
 const dragIndex = ref<number | null>(null)
 const dragOverIndex = ref<number | null>(null)
 
-function createReviewId() {
-  return `review-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
-}
-
 function createEmptyReview(): PropertyReview {
   return {
-    id: createReviewId(),
+    id: createPropertyReviewId(),
     author: "",
     date: "",
     quote: "",
@@ -40,7 +47,7 @@ function createEmptyReview(): PropertyReview {
 
 const editingReview = computed(() => {
   if (isCreatingNew.value) {
-    return createEmptyReview()
+    return prefillReview.value ?? createEmptyReview()
   }
 
   return props.modelValue[editingIndex.value] ?? createEmptyReview()
@@ -75,12 +82,44 @@ function reviewMeta(review: PropertyReview) {
 }
 
 function openAdd() {
+  addChoiceOpen.value = true
+}
+
+function closeAddChoice() {
+  addChoiceOpen.value = false
+}
+
+function openCreateManual() {
+  prefillReview.value = null
+  isCreatingNew.value = true
+  editingIndex.value = props.modelValue.length
+  editModalOpen.value = true
+}
+
+function onChooseCreate() {
+  closeAddChoice()
+  openCreateManual()
+}
+
+function onChooseFromGuest() {
+  closeAddChoice()
+  guestPickerOpen.value = true
+}
+
+function closeGuestPicker() {
+  guestPickerOpen.value = false
+}
+
+function onGuestReviewSelected(guestReview: GuestReview) {
+  closeGuestPicker()
+  prefillReview.value = mapGuestReviewToPropertyReview(guestReview, locale.value)
   isCreatingNew.value = true
   editingIndex.value = props.modelValue.length
   editModalOpen.value = true
 }
 
 function openEdit(index: number) {
+  prefillReview.value = null
   isCreatingNew.value = false
   editingIndex.value = index
   editModalOpen.value = true
@@ -89,6 +128,7 @@ function openEdit(index: number) {
 function closeEdit() {
   editModalOpen.value = false
   isCreatingNew.value = false
+  prefillReview.value = null
 }
 
 function saveEdit(value: PropertyReview) {
@@ -245,6 +285,21 @@ function onDrop(index: number, event: DragEvent) {
         </div>
       </li>
     </ul>
+
+    <AdminReviewAddChoiceModal
+      :open="addChoiceOpen"
+      @close="closeAddChoice"
+      @create="onChooseCreate"
+      @from-guest="onChooseFromGuest"
+    />
+
+    <AdminReviewGuestPickerModal
+      :open="guestPickerOpen"
+      :slug="slug"
+      :existing-reviews="modelValue"
+      @close="closeGuestPicker"
+      @select="onGuestReviewSelected"
+    />
 
     <AdminReviewEditModal
       v-if="editModalOpen"

@@ -45,6 +45,14 @@ export function resolveHostivSignupEncryptionSecret(config: {
     return dedicated
   }
 
+  if (process.env.NODE_ENV === "production") {
+    throw createError({
+      statusCode: 503,
+      message:
+        "HOSTIV_SIGNUP_ENCRYPTION_KEY requis en production (openssl rand -base64 32)."
+    })
+  }
+
   const fallback = String(config.supabaseServiceRoleKey || "").trim()
 
   if (!fallback) {

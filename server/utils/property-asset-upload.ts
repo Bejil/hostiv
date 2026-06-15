@@ -10,9 +10,10 @@ const MIME_BY_EXT: Record<string, string> = {
   ".png": "image/png",
   ".webp": "image/webp",
   ".gif": "image/gif",
-  ".svg": "image/svg+xml",
   ".ico": "image/x-icon"
 }
+
+const BLOCKED_EXTENSIONS = new Set([".svg", ".html", ".htm", ".xml"])
 
 function sanitizeStorageRelativePath(raw: string) {
   const cleaned = raw
@@ -60,7 +61,22 @@ export async function uploadPropertyAsset(
   const storageKey = `${normalizedSlug}/${safeRelative}`
   const bucket = process.env.NUXT_PUBLIC_PROPERTY_ASSETS_BUCKET?.trim() || DEFAULT_PROPERTY_ASSETS_BUCKET
   const ext = extname(file.filename || safeRelative).toLowerCase()
+
+  if (BLOCKED_EXTENSIONS.has(ext)) {
+    throw createError({
+      statusCode: 400,
+      message: "Format de fichier non autorisé (JPEG, PNG, WebP, GIF ou ICO uniquement)."
+    })
+  }
+
   const contentType = file.type || MIME_BY_EXT[ext] || "application/octet-stream"
+
+  if (contentType === "image/svg+xml" || contentType.includes("html")) {
+    throw createError({
+      statusCode: 400,
+      message: "Format de fichier non autorisé (JPEG, PNG, WebP, GIF ou ICO uniquement)."
+    })
+  }
 
   const supabase = requireSupabaseAdmin()
 

@@ -146,6 +146,45 @@ export async function deleteStripeConnectAccount(
   }
 }
 
+export async function deletePropertyAndConnectedResources(property: {
+  id: string
+  slug: string
+  stripe_account_id?: string | null
+}): Promise<void> {
+  const normalizedSlug = property.slug.trim().toLowerCase()
+  const stripeAccountId =
+    typeof property.stripe_account_id === "string" ? property.stripe_account_id.trim() : ""
+  const stripeSecretKey = String(process.env.STRIPE_SECRET_KEY || "").trim()
+
+  if (stripeAccountId && stripeSecretKey) {
+    const stripe = getStripeClient(stripeSecretKey)
+    await deleteStripeConnectAccount(stripe, stripeAccountId)
+  } else if (stripeAccountId && !stripeSecretKey) {
+    console.warn(
+      "[hostiv-account] STRIPE_SECRET_KEY missing — Connect account not deleted at Stripe:",
+      stripeAccountId
+    )
+  }
+
+  await deletePropertyStorageAssets(normalizedSlug)
+
+  const supabase = requireSupabaseAdmin()
+
+  const { error: deletePropertyError } = await supabase
+    .from("properties")
+    .delete()
+    .eq("id", property.id)
+
+  if (deletePropertyError) {
+    console.error("[hostiv-account] property delete:", deletePropertyError.message)
+
+    throw createError({
+      statusCode: 502,
+      message: "Impossible de supprimer le site."
+    })
+  }
+}
+
 export async function deleteHostivAccountForProperty(slug: string, userId: string): Promise<void> {
   const normalizedSlug = slug.trim().toLowerCase()
   const supabase = requireSupabaseAdmin()
@@ -179,36 +218,7 @@ export async function deleteHostivAccountForProperty(slug: string, userId: strin
   const { data: ownerAuth, error: ownerAuthError } = await supabase.auth.admin.getUserById(userId)
   const ownerEmail = ownerAuthError ? "" : ownerAuth.user?.email?.trim() ?? ""
 
-  const stripeAccountId =
-    typeof property.stripe_account_id === "string" ? property.stripe_account_id.trim() : ""
-
-  const stripeSecretKey = String(process.env.STRIPE_SECRET_KEY || "").trim()
-
-  if (stripeAccountId && stripeSecretKey) {
-    const stripe = getStripeClient(stripeSecretKey)
-    await deleteStripeConnectAccount(stripe, stripeAccountId)
-  } else if (stripeAccountId && !stripeSecretKey) {
-    console.warn(
-      "[hostiv-account] STRIPE_SECRET_KEY missing — Connect account not deleted at Stripe:",
-      stripeAccountId
-    )
-  }
-
-  await deletePropertyStorageAssets(normalizedSlug)
-
-  const { error: deletePropertyError } = await supabase
-    .from("properties")
-    .delete()
-    .eq("id", property.id)
-
-  if (deletePropertyError) {
-    console.error("[hostiv-account] property delete:", deletePropertyError.message)
-
-    throw createError({
-      statusCode: 502,
-      message: "Impossible de supprimer votre site."
-    })
-  }
+  await deletePropertyAndConnectedResources(property)
 
   const { error: deleteUserError } = await supabase.auth.admin.deleteUser(userId)
 

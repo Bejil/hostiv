@@ -6,6 +6,7 @@ import {
   hostivPlanPriceCents
 } from "../../app/utils/hostiv-subscription-pricing"
 import { applyHostivSubscriptionPaymentToAccount } from "./hostiv-subscription-payment"
+import { recordHostivStripeCheckoutPayment } from "./hostiv-stripe-payment-record"
 import { getStripeClient } from "./stripe-client"
 import { requireSupabaseAdmin } from "./supabase"
 import {
@@ -144,6 +145,13 @@ export async function fulfillHostivSubscriptionCheckoutSession(
       paidUntil: payment.paid_until
     })
   }
+
+  await recordHostivStripeCheckoutPayment(session, "hostiv_subscription", {
+    userId,
+    memberEmail: ownerEmail,
+    propertySlug,
+    subscriptionPlan: payment.subscription_plan
+  })
 
   return {
     fulfilled: true as const,

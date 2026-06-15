@@ -1,4 +1,4 @@
-import { requirePropertyOwner } from "../../../../utils/admin-auth"
+import { requirePropertyPremiumTools } from "../../../../utils/hostiv-premium-tools-access"
 import { buildWelcomeGuideHtml } from "../../../../utils/welcome-guide-html"
 import { normalizePropertyAdminRecord } from "../../../../../app/utils/normalize-property-admin"
 import { normalizeWelcomeGuide } from "../../../../../app/utils/welcome-guide-content"
@@ -11,7 +11,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: "Paramètre manquant." })
   }
 
-  await requirePropertyOwner(event, slug)
+  await requirePropertyPremiumTools(event, slug)
 
   const body = await readBody<{ record?: PropertyAdminRecord } | PropertyAdminRecord>(event)
   const incoming = (body as { record?: PropertyAdminRecord })?.record ?? (body as PropertyAdminRecord)

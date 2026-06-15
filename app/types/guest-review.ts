@@ -22,6 +22,15 @@ export type GuestReviewListResult = {
   page: number
   pageSize: number
   pageCount: number
+  summary?: GuestReviewSummary
+}
+
+export type GuestReviewSummary = {
+  total: number
+  averageRating: number
+  withComment: number
+  distribution: Record<"1" | "2" | "3" | "4" | "5", number>
+  latestReviewAt: string | null
 }
 
 export type GuestReviewFormContext = {

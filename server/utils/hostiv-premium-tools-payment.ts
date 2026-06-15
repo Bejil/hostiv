@@ -47,6 +47,7 @@ export async function applyHostivPremiumToolsPaymentToAccount(userId: string, no
   if (
     hasHostivPremiumTools({
       plan: account.subscription_plan,
+      paid_until: account.paid_until,
       premium_tools_until: account.premium_tools_until,
       now
     })

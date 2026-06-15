@@ -316,6 +316,14 @@ export const adminCopySectionsFr: AdminCopySection[] = [
           "Des expériences très positives autour du calme et de l’accueil",
           "Ce que disent les voyageurs après leur séjour"
         ]
+      },
+      {
+        key: "intro",
+        label: "Introduction",
+        examples: [
+          "Des retours authentiques recueillis après chaque séjour.",
+          "La note moyenne est calculée automatiquement à partir de vos verbatims."
+        ]
       }
     ]
   },

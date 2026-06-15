@@ -68,13 +68,29 @@ export const adminUiLabelsExtendedEn = {
     footerStarterPlusUpsell:
       "Starter +: welcome guide PDF and booking invoices (+€{price} / {period}).",
     footerStarterPlusActive:
-      "Welcome guide PDF and booking invoices active until Starter + ends."
+      "Welcome guide PDF and booking invoices active until Starter + ends.",
+    starterPlusInsightTitle: "Upgrade your Starter plan",
+    starterPlusInsightKicker: "Starter + add-on",
+    starterPlusInsightCta: "Enable Starter + — €{price} / {period}"
   },
   guestReviews: {
     loading: "Loading reviews...",
     errors: {
       load: "Unable to load reviews.",
       delete: "Unable to delete this review."
+    },
+    summary: {
+      ariaLabel: "Guest reviews overview",
+      averageRating: "Average rating",
+      outOfFive: "out of 5",
+      totalReviews: "Reviews received",
+      withComment: "With a comment",
+      withCommentRate: "{percent}% of total",
+      latestReview: "Latest review",
+      distribution: "Rating breakdown",
+      starCount: "{count} reviews",
+      starCountOne: "1 review",
+      noDate: "—"
     },
     empty: {
       title: "No reviews yet",
@@ -97,7 +113,10 @@ export const adminUiLabelsExtendedEn = {
     paginationNext: "Next",
     stayDates: "Stay: {dates}",
     deleteConfirmTitle: "Delete this review?",
-    deleteConfirmBody: "This action cannot be undone."
+    deleteConfirmBody: "This action cannot be undone.",
+    addVerbatim: "Add to reviews",
+    addVerbatimAlready: "Already added",
+    addVerbatimDisabled: "Empty comment — this review cannot be added as a verbatim."
   },
   reservations: {
     status: {
@@ -235,6 +254,10 @@ export const adminUiLabelsExtendedEn = {
     urlLabel: "ICS URL",
     hint:
       "Paste this link in the « import calendar » section of your external platform. Only confirmed bookings on your site are included.",
+    rotateHint:
+      "If this link was shared by mistake, regenerate it — the old link will stop working immediately.",
+    rotateCta: "Regenerate link",
+    rotating: "Regenerating…",
     copied: "Copied",
     copyCta: "Copy link"
   },
@@ -546,6 +569,8 @@ export const adminUiLabelsExtendedEn = {
     },
     includedGuestsHint: "Number of guests covered by the base rate.",
     examples: {
+      brandName: ["The Grand Apartment", "Lilac House"],
+      logo: ["Horizontal logo on light background", "PNG or SVG with transparent background preferred"],
       brandMeta: ["Le Chesnay · Versailles", "Family apartment · 10 min from centre"],
       heroPhoto: [
         "Bright living room from the entrance",
@@ -576,7 +601,9 @@ export const adminUiLabelsExtendedEn = {
       hostIntro: [
         "I personally handle check-in and stay available during your stay to answer questions.",
         "We live nearby: self check-in in the evening, neighbourhood tips the next day if needed."
-      ]
+      ],
+      nightPrice: ["€95 / night", "€120 in high season"],
+      includedGuests: ["2 guests", "4 guests (family)"]
     }
   },
   template: {

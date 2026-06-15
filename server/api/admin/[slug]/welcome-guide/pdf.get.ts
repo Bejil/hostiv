@@ -1,4 +1,4 @@
-import { requirePropertyOwner } from "../../../../utils/admin-auth"
+import { requirePropertyPremiumTools } from "../../../../utils/hostiv-premium-tools-access"
 import { getPropertyAdminBySlug } from "../../../../utils/property-admin-repository"
 import { buildWelcomeGuidePdf, welcomeGuidePdfFilename } from "../../../../utils/welcome-guide-pdf"
 
@@ -9,7 +9,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: "Paramètre manquant." })
   }
 
-  await requirePropertyOwner(event, slug)
+  await requirePropertyPremiumTools(event, slug)
 
   const property = await getPropertyAdminBySlug(slug)
 

@@ -54,6 +54,7 @@ const icsModalOpen = ref(false)
 const icsExportModalOpen = ref(false)
 const icsExportUrl = ref("")
 const icsExportLoading = ref(false)
+const icsExportRotating = ref(false)
 const icsExportError = ref<string | null>(null)
 let refreshTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -605,6 +606,30 @@ function closeIcsExportModal() {
   icsExportModalOpen.value = false
 }
 
+async function rotateIcsExportUrl() {
+  icsExportRotating.value = true
+  icsExportError.value = null
+
+  try {
+    const response = await $fetch<{ url: string }>(
+      `/api/admin/${props.slug}/reservations-ics-url`,
+      {
+        method: "POST",
+        headers: await authHeaders()
+      }
+    )
+
+    icsExportUrl.value = response.url
+  } catch (err: unknown) {
+    const e = err as { data?: { message?: string }; message?: string }
+
+    icsExportError.value =
+      e.data?.message || e.message || ext.value.errors.icsUrl
+  } finally {
+    icsExportRotating.value = false
+  }
+}
+
 watch(
   feeds,
   () => {
@@ -882,8 +907,10 @@ onUnmounted(() => {
       :open="icsExportModalOpen"
       :url="icsExportUrl"
       :loading="icsExportLoading"
+      :rotating="icsExportRotating"
       :error="icsExportError"
       @close="closeIcsExportModal"
+      @rotate="rotateIcsExportUrl"
     />
 
     <AdminIcsCalendarsModal

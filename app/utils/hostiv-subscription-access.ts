@@ -123,6 +123,7 @@ export function buildHostivSubscriptionAccess(input: {
   })
   const hasPremiumTools = hasHostivPremiumTools({
     plan,
+    paid_until: paidUntil,
     premium_tools_until: premiumToolsUntil
   })
   const hasStarterPlus =

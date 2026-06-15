@@ -3,10 +3,11 @@ import { isHostivProPlan, type HostivSubscriptionPlan } from "./hostiv-subscript
 
 export function hasHostivPremiumTools(input: {
   plan?: unknown
+  paid_until?: string | null
   premium_tools_until?: string | null
   now?: Date
 }) {
-  if (isHostivProPlan(input.plan)) {
+  if (isHostivProPlan(input.plan) && isHostivSubscriptionActive(input.paid_until, input.now)) {
     return true
   }
 
@@ -15,9 +16,10 @@ export function hasHostivPremiumTools(input: {
 
 export function resolveHostivEffectivePlan(
   plan: unknown,
-  premiumToolsUntil?: string | null
+  premiumToolsUntil?: string | null,
+  paidUntil?: string | null
 ): HostivSubscriptionPlan {
-  if (isHostivProPlan(plan)) {
+  if (isHostivProPlan(plan) && isHostivSubscriptionActive(paidUntil)) {
     return "pro"
   }
 

@@ -94,12 +94,14 @@ export async function sendHostivWelcomeEmail(options: {
   propertyName: string
   slug: string
   plan: HostivSubscriptionPlan
+  verificationUrl?: string
 }) {
   const mail = buildHostivWelcomeEmail({
     fullName: options.fullName,
     propertyName: options.propertyName,
     slug: options.slug,
-    planLabel: hostivPlanCheckoutLabel(options.plan)
+    planLabel: hostivPlanCheckoutLabel(options.plan),
+    verificationUrl: options.verificationUrl
   })
 
   await trySendTransactionalEmail({

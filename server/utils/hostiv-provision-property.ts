@@ -104,7 +104,7 @@ function buildEmptySiteContent() {
       },
       pricing: { eyebrow: "", title: "", intro: "" },
       amenities: { eyebrow: "", title: "", intro: "" },
-      reviews: { eyebrow: "", title: "" },
+      reviews: { eyebrow: "", title: "", intro: "" },
       booking: { eyebrow: "", title: "", intro: "" },
       house_rules: { eyebrow: "", title: "" }
     },

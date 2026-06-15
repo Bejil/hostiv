@@ -1,10 +1,15 @@
 <script setup lang="ts">
+import { Check, Sparkles } from "@lucide/vue"
 import type { HostivSubscriptionAccess } from "../../utils/hostiv-subscription-access"
 import { formatHostivSubscriptionDate } from "../../utils/hostiv-subscription-access"
 import { getHostivLanding } from "../../data/hostivLanding"
 import { adminUiFormat } from "../../data/admin-ui"
+import { useSupabaseClient } from "../../composables/useSupabaseClient"
+import { startHostivPremiumToolsCheckout } from "../../composables/useHostivSubscriptionCheckout"
+import AdminAlert from "./AdminAlert.vue"
 
 const props = defineProps<{
+  slug: string
   access: HostivSubscriptionAccess
 }>()
 
@@ -18,6 +23,20 @@ const plan = computed(
     landingPricing.value.plans[1]
 )
 const starterPlusAddon = computed(() => landingPricing.value.premiumAddon)
+
+const showStarterPlusInsight = computed(
+  () =>
+    props.access.plan === "starter" &&
+    props.access.active &&
+    !props.access.has_starter_plus
+)
+
+const starterPlusInsightCta = computed(() =>
+  adminUiFormat(ext.value.subscription.starterPlusInsightCta, {
+    price: String(starterPlusAddon.value.price),
+    period: starterPlusAddon.value.period
+  })
+)
 
 const planTitle = computed(() => {
   if (props.access.has_starter_plus) {
@@ -89,11 +108,8 @@ const footerNote = computed(() => {
     return ext.value.subscription.footerNoPlan
   }
 
-  if (props.access.plan === "starter" && props.access.active && !props.access.has_starter_plus) {
-    return adminUiFormat(ext.value.subscription.footerStarterPlusUpsell, {
-      price: String(starterPlusAddon.value.price),
-      period: starterPlusAddon.value.period
-    })
+  if (showStarterPlusInsight.value) {
+    return null
   }
 
   if (props.access.has_starter_plus) {
@@ -102,6 +118,32 @@ const footerNote = computed(() => {
 
   return null
 })
+
+const starterPlusPaying = ref(false)
+const starterPlusError = ref("")
+
+async function onActivateStarterPlus() {
+  starterPlusPaying.value = true
+  starterPlusError.value = ""
+
+  try {
+    const supabase = useSupabaseClient()
+    const { data } = await supabase.auth.getSession()
+    const token = data.session?.access_token
+
+    if (!token) {
+      throw new Error(ui.value.proUpgrade.loginRequired)
+    }
+
+    await startHostivPremiumToolsCheckout(token, props.slug)
+  } catch (err: unknown) {
+    const e = err as { data?: { message?: string }; message?: string }
+
+    starterPlusError.value =
+      e.data?.message || e.message || ui.value.proUpgrade.paymentOpenFailed
+    starterPlusPaying.value = false
+  }
+}
 </script>
 
 <template>
@@ -156,6 +198,42 @@ const footerNote = computed(() => {
         </p>
       </article>
     </div>
+
+    <article v-if="showStarterPlusInsight" class="admin-general-subscription__insight">
+      <div class="admin-general-subscription__insight-head">
+        <span class="admin-general-subscription__insight-icon" aria-hidden="true">
+          <Sparkles :size="16" stroke-width="2" />
+        </span>
+        <div>
+          <p class="admin-general-subscription__insight-kicker">
+            {{ ext.subscription.starterPlusInsightKicker }}
+          </p>
+          <h4 class="admin-general-subscription__insight-title">
+            {{ ext.subscription.starterPlusInsightTitle }}
+          </h4>
+        </div>
+      </div>
+
+      <p class="admin-general-subscription__insight-lead">{{ starterPlusAddon.tagline }}</p>
+
+      <ul class="admin-general-subscription__insight-list">
+        <li v-for="feature in starterPlusAddon.features" :key="feature">
+          <Check :size="14" stroke-width="2.5" aria-hidden="true" />
+          <span>{{ feature }}</span>
+        </li>
+      </ul>
+
+      <AdminAlert v-if="starterPlusError" variant="error" :message="starterPlusError" />
+
+      <button
+        type="button"
+        class="admin-btn admin-btn--primary admin-general-subscription__insight-cta"
+        :disabled="starterPlusPaying"
+        @click="onActivateStarterPlus"
+      >
+        {{ starterPlusPaying ? ui.proUpgrade.redirecting : starterPlusInsightCta }}
+      </button>
+    </article>
 
     <footer class="admin-general-subscription__footer">
       <p class="admin-general-subscription__renewal">

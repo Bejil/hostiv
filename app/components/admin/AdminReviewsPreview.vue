@@ -8,17 +8,21 @@ const props = defineProps<{
   reviews: PropertyReview[]
   eyebrow: string
   title: string
+  intro: string
   backgroundPath: string
   previewUrl: (path: string) => string
 }>()
 
-const { ui } = useAdminUi()
+const { ui, locale } = useAdminUi()
 
 const displayEyebrow = computed(
   () => props.eyebrow.trim() || ui.value.previews.common.eyebrow
 )
 const displayTitle = computed(
   () => props.title.trim() || ui.value.previews.common.sectionTitle
+)
+const displayIntro = computed(
+  () => props.intro.trim() || ui.value.previews.common.intro
 )
 
 const displayReviews = computed(() =>
@@ -51,9 +55,18 @@ function ratingAriaLabel(rating: string) {
   <div class="admin-reviews-preview" :aria-label="ui.previews.reviews.ariaLabel">
     <p class="admin-reviews-preview__label">{{ ui.previews.common.label }}</p>
     <section class="admin-reviews-preview__section" :style="sectionStyle">
-      <div class="admin-reviews-preview__head">
-        <p class="admin-reviews-preview__eyebrow">{{ displayEyebrow }}</p>
-        <h2 class="admin-reviews-preview__title">{{ displayTitle }}</h2>
+      <div class="testimonials-top admin-reviews-preview__top">
+        <div class="admin-reviews-preview__head">
+          <p class="admin-reviews-preview__eyebrow">{{ displayEyebrow }}</p>
+          <h2 class="admin-reviews-preview__title">{{ displayTitle }}</h2>
+          <p v-if="displayIntro" class="admin-reviews-preview__intro">{{ displayIntro }}</p>
+        </div>
+
+        <ReviewsSummaryBlock
+          :reviews="displayReviews"
+          :locale="locale"
+          variant="admin-preview"
+        />
       </div>
 
       <p v-if="!displayReviews.length" class="admin-reviews-preview__empty">

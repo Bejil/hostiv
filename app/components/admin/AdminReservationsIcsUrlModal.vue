@@ -7,6 +7,7 @@ const props = defineProps<{
   open: boolean
   url: string
   loading: boolean
+  rotating: boolean
   error: string | null
 }>()
 
@@ -15,6 +16,7 @@ const ext = computed(() => ui.value.extended.reservationsIcs)
 
 const emit = defineEmits<{
   close: []
+  rotate: []
 }>()
 
 const copied = ref(false)
@@ -132,6 +134,9 @@ async function copyUrl() {
               <p class="admin-reservations-ics-url-modal__hint">
                 {{ ext.hint }}
               </p>
+              <p v-if="url" class="admin-reservations-ics-url-modal__hint">
+                {{ ext.rotateHint }}
+              </p>
             </template>
 
             <footer class="admin-reservations-ics-url-modal__footer">
@@ -139,9 +144,18 @@ async function copyUrl() {
                 {{ ui.common.close }}
               </button>
               <button
+                v-if="url"
+                type="button"
+                class="hostiv-btn hostiv-btn--secondary"
+                :disabled="loading || rotating"
+                @click="emit('rotate')"
+              >
+                {{ rotating ? ext.rotating : ext.rotateCta }}
+              </button>
+              <button
                 type="button"
                 class="hostiv-btn hostiv-btn--primary"
-                :disabled="loading || !url"
+                :disabled="loading || rotating || !url"
                 @click="copyUrl"
               >
                 <AdminIcon name="external" :size="16" />

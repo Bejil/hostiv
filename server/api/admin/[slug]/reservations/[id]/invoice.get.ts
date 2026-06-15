@@ -1,4 +1,4 @@
-import { requirePropertyOwner } from "../../../../../utils/admin-auth"
+import { requirePropertyPremiumTools } from "../../../../../utils/hostiv-premium-tools-access"
 import {
   buildBookingInvoicePdf,
   bookingInvoiceDownloadFilename
@@ -15,7 +15,8 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: "Paramètres manquants." })
   }
 
-  const user = await requirePropertyOwner(event, slug)
+  const { access } = await requirePropertyPremiumTools(event, slug)
+  const user = access.user
   const reservation = await getAdminBookingReservationById(slug, id)
 
   if (!reservation) {

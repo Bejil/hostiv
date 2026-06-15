@@ -145,6 +145,25 @@ export const adminUiLabelsDomainsFr = {
       addButton: "Ajouter un verbatim",
       empty: "Aucun verbatim. Utilisez « Ajouter un verbatim » pour en créer un.",
       lead: "Les avis défilent en carrousel sur la page.",
+      addChoice: {
+        title: "Ajouter un verbatim",
+        subtitle: "Créez un avis manuellement ou réutilisez un avis laissé par un voyageur.",
+        createTitle: "Créer manuellement",
+        createDescription: "Rédiger un verbatim de A à Z (auteur, note, citation).",
+        fromGuestTitle: "Depuis les avis voyageurs",
+        fromGuestDescription: "Choisir un avis soumis par un voyageur après son séjour."
+      },
+      guestPicker: {
+        title: "Choisir un avis voyageur",
+        subtitle: "Seuls les avis avec commentaire et non déjà importés sont proposés.",
+        loading: "Chargement des avis voyageurs…",
+        select: "Choisir",
+        count: "{count} avis disponible",
+        countPlural: "{count} avis disponibles",
+        emptyTitle: "Aucun avis à importer",
+        emptyDescription:
+          "Les avis déjà importés ou sans commentaire n’apparaissent pas ici. Consultez la section « Avis voyageurs »."
+      },
       modal: {
         addTitle: "Ajouter un verbatim",
         editTitle: "Modifier le verbatim",
