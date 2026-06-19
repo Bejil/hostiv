@@ -1,2 +1,13 @@
-User-Agent: *
-Disallow:
+User-agent: *
+Allow: /
+
+Disallow: /admin
+Disallow: /admin/
+Disallow: /inscription/
+Disallow: /mot-de-passe/
+Disallow: /en/reset-password
+Disallow: /*/admin
+Disallow: /*/preview
+
+Sitemap: /sitemap.xml
+Sitemap: /sitemap-properties.xml

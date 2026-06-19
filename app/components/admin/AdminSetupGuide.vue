@@ -25,6 +25,14 @@ const sectionNav = inject(adminSectionNavKey)
 const { ui, locale } = useAdminUi()
 
 const setupGuideItems = computed(() => getAdminSetupGuideItems(locale.value))
+
+const visibleSetupGuideItems = computed(() => {
+  if (props.record.admin_access?.role === "cohost") {
+    return setupGuideItems.value.filter((item) => item.id !== "stripe" && item.section !== "payouts")
+  }
+
+  return setupGuideItems.value
+})
 const setupGuideCustomizationBlockIds = computed(() =>
   getAdminSetupGuideCustomizationBlockIds(locale.value)
 )
@@ -42,7 +50,13 @@ const stripe = computed(() => ({
 }))
 
 const progress = computed(() =>
-  buildSetupGuideProgress(props.record, stripe.value, skippedIds.value, locale.value)
+  buildSetupGuideProgress(
+    props.record,
+    stripe.value,
+    skippedIds.value,
+    locale.value,
+    visibleSetupGuideItems.value
+  )
 )
 
 function loadPreferences() {
@@ -283,7 +297,7 @@ onMounted(loadPreferences)
 
         <ul v-if="!progress.allComplete" class="admin-setup-guide__list" role="list">
           <li
-            v-for="item in setupGuideItems"
+            v-for="item in visibleSetupGuideItems"
             :key="item.id"
             class="admin-setup-guide__item"
             :class="{

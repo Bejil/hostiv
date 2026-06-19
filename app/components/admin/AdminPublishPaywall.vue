@@ -5,6 +5,8 @@ import { adminUiFormat } from "../../data/admin-ui"
 import type { HostivSubscriptionAccess } from "../../utils/hostiv-subscription-access"
 import { useSupabaseClient } from "../../composables/useSupabaseClient"
 import { startHostivSubscriptionCheckout } from "../../composables/useHostivSubscriptionCheckout"
+import { useHostivPromoCode } from "../../composables/useHostivPromoCode"
+import HostivPromoCodeField from "../HostivPromoCodeField.vue"
 import HostivSignupPlanCard from "../hostiv/HostivSignupPlanCard.vue"
 
 const props = withDefaults(
@@ -33,6 +35,13 @@ const pricingPlans = computed(() => getHostivLanding(locale.value).pricing.plans
 const selectedPlanId = ref<HostivPricingPlanId>(props.access.plan)
 const paying = ref(false)
 const error = ref("")
+const userEmail = ref("")
+
+const promo = useHostivPromoCode({
+  context: "hostiv_subscription",
+  email: userEmail,
+  subscriptionPlan: selectedPlanId
+})
 
 const selectedPlan = computed(
   () => pricingPlans.value.find((item) => item.id === selectedPlanId.value) ?? pricingPlans.value[1]
@@ -67,9 +76,18 @@ watch(
     if (isOpen) {
       selectedPlanId.value = props.access.plan
       error.value = ""
+      promo.resetPromoState()
+      void loadUserEmail()
     }
   }
 )
+
+async function loadUserEmail() {
+  const supabase = useSupabaseClient()
+  const { data } = await supabase.auth.getSession()
+
+  userEmail.value = data.session?.user?.email?.trim() ?? ""
+}
 
 onUnmounted(() => {
   if (import.meta.client) {
@@ -102,7 +120,16 @@ function selectPlan(planId: HostivPricingPlanId) {
 
   selectedPlanId.value = planId
   error.value = ""
+  promo.clearPromo()
 }
+
+const payPriceLabel = computed(() => {
+  if (promo.finalAmountEur != null) {
+    return String(promo.finalAmountEur)
+  }
+
+  return String(selectedPlan.value.price)
+})
 
 async function onPay() {
   paying.value = true
@@ -116,7 +143,12 @@ async function onPay() {
       throw new Error(ext.value.publishPaywall.loginRequired)
     }
 
-    await startHostivSubscriptionCheckout(token, selectedPlanId.value, props.slug)
+    await startHostivSubscriptionCheckout(
+      token,
+      selectedPlanId.value,
+      props.slug,
+      promo.promoCodeForCheckout || undefined
+    )
   } catch (err: unknown) {
     const e = err as { data?: { message?: string }; message?: string }
 
@@ -195,6 +227,19 @@ async function onPay() {
 
           <AdminAlert v-if="error" variant="error" :message="error" />
 
+          <HostivPromoCodeField
+            context="hostiv_subscription"
+            :email="userEmail"
+            :subscription-plan="selectedPlanId"
+            :code="promo.code"
+            :applied-code="promo.applied?.code ?? null"
+            :validating="promo.validating"
+            :error="promo.error"
+            @update:code="promo.code = $event"
+            @apply="promo.applyPromoCode()"
+            @clear="promo.clearPromo()"
+          />
+
           <div class="admin-publish-paywall__actions">
             <button v-if="!isAccessGate" type="button" class="admin-btn admin-btn--ghost" @click="emit('close')">
               {{ ext.publishPaywall.continueDraft }}
@@ -209,7 +254,7 @@ async function onPay() {
                 paying
                   ? ext.publishPaywall.paying
                   : adminUiFormat(ext.publishPaywall.payCta, {
-                        price: String(selectedPlan.price)
+                        price: payPriceLabel
                       })
               }}
             </button>

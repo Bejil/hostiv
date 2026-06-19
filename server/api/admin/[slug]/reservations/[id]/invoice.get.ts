@@ -16,6 +16,14 @@ export default defineEventHandler(async (event) => {
   }
 
   const { access } = await requirePropertyPremiumTools(event, slug)
+
+  if (access.role === "cohost") {
+    throw createError({
+      statusCode: 403,
+      message: "Réservé à l’hôte principal."
+    })
+  }
+
   const user = access.user
   const reservation = await getAdminBookingReservationById(slug, id)
 

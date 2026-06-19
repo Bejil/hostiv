@@ -2,7 +2,7 @@ import type { AdminNavSectionId, AdminTopSectionId } from "../admin-nav-sections
 
 export const ADMIN_TOP_NAV_ICONS: Record<
   AdminTopSectionId,
-  "settings" | "layout" | "text" | "image" | "calendar" | "card"
+  "settings" | "users" | "layout" | "text" | "image" | "calendar" | "card" | "quote"
 > = {
   general: "settings",
   customization: "layout",

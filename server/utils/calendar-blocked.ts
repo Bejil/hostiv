@@ -1,8 +1,15 @@
+import type { PropertyCalendarConfig } from "../../app/types/property-site"
+import { normalizeCalendarConfig } from "../../app/utils/calendar-config"
+import { listAdminBookingReservations } from "./booking-reservation-repository"
 import { getBlockedNightDates, mergeBlockedNightDates, parseIcalEvents } from "./ical"
 import { getPropertyCalendarConfig } from "./property-site-repository"
+import { enumerateStayNights } from "./stay-nights"
 import { assertAllowedCalendarFeedUrl } from "./calendar-feed-url"
 
 const FETCH_TIMEOUT_MS = 12_000
+
+export const HOSTIV_MANUAL_BLOCK_SOURCE = "Blocage manuel"
+export const HOSTIV_RESERVATION_BLOCK_SOURCE = "Réservation Hostiv"
 
 async function fetchCalendarFeed(url: string) {
   assertAllowedCalendarFeedUrl(url)
@@ -33,6 +40,39 @@ function normalizeFeedUrls(feeds?: CalendarFeedInput[]) {
     .filter((feed) => feed.url)
 }
 
+function addDateSource(map: Record<string, string[]>, date: string, source: string) {
+  const sources = map[date] ?? []
+
+  if (!sources.includes(source)) {
+    sources.push(source)
+  }
+
+  map[date] = sources
+}
+
+function sortDateSources(map: Record<string, string[]>) {
+  for (const date of Object.keys(map)) {
+    map[date].sort((a, b) => a.localeCompare(b, "fr"))
+  }
+}
+
+async function getReservationBlockedNightDates(slug: string) {
+  const reservations = await listAdminBookingReservations(slug)
+  const dates = new Set<string>()
+
+  for (const reservation of reservations) {
+    if (reservation.status === "cancelled") {
+      continue
+    }
+
+    for (const night of enumerateStayNights(reservation.arrival_date, reservation.departure_date)) {
+      dates.add(night)
+    }
+  }
+
+  return dates
+}
+
 export async function getMergedBlockedNightDates(feeds?: CalendarFeedInput[]) {
   const feedUrls = normalizeFeedUrls(feeds)
   const results = await Promise.allSettled(
@@ -61,13 +101,7 @@ export async function getMergedBlockedNightDates(feeds?: CalendarFeedInput[]) {
       })
 
       for (const date of dateList) {
-        const sources = dateSources[date] ?? []
-
-        if (!sources.includes(feed.name)) {
-          sources.push(feed.name)
-        }
-
-        dateSources[date] = sources
+        addDateSource(dateSources, date, feed.name)
       }
 
       blockedSets.push(dates)
@@ -76,9 +110,7 @@ export async function getMergedBlockedNightDates(feeds?: CalendarFeedInput[]) {
     }
   }
 
-  for (const date of Object.keys(dateSources)) {
-    dateSources[date].sort((a, b) => a.localeCompare(b, "fr"))
-  }
+  sortDateSources(dateSources)
 
   return {
     dates: mergeBlockedNightDates(blockedSets),
@@ -92,8 +124,46 @@ export async function getMergedBlockedNightDates(feeds?: CalendarFeedInput[]) {
   }
 }
 
-export async function getMergedBlockedNightDatesForProperty(slug: string) {
-  const calendarConfig = await getPropertyCalendarConfig(slug)
+export async function getPropertyBlockedNightDates(
+  slug: string,
+  calendarConfigInput?: Partial<PropertyCalendarConfig> | null
+) {
+  const calendarConfig = calendarConfigInput
+    ? normalizeCalendarConfig(calendarConfigInput)
+    : await getPropertyCalendarConfig(slug)
 
-  return getMergedBlockedNightDates(calendarConfig.ics_feeds)
+  const ical = await getMergedBlockedNightDates(calendarConfig.ics_feeds)
+  const manualBlocks = new Set(calendarConfig.manual_blocks ?? [])
+  const reservationBlocks = await getReservationBlockedNightDates(slug)
+  const dateSources = { ...ical.dateSources }
+
+  for (const date of manualBlocks) {
+    addDateSource(dateSources, date, HOSTIV_MANUAL_BLOCK_SOURCE)
+  }
+
+  for (const date of reservationBlocks) {
+    addDateSource(dateSources, date, HOSTIV_RESERVATION_BLOCK_SOURCE)
+  }
+
+  sortDateSources(dateSources)
+
+  const dates = mergeBlockedNightDates([ical.dates, manualBlocks, reservationBlocks])
+
+  return {
+    dates,
+    dateSources,
+    feedBlocks: ical.feedBlocks,
+    sources: ical.sources
+  }
+}
+
+export async function getMergedBlockedNightDatesForProperty(slug: string) {
+  const { dates, dateSources, feedBlocks, sources } = await getPropertyBlockedNightDates(slug)
+
+  return {
+    dates,
+    dateSources,
+    feedBlocks,
+    sources
+  }
 }

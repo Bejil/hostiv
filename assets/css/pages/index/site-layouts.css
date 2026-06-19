@@ -1,0 +1,560 @@
+/* Layouts structurels — structure globale du site (complète .site-template--* pour l’ambiance) */
+
+.site-layout {
+  --site-inner-width: min(1180px, calc(100% - 28px));
+  --site-band-padding-y: clamp(56px, 9vw, 100px);
+  --site-card-radius: 28px;
+}
+
+.site-layout .topbar,
+.site-layout .page-band__inner,
+.site-layout .testimonials-section .page-band__inner {
+  width: var(--site-inner-width);
+}
+
+.site-layout .page-band {
+  padding-block: var(--site-band-padding-y);
+}
+
+.site-layout .featured-card,
+.site-layout .visual-card,
+.site-layout .info-card,
+.site-layout .amenity-card,
+.site-layout .price-card,
+.site-layout .summary-card,
+.site-layout .house-rule-card,
+.site-layout .house-rules-schedule-item,
+.site-layout .stat-card,
+.site-layout .location-map-card {
+  border-radius: var(--site-card-radius);
+}
+
+/* ——— Classic : éditorial pleine largeur ——— */
+.site-layout--classic .section-head-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 0.85fr);
+  gap: clamp(16px, 3vw, 32px);
+  align-items: end;
+}
+
+.site-layout--classic .section-head-row h2 {
+  margin-bottom: 0;
+}
+
+.site-layout--classic .section-head-row .section-intro {
+  margin-bottom: 0;
+}
+
+.site-layout--classic .hero-card > .booking-strip:not(.booking-strip-sticky) {
+  /* Comportement par défaut (hero.css) */
+}
+
+/* ——— Split : magazine asymétrique ——— */
+.site-layout--split {
+  --site-inner-width: min(1260px, calc(100% - 40px));
+  --site-band-padding-y: clamp(52px, 8vw, 92px);
+  --site-card-radius: 24px;
+}
+
+.site-layout--split .hero-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
+  grid-template-rows: minmax(clamp(300px, 40vw, 520px), auto) auto;
+  column-gap: clamp(16px, 2.5vw, 28px);
+  row-gap: clamp(20px, 3vw, 32px);
+  align-items: end;
+  padding:
+    clamp(80px, 9vw, 104px)
+    max(20px, calc((100vw - min(1260px, calc(100vw - 40px))) / 2))
+    clamp(48px, 6vw, 72px);
+  overflow: visible;
+}
+
+.site-layout--split .hero-media {
+  position: relative;
+  inset: auto;
+  grid-column: 1 / -1;
+  grid-row: 1;
+  min-height: clamp(300px, 40vw, 520px);
+  height: clamp(300px, 40vw, 520px);
+  border-radius: clamp(20px, 3vw, 32px);
+  overflow: hidden;
+}
+
+.site-layout--split .hero-image {
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+  object-fit: cover;
+  object-position: center center;
+  transform: translate(0, var(--hero-parallax-offset, 0px)) scale(1.05);
+}
+
+.site-layout--split .hero-overlay {
+  background:
+    linear-gradient(180deg, rgba(15, 12, 10, 0.04) 0%, rgba(15, 12, 10, 0.52) 100%);
+}
+
+.site-layout--split .hero-content {
+  grid-column: 1;
+  grid-row: 2;
+  width: auto;
+  max-width: none;
+  margin: 0;
+  align-self: end;
+  z-index: 2;
+}
+
+.site-layout--split .hero-copy {
+  max-width: 680px;
+}
+
+.site-layout--split .hero-card > .booking-strip:not(.booking-strip-sticky) {
+  grid-column: 2;
+  grid-row: 2;
+  width: auto;
+  margin: 0;
+  align-self: start;
+  position: relative;
+  top: auto;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  margin-top: 0;
+  padding: 16px;
+  border-radius: 22px;
+  overflow: visible;
+}
+
+.site-layout--split .hero-card > .booking-strip:not(.booking-strip-sticky) .booking-item-popover {
+  width: 100%;
+}
+
+.site-layout--split .hero-card > .booking-strip:not(.booking-strip-sticky) .booking-button {
+  width: 100%;
+  grid-column: 1 / -1;
+}
+
+/* Thèmes à hero « carte » : padding latéral interne */
+.site-layout--split.site-template--riviera .hero-card,
+.site-layout--split.site-template--panorama .hero-card,
+.site-layout--split.site-template--cabin .hero-card,
+.site-layout--split.site-template--marina .hero-card {
+  padding-inline: clamp(16px, 3vw, 28px);
+}
+
+.site-layout--split .section-head-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(300px, 0.9fr);
+  gap: clamp(20px, 4vw, 48px);
+  align-items: end;
+}
+
+.site-layout--split .section-head-row h2 {
+  margin-bottom: 0;
+}
+
+.site-layout--split .section-head-row .section-intro {
+  margin-bottom: 0;
+  text-align: right;
+}
+
+.site-layout--split .featured-layout {
+  grid-template-columns: minmax(0, 1.65fr) minmax(280px, 0.72fr);
+  gap: 22px;
+}
+
+.site-layout--split .featured-card-large {
+  min-height: 680px;
+}
+
+.site-layout--split .summary-layout {
+  grid-template-columns: minmax(300px, 0.95fr) minmax(0, 1.05fr);
+  gap: clamp(32px, 5vw, 64px);
+}
+
+.site-layout--split .visual-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.site-layout--split .visual-grid .visual-card:first-child {
+  grid-column: span 2;
+  grid-template-rows: 200px auto;
+}
+
+.site-layout--split .benefits-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.site-layout--split .pricing-grid {
+  gap: 20px;
+}
+
+.site-layout--split .amenities-grid {
+  grid-template-columns: 1fr;
+  gap: 18px;
+}
+
+.site-layout--split .location-layout {
+  grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.85fr);
+}
+
+.site-layout--split .house-rules-grid {
+  gap: 18px;
+}
+
+.site-layout--split .platform-stats-head {
+  text-align: left;
+  margin-inline: 0;
+}
+
+/* ——— Hotel : brochure centrée ——— */
+.site-layout--hotel {
+  --site-inner-width: min(1040px, calc(100% - 32px));
+  --site-band-padding-y: clamp(64px, 10vw, 112px);
+  --site-card-radius: 20px;
+}
+
+.site-layout--hotel .hero-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: clamp(72px, 10vw, 120px) 0 0;
+  background: #171311;
+}
+
+.site-layout--hotel .hero-media {
+  position: relative;
+  inset: auto;
+  width: min(1180px, calc(100% - 28px));
+  height: clamp(240px, 38vw, 460px);
+  margin: 0 auto;
+  border-radius: clamp(28px, 4vw, 48px);
+  overflow: hidden;
+}
+
+.site-layout--hotel .hero-image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+  transform: translate(0, var(--hero-parallax-offset, 0px)) scale(1.05);
+  top: 0;
+  left: 0;
+}
+
+.site-layout--hotel .hero-overlay {
+  background:
+    linear-gradient(180deg, rgba(15, 12, 10, 0.08) 0%, rgba(15, 12, 10, 0.55) 100%);
+}
+
+.site-layout--hotel .hero-content {
+  width: min(1180px, calc(100% - 28px));
+  justify-content: center;
+  margin-top: clamp(20px, 3vw, 32px);
+}
+
+.site-layout--hotel .hero-copy {
+  align-items: center;
+  text-align: center;
+  max-width: 720px;
+  margin-inline: auto;
+}
+
+.site-layout--hotel .hero-copy h1 {
+  max-width: 20ch;
+  margin-inline: auto;
+}
+
+.site-layout--hotel .hero-text {
+  margin-inline: auto;
+}
+
+.site-layout--hotel .hero-card > .booking-strip:not(.booking-strip-sticky) {
+  width: min(1180px, calc(100% - 28px));
+  margin-top: clamp(18px, 3vw, 28px);
+  margin-bottom: clamp(-28px, -3vw, -18px);
+  z-index: 2;
+  border-radius: 22px;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) auto;
+  box-shadow: 0 24px 48px rgba(18, 15, 12, 0.2);
+}
+
+.site-layout--hotel .page-flow {
+  padding-top: clamp(36px, 5vw, 56px);
+}
+
+.site-layout--hotel .section-head,
+.site-layout--hotel .section-head-row {
+  text-align: center;
+}
+
+.site-layout--hotel .section-head-row {
+  display: block;
+}
+
+.site-layout--hotel .section-head-row h2 {
+  max-width: 18ch;
+  margin-inline: auto;
+}
+
+.site-layout--hotel .section-head-row .section-intro {
+  max-width: 52ch;
+  margin-inline: auto;
+}
+
+.site-layout--hotel .featured-layout {
+  grid-template-columns: 1fr;
+  gap: 20px;
+  max-width: 920px;
+  margin-inline: auto;
+}
+
+.site-layout--hotel .featured-card-large {
+  min-height: 420px;
+}
+
+.site-layout--hotel .featured-stack {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.site-layout--hotel .summary-layout {
+  grid-template-columns: 1fr;
+  gap: 28px;
+  max-width: 720px;
+  margin-inline: auto;
+  text-align: center;
+}
+
+.site-layout--hotel .summary-copy h2 {
+  max-width: none;
+  margin-inline: auto;
+}
+
+.site-layout--hotel .summary-quote {
+  border-left: none;
+  padding-left: 0;
+  font-style: normal;
+}
+
+.site-layout--hotel .visual-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  max-width: 920px;
+  margin-inline: auto;
+}
+
+.site-layout--hotel .benefits-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  max-width: 820px;
+  margin-inline: auto;
+}
+
+.site-layout--hotel .pricing-grid {
+  max-width: 920px;
+  margin-inline: auto;
+}
+
+.site-layout--hotel .amenities-grid {
+  grid-template-columns: 1fr;
+  max-width: 720px;
+  margin-inline: auto;
+}
+
+.site-layout--hotel .location-layout {
+  grid-template-columns: 1fr;
+  max-width: 820px;
+  margin-inline: auto;
+}
+
+.site-layout--hotel .location-map-card {
+  min-height: 320px;
+}
+
+.site-layout--hotel .house-rules-schedule {
+  max-width: 520px;
+  margin-inline: auto;
+}
+
+.site-layout--hotel .house-rules-grid {
+  max-width: 820px;
+  margin-inline: auto;
+}
+
+.site-layout--hotel .platform-stats-head {
+  text-align: center;
+  margin-inline: auto;
+}
+
+/* ——— Editorial : colonne étroite de lecture ——— */
+.site-layout--editorial {
+  --site-inner-width: min(760px, calc(100% - 32px));
+  --site-band-padding-y: clamp(48px, 7vw, 80px);
+  --site-card-radius: 22px;
+}
+
+.site-layout--editorial .hero-card {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  padding:
+    clamp(88px, 10vw, 120px)
+    max(16px, calc((100vw - min(760px, calc(100vw - 32px))) / 2))
+    clamp(40px, 5vw, 64px);
+  overflow: visible;
+}
+
+.site-layout--editorial .hero-media {
+  position: relative;
+  inset: auto;
+  width: 100%;
+  height: clamp(220px, 34vw, 360px);
+  margin-bottom: clamp(20px, 3vw, 28px);
+  border-radius: clamp(18px, 2.5vw, 28px);
+  overflow: hidden;
+}
+
+.site-layout--editorial .hero-image {
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+  object-fit: cover;
+  transform: translate(0, var(--hero-parallax-offset, 0px)) scale(1.05);
+}
+
+.site-layout--editorial .hero-overlay {
+  background:
+    linear-gradient(180deg, rgba(15, 12, 10, 0.04) 0%, rgba(15, 12, 10, 0.5) 100%);
+}
+
+.site-layout--editorial .hero-content {
+  width: 100%;
+  margin: 0;
+  z-index: 2;
+}
+
+.site-layout--editorial .hero-copy {
+  max-width: none;
+}
+
+.site-layout--editorial .hero-card > .booking-strip:not(.booking-strip-sticky) {
+  width: 100%;
+  margin-top: 20px;
+}
+
+.site-layout--editorial .section-head-row {
+  display: block;
+}
+
+.site-layout--editorial .featured-layout,
+.site-layout--editorial .visual-grid,
+.site-layout--editorial .benefits-grid,
+.site-layout--editorial .pricing-grid,
+.site-layout--editorial .amenities-grid,
+.site-layout--editorial .house-rules-grid,
+.site-layout--editorial .location-layout,
+.site-layout--editorial .summary-layout {
+  grid-template-columns: 1fr;
+}
+
+.site-layout--editorial .featured-card-large {
+  min-height: 360px;
+}
+
+.site-layout--editorial .platform-stats-grid {
+  grid-template-columns: 1fr;
+}
+
+.site-layout--editorial.site-template--riviera .hero-card,
+.site-layout--editorial.site-template--panorama .hero-card,
+.site-layout--editorial.site-template--cabin .hero-card,
+.site-layout--editorial.site-template--marina .hero-card {
+  padding-inline: clamp(16px, 3vw, 24px);
+}
+
+/* ——— Responsive ——— */
+@media (max-width: 1120px) {
+  .site-layout--split .section-head-row .section-intro {
+    text-align: left;
+  }
+
+  .site-layout--split .visual-grid .visual-card:first-child {
+    grid-column: auto;
+  }
+}
+
+@media (max-width: 960px) {
+  .site-layout--split .hero-card {
+    display: block;
+    padding:
+      clamp(80px, 9vw, 104px)
+      max(14px, calc((100vw - min(1180px, calc(100vw - 28px))) / 2))
+      100px;
+  }
+
+  .site-layout--split .hero-media {
+    position: absolute;
+    inset: 0;
+    width: auto;
+    height: auto;
+    min-height: auto;
+    border-radius: 0;
+  }
+
+  .site-layout--split .hero-image {
+    top: 50%;
+    left: 50%;
+    width: 120%;
+    height: calc(100% + 120px);
+    min-height: calc(100% + 120px);
+    transform: translate(-50%, calc(-50% + var(--hero-parallax-offset, 0px))) scale(1.1);
+  }
+
+  .site-layout--split .hero-overlay {
+    background:
+      linear-gradient(90deg, rgba(15, 12, 10, 0.84) 0%, rgba(15, 12, 10, 0.42) 48%, rgba(15, 12, 10, 0.68) 100%),
+      linear-gradient(180deg, rgba(15, 12, 10, 0.08), rgba(15, 12, 10, 0.4));
+  }
+
+  .site-layout--split .hero-content,
+  .site-layout--split .hero-card > .booking-strip:not(.booking-strip-sticky) {
+    position: relative;
+    z-index: 1;
+    width: min(1180px, calc(100% - 28px));
+    margin-inline: auto;
+  }
+
+  .site-layout--split .hero-card > .booking-strip:not(.booking-strip-sticky) {
+    display: grid;
+    grid-template-columns: minmax(0, 1.3fr) minmax(0, 1.1fr) auto;
+    margin-top: 28px;
+  }
+
+  .site-layout--split.site-template--riviera .hero-card,
+  .site-layout--split.site-template--panorama .hero-card,
+  .site-layout--split.site-template--cabin .hero-card,
+  .site-layout--split.site-template--marina .hero-card {
+    padding-inline: 0;
+  }
+}
+
+@media (max-width: 720px) {
+  .site-layout--hotel .hero-card > .booking-strip:not(.booking-strip-sticky) {
+    grid-template-columns: 1fr;
+  }
+
+  .site-layout--split .hero-card > .booking-strip:not(.booking-strip-sticky) {
+    grid-template-columns: 1fr;
+  }
+
+  .site-layout--hotel .featured-stack,
+  .site-layout--hotel .benefits-grid {
+    grid-template-columns: 1fr;
+  }
+}

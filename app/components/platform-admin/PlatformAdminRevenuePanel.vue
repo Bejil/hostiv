@@ -60,6 +60,13 @@ const summaryCards = computed(() => {
       label: s.premiumTools,
       value: formatEuro(summary.premium_tools_eur),
       accent: false
+    },
+    {
+      icon: "key" as const satisfies AdminIconName,
+      label: s.discounts,
+      value: formatEuro(summary.discount_total_eur),
+      hint: `${summary.promo_payments_count} ${s.promoPayments.toLowerCase()}`,
+      accent: false
     }
   ]
 })
@@ -115,6 +122,7 @@ const summaryCards = computed(() => {
                 <th>{{ ui.revenue.columns.product }}</th>
                 <th>{{ ui.revenue.columns.member }}</th>
                 <th>{{ ui.revenue.columns.site }}</th>
+                <th>{{ ui.revenue.columns.promo }}</th>
                 <th>{{ ui.revenue.columns.amount }}</th>
               </tr>
             </thead>
@@ -138,7 +146,29 @@ const summaryCards = computed(() => {
                   </NuxtLink>
                   <span v-else>—</span>
                 </td>
-                <td>{{ formatEuro(payment.amount_eur) }}</td>
+                <td>
+                  <span v-if="payment.promo_code" class="platform-admin-badge platform-admin-badge--status-ok">
+                    {{ payment.promo_code }}
+                    <template v-if="payment.discount_eur">
+                      (-{{ formatEuro(payment.discount_eur) }})
+                    </template>
+                  </span>
+                  <span v-else>—</span>
+                </td>
+                <td>
+                  <span class="platform-admin-revenue-amount">
+                    <span class="platform-admin-revenue-amount__value">{{
+                      formatEuro(payment.amount_eur)
+                    }}</span>
+                    <span
+                      v-if="payment.amount_subtotal_eur && payment.discount_eur"
+                      class="platform-admin-revenue-amount__breakdown"
+                    >
+                      ({{ formatEuro(payment.amount_subtotal_eur) }} →
+                      {{ formatEuro(payment.amount_eur) }})
+                    </span>
+                  </span>
+                </td>
               </tr>
             </tbody>
           </table>

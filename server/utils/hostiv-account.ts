@@ -7,6 +7,7 @@ import {
 import type { HostivAccountProfile, HostivAccountUpdateBody } from "../../app/types/hostiv-account"
 import { isHostivPasswordValid } from "../../app/utils/hostiv-password-rules"
 import { deletePropertyStorageAssets } from "./property-storage-cleanup"
+import { countOwnedPropertiesForUser } from "./hostiv-properties"
 import { requireSupabaseAdmin } from "./supabase"
 import { getStripeClient } from "./stripe-client"
 import { formatStripeErrorMessage } from "./stripe-error"
@@ -146,12 +147,72 @@ export async function deleteStripeConnectAccount(
   }
 }
 
-export async function deletePropertyAndConnectedResources(property: {
-  id: string
-  slug: string
-  stripe_account_id?: string | null
-}): Promise<void> {
+async function listPropertyCohostUserIds(propertyId: string, ownerUserId: string) {
+  const supabase = requireSupabaseAdmin()
+  const { data, error } = await supabase
+    .from("property_cohosts")
+    .select("user_id")
+    .eq("property_id", propertyId)
+
+  if (error) {
+    console.error("[hostiv-account] cohost list:", error.message)
+
+    throw createError({
+      statusCode: 502,
+      message: "Impossible de charger les co-hôtes du site."
+    })
+  }
+
+  const ids = new Set<string>()
+
+  for (const row of data ?? []) {
+    const userId = typeof row.user_id === "string" ? row.user_id.trim() : ""
+
+    if (userId && userId !== ownerUserId) {
+      ids.add(userId)
+    }
+  }
+
+  return [...ids]
+}
+
+async function deleteOrphanedCohostAccounts(userIds: string[]) {
+  if (!userIds.length) {
+    return
+  }
+
+  const supabase = requireSupabaseAdmin()
+
+  for (const userId of userIds) {
+    const [{ data: ownedProperty }, { data: otherCohost }] = await Promise.all([
+      supabase.from("properties").select("id").eq("owner_user_id", userId).maybeSingle(),
+      supabase.from("property_cohosts").select("id").eq("user_id", userId).maybeSingle()
+    ])
+
+    if (ownedProperty || otherCohost) {
+      continue
+    }
+
+    const { error } = await supabase.auth.admin.deleteUser(userId)
+
+    if (error) {
+      console.error("[hostiv-account] cohost user delete:", userId, error.message)
+    }
+  }
+}
+
+export async function deletePropertyAndConnectedResources(
+  property: {
+    id: string
+    slug: string
+    stripe_account_id?: string | null
+  },
+  options: { ownerUserId?: string } = {}
+): Promise<void> {
   const normalizedSlug = property.slug.trim().toLowerCase()
+  const cohostUserIds = options.ownerUserId
+    ? await listPropertyCohostUserIds(property.id, options.ownerUserId)
+    : []
   const stripeAccountId =
     typeof property.stripe_account_id === "string" ? property.stripe_account_id.trim() : ""
   const stripeSecretKey = String(process.env.STRIPE_SECRET_KEY || "").trim()
@@ -183,6 +244,8 @@ export async function deletePropertyAndConnectedResources(property: {
       message: "Impossible de supprimer le site."
     })
   }
+
+  await deleteOrphanedCohostAccounts(cohostUserIds)
 }
 
 export async function deleteHostivAccountForProperty(slug: string, userId: string): Promise<void> {
@@ -218,7 +281,13 @@ export async function deleteHostivAccountForProperty(slug: string, userId: strin
   const { data: ownerAuth, error: ownerAuthError } = await supabase.auth.admin.getUserById(userId)
   const ownerEmail = ownerAuthError ? "" : ownerAuth.user?.email?.trim() ?? ""
 
-  await deletePropertyAndConnectedResources(property)
+  await deletePropertyAndConnectedResources(property, { ownerUserId: userId })
+
+  const remainingOwned = await countOwnedPropertiesForUser(userId)
+
+  if (remainingOwned > 0) {
+    return
+  }
 
   const { error: deleteUserError } = await supabase.auth.admin.deleteUser(userId)
 

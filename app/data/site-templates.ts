@@ -4,9 +4,7 @@ export type SiteTemplateId =
   | "signature"
   | "riviera"
   | "panorama"
-  | "toky"
   | "cabin"
-  | "resort"
   | "marina"
 
 export type SiteTemplateOption = {
@@ -18,53 +16,41 @@ export type SiteTemplateOption = {
 
 export const DEFAULT_SITE_TEMPLATE_ID: SiteTemplateId = "signature"
 
+const LEGACY_SITE_TEMPLATE_MIGRATION: Record<string, SiteTemplateId> = {
+  toky: "signature",
+  resort: "marina"
+}
+
 const siteTemplateOptionsFr: SiteTemplateOption[] = [
   {
     id: "signature",
     name: "Signature",
     eyebrow: "Chaleureux · Premium",
-    description: "L’ambiance actuelle : tons sable, cartes douces et expérience très éditoriale."
+    description: "Tons sable, cartes douces et expérience éditoriale."
   },
   {
     id: "riviera",
     name: "Riviera",
     eyebrow: "Lumineux · Vacances",
-    description: "Hero arrondi, titres serif, cartes plus généreuses et sections plus aérées."
+    description: "Hero arrondi, titres serif et sections aérées."
   },
   {
     id: "panorama",
     name: "Panorama",
     eyebrow: "Immersif · Narratif",
-    description:
-      "Mise en page inédite : sections plus cinématographiques, compositions asymétriques et focus visuel."
-  },
-  {
-    id: "toky",
-    name: "Toky",
-    eyebrow: "Éditorial · Jaune",
-    description:
-      "Inspiré hôtel boutique : fond clair, serif décoratif, accents jaune vif et boutons noirs."
+    description: "Sections cinématographiques et compositions asymétriques."
   },
   {
     id: "cabin",
     name: "Cabin",
     eyebrow: "Nature · Forêt",
-    description:
-      "Crème et vert forêt, titres serif élégants, cartes douces et formulaire sombre."
-  },
-  {
-    id: "resort",
-    name: "Resort",
-    eyebrow: "Voyage · Rouge",
-    description:
-      "Blanc et rouge, hero lumineux en arc, barre de réservation horizontale type hôtel."
+    description: "Crème et vert forêt, serif élégant, formulaire sombre."
   },
   {
     id: "marina",
     name: "Marina",
     eyebrow: "Luxe · Marine",
-    description:
-      "Bleu marine et corail, cartes nettes, CTA arrondis et sections contrastées."
+    description: "Bleu marine et corail, cartes nettes et CTA arrondis."
   }
 ]
 
@@ -73,45 +59,31 @@ const siteTemplateOptionsEn: SiteTemplateOption[] = [
     id: "signature",
     name: "Signature",
     eyebrow: "Warm · Premium",
-    description: "The current look: sand tones, soft cards and a highly editorial feel."
+    description: "Sand tones, soft cards and an editorial feel."
   },
   {
     id: "riviera",
     name: "Riviera",
     eyebrow: "Bright · Holiday",
-    description: "Rounded hero, serif titles, generous cards and airier sections."
+    description: "Rounded hero, serif titles and airy sections."
   },
   {
     id: "panorama",
     name: "Panorama",
     eyebrow: "Immersive · Story-driven",
-    description:
-      "A fresh layout: more cinematic sections, asymmetric compositions and visual focus."
-  },
-  {
-    id: "toky",
-    name: "Toky",
-    eyebrow: "Editorial · Yellow",
-    description:
-      "Boutique hotel inspired: light background, decorative serif, bright yellow accents and black buttons."
+    description: "Cinematic sections and asymmetric compositions."
   },
   {
     id: "cabin",
     name: "Cabin",
     eyebrow: "Nature · Forest",
-    description: "Cream and forest green, elegant serif titles, soft cards and a dark booking form."
-  },
-  {
-    id: "resort",
-    name: "Resort",
-    eyebrow: "Travel · Red",
-    description: "White and red, bright arched hero, horizontal hotel-style booking bar."
+    description: "Cream and forest green, elegant serif, dark booking form."
   },
   {
     id: "marina",
     name: "Marina",
     eyebrow: "Luxury · Marine",
-    description: "Navy and coral, crisp cards, rounded CTAs and contrasting sections."
+    description: "Navy and coral, crisp cards and rounded CTAs."
   }
 ]
 
@@ -124,7 +96,7 @@ export function getSiteTemplateOptions(locale: HostivLocale = "fr"): SiteTemplat
 
 const templateIdSet = new Set(siteTemplateOptionsFr.map((option) => option.id))
 
-/** Retourne null si aucun thème n’a été choisi (onboarding / brouillon). */
+/** Retourne null si aucun thème actif n’a été choisi (onboarding / brouillon). */
 export function parseSiteTemplateId(value: unknown): SiteTemplateId | null {
   if (typeof value !== "string") {
     return null
@@ -139,6 +111,25 @@ export function parseSiteTemplateId(value: unknown): SiteTemplateId | null {
   return trimmed as SiteTemplateId
 }
 
+/** Résout un thème pour le site public (inclut migration des anciens thèmes retirés). */
+export function resolveSiteTemplateId(value: unknown): SiteTemplateId {
+  const parsed = parseSiteTemplateId(value)
+
+  if (parsed) {
+    return parsed
+  }
+
+  if (typeof value === "string") {
+    const migrated = LEGACY_SITE_TEMPLATE_MIGRATION[value.trim()]
+
+    if (migrated) {
+      return migrated
+    }
+  }
+
+  return DEFAULT_SITE_TEMPLATE_ID
+}
+
 export function normalizeSiteTemplateId(value: unknown): SiteTemplateId {
-  return parseSiteTemplateId(value) ?? DEFAULT_SITE_TEMPLATE_ID
+  return resolveSiteTemplateId(value)
 }

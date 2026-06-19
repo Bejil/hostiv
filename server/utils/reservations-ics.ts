@@ -1,8 +1,15 @@
 import type { AdminBookingReservation } from "../../app/types/booking-reservation"
+import { addDayToIsoDate, enumerateStayNights } from "./stay-nights"
 
 type ReservationsIcsOptions = {
   calendarName: string
   propertySlug: string
+  manualBlocks?: string[]
+}
+
+type ManualBlockRange = {
+  start: string
+  end: string
 }
 
 function escapeIcalText(value: string) {
@@ -42,6 +49,29 @@ function guestLabel(reservation: AdminBookingReservation) {
   return "Réservation Hostiv"
 }
 
+function groupConsecutiveDates(dates: string[]) {
+  const sorted = [...dates].sort((a, b) => a.localeCompare(b))
+  const ranges: ManualBlockRange[] = []
+
+  for (const date of sorted) {
+    const last = ranges[ranges.length - 1]
+
+    if (!last) {
+      ranges.push({ start: date, end: date })
+      continue
+    }
+
+    if (date === addDayToIsoDate(last.end)) {
+      last.end = date
+      continue
+    }
+
+    ranges.push({ start: date, end: date })
+  }
+
+  return ranges
+}
+
 function buildReservationEvent(
   reservation: AdminBookingReservation,
   propertySlug: string,
@@ -74,6 +104,29 @@ function buildReservationEvent(
   ].join("\r\n")
 }
 
+function buildManualBlockEvent(range: ManualBlockRange, propertySlug: string, stamp: string) {
+  const departureDate = addDayToIsoDate(range.end)
+  const summary = escapeIcalText("Indisponible — blocage manuel")
+  const description = escapeIcalText(
+    range.start === range.end
+      ? `Nuit bloquée manuellement le ${range.start}`
+      : `Période bloquée manuellement du ${range.start} au ${range.end}`
+  )
+
+  return [
+    "BEGIN:VEVENT",
+    `UID:${escapeIcalText(`manual-${range.start}-${range.end}@hostiv/${propertySlug}`)}`,
+    `DTSTAMP:${stamp}`,
+    `DTSTART;VALUE=DATE:${formatIcalDateValue(range.start)}`,
+    `DTEND;VALUE=DATE:${formatIcalDateValue(departureDate)}`,
+    `SUMMARY:${summary}`,
+    `DESCRIPTION:${description}`,
+    "STATUS:CONFIRMED",
+    "TRANSP:OPAQUE",
+    "END:VEVENT"
+  ].join("\r\n")
+}
+
 export function buildReservationsIcsCalendar(
   reservations: AdminBookingReservation[],
   options: ReservationsIcsOptions
@@ -81,8 +134,23 @@ export function buildReservationsIcsCalendar(
   const confirmed = reservations.filter((reservation) => reservation.status === "confirmed")
   const stamp = formatIcalUtcTimestamp(new Date())
   const calendarName = escapeIcalText(options.calendarName.trim() || options.propertySlug)
-  const events = confirmed.map((reservation) =>
+  const reservedNights = new Set<string>()
+
+  for (const reservation of confirmed) {
+    for (const night of enumerateStayNights(reservation.arrival_date, reservation.departure_date)) {
+      reservedNights.add(night)
+    }
+  }
+
+  const manualBlocks = [...new Set(options.manualBlocks ?? [])]
+    .filter((date) => !reservedNights.has(date))
+    .sort((a, b) => a.localeCompare(b))
+
+  const reservationEvents = confirmed.map((reservation) =>
     buildReservationEvent(reservation, options.propertySlug, stamp)
+  )
+  const manualBlockEvents = groupConsecutiveDates(manualBlocks).map((range) =>
+    buildManualBlockEvent(range, options.propertySlug, stamp)
   )
 
   return [
@@ -92,7 +160,8 @@ export function buildReservationsIcsCalendar(
     "CALSCALE:GREGORIAN",
     "METHOD:PUBLISH",
     `X-WR-CALNAME:${calendarName}`,
-    ...events,
+    ...reservationEvents,
+    ...manualBlockEvents,
     "END:VCALENDAR",
     ""
   ].join("\r\n")

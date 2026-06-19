@@ -893,6 +893,21 @@
   color: var(--h-accent);
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .hostiv-modal-fade-enter-active,
+  .hostiv-modal-fade-leave-active,
+  .hostiv-modal-panel-enter-active,
+  .hostiv-modal-panel-leave-active {
+    transition: none;
+  }
+
+  .hostiv-modal-panel-enter-from,
+  .hostiv-modal-panel-leave-to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 .hostiv-modal__success-box {
   display: flex;
   flex-direction: column;

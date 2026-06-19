@@ -16,6 +16,7 @@ import type {
 } from "../../app/types/platform-admin"
 import type { HostivSubscriptionPlan } from "../../app/utils/hostiv-subscription-plan"
 import { buildHostivSubscriptionAccess, isHostivSubscriptionActive } from "../../app/utils/hostiv-subscription-access"
+import { buildHostivSubscriptionAccessForEmail } from "./hostiv-platform-admin-subscription"
 import { profileFromUserMetadata } from "../../app/utils/hostiv-user-profile"
 import { requireSupabaseAdmin } from "./supabase"
 
@@ -70,7 +71,7 @@ function premiumAddonPriceEur() {
 function planPriceEur(plan: "starter" | "pro") {
   const match = hostivPricing.plans.find((entry) => entry.id === plan)
 
-  return match?.price ?? (plan === "starter" ? 49 : 69)
+  return match?.price ?? (plan === "starter" ? 49 : 99)
 }
 
 function daysFromNow(days: number) {
@@ -198,30 +199,33 @@ export async function getPlatformAdminDashboardStats(): Promise<PlatformAdminDas
   let newMembers30d = 0
 
   for (const account of accounts) {
-    const access = buildHostivSubscriptionAccess(account)
+    const authUser = authUsers.get(account.id)
+    const access = buildHostivSubscriptionAccessForEmail(account, authUser?.email)
 
     if (access.active) {
       subscriptionsActive += 1
 
-      if (access.plan === "starter") {
-        starterActive += 1
-        estimatedAnnual += planPriceEur("starter")
+      if (!access.is_platform_admin) {
+        if (access.plan === "starter") {
+          starterActive += 1
+          estimatedAnnual += planPriceEur("starter")
 
-        if (access.has_starter_plus) {
-          starterPlusActive += 1
-          estimatedAnnual += premiumAddonPriceEur()
+          if (access.has_starter_plus) {
+            starterPlusActive += 1
+            estimatedAnnual += premiumAddonPriceEur()
+          }
+        } else {
+          proActive += 1
+          estimatedAnnual += planPriceEur("pro")
         }
       } else {
         proActive += 1
-        estimatedAnnual += planPriceEur("pro")
       }
     } else if (access.paid_until) {
       subscriptionsExpired += 1
     } else {
       subscriptionsUnpaid += 1
     }
-
-    const authUser = authUsers.get(account.id)
 
     if (authUser?.created_at && authUser.created_at >= since30d) {
       newMembers30d += 1
@@ -412,13 +416,16 @@ export async function listPlatformAdminSites(): Promise<PlatformAdminSiteRow[]> 
     const ownerId =
       typeof property.owner_user_id === "string" ? property.owner_user_id : null
     const account = ownerId ? accountsById.get(ownerId) : null
-    const access = buildHostivSubscriptionAccess({
-      subscription_plan: account?.subscription_plan ?? property.subscription_plan,
-      paid_until: account?.paid_until,
-      premium_tools_until: account?.premium_tools_until,
-      subscription_started_at: account?.subscription_started_at
-    })
     const authUser = ownerId ? authUsers.get(ownerId) : null
+    const access = buildHostivSubscriptionAccessForEmail(
+      {
+        subscription_plan: account?.subscription_plan ?? property.subscription_plan,
+        paid_until: account?.paid_until,
+        premium_tools_until: account?.premium_tools_until,
+        subscription_started_at: account?.subscription_started_at
+      },
+      authUser?.email
+    )
     const reservationKey = property.id
     const reservationStat = reservationStats.get(reservationKey) ??
       reservationStats.get(property.slug) ?? { count: 0, gmv: 0 }
@@ -493,8 +500,8 @@ export async function listPlatformAdminMembers(): Promise<PlatformAdminMemberRow
   }
 
   return (accountsRes.data ?? []).map((account) => {
-    const access = buildHostivSubscriptionAccess(account)
     const authUser = authUsers.get(account.id)
+    const access = buildHostivSubscriptionAccessForEmail(account, authUser?.email)
     const property = propertyByOwner.get(account.id)
 
     return {
@@ -547,8 +554,8 @@ export async function getPlatformAdminMemberDetail(userId: string): Promise<Plat
   }
 
   const account = accountRes.data
-  const access = buildHostivSubscriptionAccess(account)
   const user = userRes.data.user
+  const access = buildHostivSubscriptionAccessForEmail(account, user.email)
   const profile = profileFromUserMetadata(user.user_metadata as Record<string, unknown> | undefined)
   const property = propertyRes.data
 
@@ -580,7 +587,7 @@ export async function getPlatformAdminRevenueReport(): Promise<PlatformAdminReve
   const { data, error } = await supabase
     .from("hostiv_stripe_payments")
     .select(
-      "id, paid_at, checkout_type, product_label, subscription_plan, member_email, property_slug, amount_cents, currency"
+      "id, paid_at, checkout_type, product_label, subscription_plan, member_email, property_slug, amount_cents, amount_subtotal_cents, discount_cents, promo_code, currency"
     )
     .eq("payment_status", "paid")
     .order("paid_at", { ascending: false })
@@ -599,6 +606,13 @@ export async function getPlatformAdminRevenueReport(): Promise<PlatformAdminReve
     member_email: row.member_email,
     property_slug: row.property_slug,
     amount_eur: Math.round(row.amount_cents) / 100,
+    amount_subtotal_eur:
+      typeof row.amount_subtotal_cents === "number" ? Math.round(row.amount_subtotal_cents) / 100 : null,
+    discount_eur:
+      typeof row.discount_cents === "number" && row.discount_cents > 0
+        ? Math.round(row.discount_cents) / 100
+        : null,
+    promo_code: typeof row.promo_code === "string" && row.promo_code.trim() ? row.promo_code : null,
     currency: row.currency
   }))
 
@@ -611,9 +625,22 @@ export async function getPlatformAdminRevenueReport(): Promise<PlatformAdminReve
   let signupCents = 0
   let subscriptionCents = 0
   let premiumToolsCents = 0
+  let discountTotalCents = 0
+  let promoPaymentsCount = 0
 
   for (const row of data ?? []) {
     totalCollectedCents += row.amount_cents
+
+    if (
+      (typeof row.promo_code === "string" && row.promo_code.trim()) ||
+      (typeof row.discount_cents === "number" && row.discount_cents > 0)
+    ) {
+      if (typeof row.discount_cents === "number" && row.discount_cents > 0) {
+        discountTotalCents += row.discount_cents
+      }
+
+      promoPaymentsCount += 1
+    }
 
     if (row.checkout_type === "hostiv_signup") {
       signupCents += row.amount_cents
@@ -637,7 +664,9 @@ export async function getPlatformAdminRevenueReport(): Promise<PlatformAdminReve
       last_30d_count: last30dCount,
       signup_eur: Math.round(signupCents) / 100,
       subscription_eur: Math.round(subscriptionCents) / 100,
-      premium_tools_eur: Math.round(premiumToolsCents) / 100
+      premium_tools_eur: Math.round(premiumToolsCents) / 100,
+      discount_total_eur: Math.round(discountTotalCents) / 100,
+      promo_payments_count: promoPaymentsCount
     },
     payments
   }
@@ -659,7 +688,7 @@ export async function getPlatformAdminRevenueBreakdown(): Promise<PlatformAdminR
     starter_plus_annual_eur: starterPlusAnnual,
     estimated_total_annual_eur: stats.estimated_annual_revenue_eur,
     note:
-      "Estimation basée sur les forfaits actifs (Starter 49 €, Pro 69 €, Starter+ 30 €). Les paiements réels Stripe ne sont pas historisés en base."
+      "Estimation basée sur les forfaits actifs (Starter 49 €, Pro 99 €, Starter+ 30 €). Les paiements réels Stripe ne sont pas historisés en base."
   }
 }
 

@@ -20,9 +20,13 @@ function normalizeHostivLanding(bundle: typeof hostivLandingFr) {
     steps: bundle.hostivSteps,
     pricing: bundle.hostivPricing,
     cta: bundle.hostivCta,
+    faqSection: bundle.hostivFaqSection,
+    faqGroups: bundle.hostivFaqGroups,
+    faqs: bundle.hostivFaqs,
     footer: bundle.hostivFooter,
     notFound: bundle.hostivNotFoundUi,
     accountModal: bundle.hostivAccountModalUi,
+    contactModal: bundle.hostivContactModalUi,
     passwordResetPage: bundle.hostivPasswordResetPageUi
   }
 }

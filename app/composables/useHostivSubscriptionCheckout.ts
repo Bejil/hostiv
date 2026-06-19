@@ -8,6 +8,7 @@ export type HostivSignupCheckoutPayload = {
   property_name: string
   property_slug: string
   subscription_plan: HostivPricingPlanId
+  promo_code?: string
 }
 
 export async function startHostivSignupCheckout(payload: HostivSignupCheckoutPayload) {
@@ -18,7 +19,10 @@ export async function startHostivSignupCheckout(payload: HostivSignupCheckoutPay
 
   const response = await $fetch<{ url: string }>("/api/hostiv/signup-checkout", {
     method: "POST",
-    body: payload
+    body: {
+      ...payload,
+      promo_code: payload.promo_code || undefined
+    }
   })
 
   if (!response.url) {
@@ -31,7 +35,8 @@ export async function startHostivSignupCheckout(payload: HostivSignupCheckoutPay
 export async function startHostivSubscriptionCheckout(
   accessToken: string,
   plan: HostivPricingPlanId,
-  propertySlug: string
+  propertySlug: string,
+  promoCode?: string
 ) {
   const response = await $fetch<{ url: string }>("/api/hostiv/subscription-checkout", {
     method: "POST",
@@ -40,7 +45,8 @@ export async function startHostivSubscriptionCheckout(
     },
     body: {
       subscription_plan: plan,
-      property_slug: propertySlug
+      property_slug: propertySlug,
+      promo_code: promoCode || undefined
     }
   })
 
@@ -51,14 +57,19 @@ export async function startHostivSubscriptionCheckout(
   window.location.assign(response.url)
 }
 
-export async function startHostivPremiumToolsCheckout(accessToken: string, propertySlug: string) {
+export async function startHostivPremiumToolsCheckout(
+  accessToken: string,
+  propertySlug: string,
+  promoCode?: string
+) {
   const response = await $fetch<{ url: string }>("/api/hostiv/premium-tools-checkout", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${accessToken}`
     },
     body: {
-      property_slug: propertySlug
+      property_slug: propertySlug,
+      promo_code: promoCode || undefined
     }
   })
 
@@ -102,5 +113,53 @@ export async function verifyHostivSignupCheckout(sessionId: string) {
     already_completed?: boolean
   }>("/api/hostiv/signup-checkout/verify", {
     query: { session_id: sessionId }
+  })
+}
+
+export type HostivPropertyAddCheckoutPayload = {
+  property_name: string
+  property_slug: string
+  subscription_plan: HostivPricingPlanId
+  return_slug: string
+  promo_code?: string
+}
+
+export async function startHostivPropertyAddCheckout(
+  accessToken: string,
+  payload: HostivPropertyAddCheckoutPayload
+) {
+  const response = await $fetch<{ url: string }>("/api/hostiv/property-add-checkout", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`
+    },
+    body: {
+      ...payload,
+      promo_code: payload.promo_code || undefined
+    }
+  })
+
+  if (!response.url) {
+    throw new Error("Impossible d’ouvrir la page de paiement.")
+  }
+
+  window.location.assign(response.url)
+}
+
+export async function verifyHostivPropertyAddCheckout(accessToken: string, sessionId: string) {
+  return $fetch<{
+    ok: boolean
+    fulfilled: boolean
+    slug: string | null
+    paid_until?: string | null
+    subscription_plan?: string | null
+    subscription_access: { active: boolean; paid_until: string | null } | null
+  }>("/api/hostiv/property-add-checkout/verify", {
+    headers: {
+      Authorization: `Bearer ${accessToken}`
+    },
+    query: {
+      session_id: sessionId
+    }
   })
 }

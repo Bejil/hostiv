@@ -15,7 +15,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const user = await getBearerUser(event)
-  const body = await readBody<{ property_slug?: string }>(event)
+  const body = await readBody<{ property_slug?: string; promo_code?: string }>(event)
   const propertySlug = String(body?.property_slug || "").trim().toLowerCase()
 
   if (!propertySlug) {
@@ -54,7 +54,8 @@ export default defineEventHandler(async (event) => {
     userId: user.id,
     email: user.email ?? "",
     propertySlug,
-    siteBaseUrl
+    siteBaseUrl,
+    promoCode: body?.promo_code
   })
 
   return checkout

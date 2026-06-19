@@ -14,6 +14,7 @@ const emit = defineEmits<{
 }>()
 
 const { ui } = usePlatformAdminUi()
+const { homePath } = useHostivLocale()
 
 const headerRef = ref<HTMLElement | null>(null)
 const accountMenuOpen = ref(false)
@@ -58,7 +59,12 @@ function onLogout() {
   <header ref="headerRef" class="admin-page__header">
     <div class="admin-page__header-inner">
       <div class="admin-page__brand">
-        <div class="admin-page__logo">
+        <NuxtLink
+          :to="homePath"
+          class="admin-page__logo admin-page__logo-link"
+          :aria-label="ui.header.logoHome"
+          :title="ui.header.logoHome"
+        >
           <img
             src="/hostiv/logo-mark.svg"
             alt=""
@@ -66,7 +72,7 @@ function onLogout() {
             height="40"
             class="admin-page__logo-img"
           />
-        </div>
+        </NuxtLink>
         <div>
           <h1 class="admin-page__title">{{ ui.shell.title }}</h1>
           <p class="admin-page__meta">

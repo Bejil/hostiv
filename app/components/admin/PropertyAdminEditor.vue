@@ -5,6 +5,7 @@ import AdminGuestReviewsEditor from "./AdminGuestReviewsEditor.vue"
 import AdminReservationsEditor from "./AdminReservationsEditor.vue"
 import AdminPayoutsEditor from "./AdminPayoutsEditor.vue"
 import AdminWelcomeGuideEditor from "./AdminWelcomeGuideEditor.vue"
+import AdminAccountPanel from "./AdminAccountPanel.vue"
 import AdminField from "./AdminField.vue"
 import AdminIcon from "./AdminIcon.vue"
 import AdminImageUpload from "./AdminImageUpload.vue"
@@ -21,7 +22,6 @@ import type { HostivSubscriptionAccess } from "../../utils/hostiv-subscription-a
 import { findAdminNavMeta } from "../../data/admin-nav-sections"
 import { getHostivLanding } from "../../data/hostivLanding"
 import { adminUiFormat } from "../../data/admin-ui"
-import AdminSeoKeywordsPanel from "./AdminSeoKeywordsPanel.vue"
 import type { HostivLocale } from "../../types/hostiv-locale"
 import type { PropertySiteCopy } from "../../types/property-site"
 import {
@@ -31,6 +31,7 @@ import {
   mergeSiteCopyOverride,
   mergeSiteCopyPrimaryFirst,
   seedLocalizedSiteLists,
+  seedLocalizedAmenityContent,
   type LocalizedSiteListKey
 } from "../../utils/site-content-locale"
 import type { PropertyWelcomeGuide } from "../../types/welcome-guide"
@@ -141,12 +142,19 @@ const router = useRouter()
 
 const proFeatureGate = useAdminProFeatureGate()
 
+const isPrimaryOwner = computed(() => record.value.admin_access?.is_primary_owner !== false)
+const isCohost = computed(() => record.value.admin_access?.role === "cohost")
+
 const stripeBlocksPublish = computed(
   () =>
     sectionNav.stripeConnectLoading.value || sectionNav.stripeConnectNeedsAttention.value
 )
 
 function onPublishedChange(value: boolean) {
+  if (!isPrimaryOwner.value) {
+    return
+  }
+
   if (value && stripeBlocksPublish.value) {
     publishStripeModalOpen.value = true
     return
@@ -203,6 +211,12 @@ function seedLocalizedContentForLocale(locale: HostivLocale) {
 
   if (seededLists) {
     patch({ content: seededLists })
+  }
+
+  const seededAmenities = seedLocalizedAmenityContent(record.value.content, locale)
+
+  if (seededAmenities) {
+    patch({ content: seededAmenities })
   }
 }
 
@@ -470,7 +484,11 @@ defineExpose({
         <section v-if="activeMenuSection === 'general'" class="admin-panel admin-panel--general">
           <div class="admin-general-layout admin-general-layout--single">
             <div class="admin-general-main">
-              <AdminGeneralSubscriptionCard :slug="slug" :access="subscriptionAccess" />
+              <AdminGeneralSubscriptionCard
+                v-if="isPrimaryOwner"
+                :slug="slug"
+                :access="subscriptionAccess"
+              />
 
               <div class="admin-subpanel admin-general-card admin-general-card--publication">
                 <div class="admin-subpanel__head admin-general-card__head">
@@ -489,6 +507,7 @@ defineExpose({
                   :model-value="record.published"
                   :label="ext.general.publishedToggleLabel"
                   :hint="ext.general.publishedToggleHint"
+                  :disabled="!isPrimaryOwner"
                   @update:model-value="onPublishedChange"
                 />
               </div>
@@ -514,6 +533,14 @@ defineExpose({
 
             </div>
           </div>
+        </section>
+
+        <section v-else-if="activeMenuSection === 'account'" class="admin-panel admin-panel--account">
+          <AdminAccountPanel
+            :slug="slug"
+            :show-cohosts="isPrimaryOwner"
+            :show-plans="isPrimaryOwner"
+          />
         </section>
 
         <AdminCustomizationPanel
@@ -560,6 +587,7 @@ defineExpose({
             :slug="slug"
             :model-value="record.calendar_config"
             :save-draft="saveDraft"
+            :can-access-accounting="!isCohost"
             @update:model-value="patch({ calendar_config: $event })"
             @reservations-changed="loadUpcomingReservationCount"
           />
@@ -572,7 +600,7 @@ defineExpose({
           <AdminGuestReviewsEditor :slug="slug" />
         </section>
 
-        <section v-else-if="activeMenuSection === 'payouts'" class="admin-panel admin-panel--payouts">
+        <section v-else-if="activeMenuSection === 'payouts' && !isCohost" class="admin-panel admin-panel--payouts">
           <AdminPayoutsEditor :slug="slug" />
         </section>
 

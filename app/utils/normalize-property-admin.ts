@@ -1,6 +1,9 @@
 import type { PropertyAdminRecord } from "../types/property-admin"
+import type { PropertyAdminAccess } from "../types/property-cohost"
 import {
+  buildHostivPlatformAdminSubscriptionAccess,
   buildHostivSubscriptionAccess,
+  isHostivPlatformAdminSubscriptionAccess,
   type HostivSubscriptionAccess
 } from "./hostiv-subscription-access"
 import { normalizeHostivSubscriptionPlan } from "./hostiv-subscription-plan"
@@ -20,7 +23,7 @@ import type {
 } from "../types/property-site"
 import { normalizeBenefitIconId } from "../data/benefit-icons"
 import { normalizeLocationHighlightIconId } from "../data/location-highlight-icons"
-import { parseSiteTemplateId } from "../data/site-templates"
+import { normalizeSiteTemplate } from "../data/site-layouts"
 import { normalizeReviewRatingValue, ratingToStars } from "./platform-rating-stars"
 import { isPresetPlatformId } from "../data/admin-platform-tabs"
 import {
@@ -197,9 +200,7 @@ function normalizeContent(
     : undefined
 
   return {
-    template: {
-      id: parseSiteTemplateId(base.template?.id)
-    },
+    template: normalizeSiteTemplate(base.template),
     copy: normalizeCopy(base.copy, brandName, brandMeta),
     copy_en: copyEn,
     email: base.email ?? { access_lines: [] },
@@ -219,7 +220,9 @@ function normalizeContent(
     reviews: normalizeReviews(base.reviews),
     reviews_en: normalizeReviews(base.reviews_en),
     amenity_catalog: base.amenity_catalog ?? [],
+    amenity_catalog_en: base.amenity_catalog_en ?? [],
     amenity_preview_sections: withAmenityPreviewHasMore(base.amenity_preview_sections ?? []),
+    amenity_preview_sections_en: withAmenityPreviewHasMore(base.amenity_preview_sections_en ?? []),
     welcome_guide: createEmptyWelcomeGuide()
   }
 }
@@ -233,6 +236,10 @@ function normalizeSubscriptionAccess(
 ): HostivSubscriptionAccess | undefined {
   if (!raw || typeof raw !== "object") {
     return undefined
+  }
+
+  if (isHostivPlatformAdminSubscriptionAccess(raw)) {
+    return buildHostivPlatformAdminSubscriptionAccess(raw.subscription_started_at)
   }
 
   return buildHostivSubscriptionAccess({
@@ -335,17 +342,34 @@ export function normalizePropertyAdminRecord(raw: PropertyAdminRecord): Property
     record.subscription_access = subscriptionAccess
   }
 
+  if (raw.admin_access && typeof raw.admin_access === "object") {
+    const role = raw.admin_access.role
+
+    if (role === "owner" || role === "cohost" || role === "platform_admin") {
+      record.admin_access = {
+        role,
+        is_primary_owner: raw.admin_access.is_primary_owner !== false,
+        can_manage_cohosts: Boolean(raw.admin_access.can_manage_cohosts)
+      }
+    }
+  }
+
   return record
 }
 
 export function clonePropertyAdminRecord(record: PropertyAdminRecord): PropertyAdminRecord {
   const access = record.subscription_access
+  const adminAccess = record.admin_access
   const cloned = normalizePropertyAdminRecord(
     JSON.parse(JSON.stringify(record)) as PropertyAdminRecord
   )
 
   if (access) {
     cloned.subscription_access = access
+  }
+
+  if (adminAccess) {
+    cloned.admin_access = adminAccess
   }
 
   return cloned

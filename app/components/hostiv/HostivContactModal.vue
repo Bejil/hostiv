@@ -2,28 +2,38 @@
 import { CheckCircle2, Loader2, Send, X } from "@lucide/vue"
 
 const { open, closeContact } = useHostivContactModal()
+const { locale, landing } = useHostivLocale()
+
+const ui = computed(() => landing.value.contactModal)
 
 const name = ref("")
 const email = ref("")
-const subject = ref("Question générale")
+const subject = ref("")
 const message = ref("")
 const website = ref("")
 const loading = ref(false)
 const error = ref("")
 const success = ref("")
 
-const subjectOptions = [
-  "Question générale",
-  "Compte et abonnement",
-  "Site et réservations",
-  "Stripe et paiements",
-  "Autre"
-] as const
+function resetSubjectDefault() {
+  subject.value = ui.value.defaultSubject
+}
+
+watch(
+  () => ui.value.defaultSubject,
+  () => {
+    if (!open.value) {
+      resetSubjectDefault()
+    }
+  },
+  { immediate: true }
+)
 
 watch(open, (isOpen) => {
   if (isOpen) {
     error.value = ""
     success.value = ""
+    resetSubjectDefault()
     document.body.style.overflow = "hidden"
     return
   }
@@ -38,7 +48,7 @@ onUnmounted(() => {
 function resetForm() {
   name.value = ""
   email.value = ""
-  subject.value = "Question générale"
+  resetSubjectDefault()
   message.value = ""
   website.value = ""
 }
@@ -64,7 +74,7 @@ async function onSubmit() {
   success.value = ""
 
   if (!name.value.trim() || !email.value.trim() || !message.value.trim()) {
-    error.value = "Renseignez tous les champs obligatoires."
+    error.value = ui.value.errors.required
     return
   }
 
@@ -78,20 +88,18 @@ async function onSubmit() {
         email: email.value,
         subject: subject.value,
         message: message.value,
-        website: website.value
+        website: website.value,
+        locale: locale.value
       }
     })
 
-    success.value =
-      "Message envoyé. Un e-mail de confirmation vous a été adressé — nous vous répondrons sous 2 jours ouvrés en général."
+    success.value = ui.value.success
     resetForm()
   } catch (cause) {
     const fetchError = cause as { data?: { message?: string }; message?: string }
 
     error.value =
-      fetchError.data?.message ||
-      fetchError.message ||
-      "Impossible d’envoyer votre message. Réessayez plus tard."
+      fetchError.data?.message || fetchError.message || ui.value.errors.sendFailed
   } finally {
     loading.value = false
   }
@@ -120,7 +128,7 @@ async function onSubmit() {
             <span class="hostiv-modal__glow" aria-hidden="true" />
 
             <button type="button" class="hostiv-modal__close" :disabled="loading" @click="closeContact">
-              <span class="sr-only">Fermer</span>
+              <span class="sr-only">{{ ui.close }}</span>
               <X :size="18" stroke-width="2" />
             </button>
 
@@ -129,9 +137,9 @@ async function onSubmit() {
                 <img src="/hostiv/logo-mark.svg" alt="" width="40" height="40" class="hostiv-modal__logo-img" />
               </span>
               <div class="hostiv-modal__head-text">
-                <h2 id="hostiv-contact-modal-title" class="hostiv-modal__title">Nous contacter</h2>
+                <h2 id="hostiv-contact-modal-title" class="hostiv-modal__title">{{ ui.title }}</h2>
                 <p class="hostiv-modal__subtitle">
-                  Décrivez votre demande — nous vous répondons par e-mail.
+                  {{ ui.subtitle }}
                 </p>
               </div>
             </header>
@@ -146,38 +154,38 @@ async function onSubmit() {
                 class="hostiv-btn hostiv-btn--primary hostiv-modal__submit"
                 @click="closeContact"
               >
-                Fermer
+                {{ ui.close }}
               </button>
             </div>
 
             <form v-else class="hostiv-modal__form" @submit.prevent="onSubmit">
               <label class="hostiv-modal__field">
-                <span>Nom complet</span>
+                <span>{{ ui.fields.name }}</span>
                 <input v-model="name" type="text" autocomplete="name" required />
               </label>
 
               <label class="hostiv-modal__field">
-                <span>E-mail</span>
+                <span>{{ ui.fields.email }}</span>
                 <input v-model="email" type="email" autocomplete="email" required />
               </label>
 
               <label class="hostiv-modal__field">
-                <span>Sujet</span>
+                <span>{{ ui.fields.subject }}</span>
                 <select v-model="subject" class="hostiv-modal__select">
-                  <option v-for="option in subjectOptions" :key="option" :value="option">
+                  <option v-for="option in ui.subjectOptions" :key="option" :value="option">
                     {{ option }}
                   </option>
                 </select>
               </label>
 
               <label class="hostiv-modal__field">
-                <span>Message</span>
+                <span>{{ ui.fields.message }}</span>
                 <textarea
                   v-model="message"
                   class="hostiv-modal__textarea"
                   rows="5"
                   required
-                  placeholder="Décrivez votre question ou votre situation…"
+                  :placeholder="ui.fields.messagePlaceholder"
                 />
               </label>
 
@@ -195,7 +203,7 @@ async function onSubmit() {
                 class="hostiv-btn hostiv-btn--primary hostiv-modal__submit"
                 :disabled="loading"
               >
-                {{ loading ? "Envoi…" : "Envoyer le message" }}
+                {{ loading ? ui.submitting : ui.submit }}
                 <Loader2 v-if="loading" :size="18" class="hostiv-modal__submit-spinner" />
                 <Send v-else :size="18" />
               </button>

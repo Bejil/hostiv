@@ -21,6 +21,7 @@ export default defineEventHandler(async (event) => {
     property_name?: string
     property_slug?: string
     subscription_plan?: string
+    promo_code?: string
   }>(event)
 
   const fullName = String(body?.full_name || "").trim()
@@ -52,6 +53,7 @@ export default defineEventHandler(async (event) => {
     propertyName,
     propertySlug,
     plan: normalizeHostivSubscriptionPlan(body?.subscription_plan),
-    siteBaseUrl
+    siteBaseUrl,
+    promoCode: body?.promo_code
   })
 })

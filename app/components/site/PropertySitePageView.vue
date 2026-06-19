@@ -33,9 +33,11 @@ import {
   visibleAmenityItems
 } from "../../utils/amenity-preview"
 import { resolvePropertyInvoiceTheme } from "../../data/site-template-invoice-theme"
-import { normalizeSiteTemplateId } from "../../data/site-templates"
+import { normalizeSiteTemplate } from "../../data/site-layouts"
 import { siteBookingModalThemeStyle } from "../../utils/site-template-css-vars"
 import { getSiteBookingModalLabels } from "../../data/site-booking-modal-labels"
+import { getSiteGuestContactLabels } from "../../data/site-guest-contact-labels"
+import SiteGuestContactModal from "./SiteGuestContactModal.vue"
 import { getSiteUiLabels, siteUiFormat } from "../../data/site-ui-labels"
 import type { HostivLocale } from "../../types/hostiv-locale"
 import {
@@ -48,6 +50,7 @@ import {
   resolveLocalizedFeaturedSpace
 } from "../../utils/site-content-locale"
 import HostivLocaleSelect from "../hostiv/HostivLocaleSelect.vue"
+import { Mail } from "@lucide/vue"
 import { appendAssetCacheRevision } from "../../utils/property-asset-url"
 
 const props = withDefaults(
@@ -82,6 +85,7 @@ const slug = computed(() => props.slug)
 const { locale: hostivLocale } = useHostivLocale()
 const contentLocale = computed(() => props.contentLocale ?? hostivLocale.value)
 const siteUi = computed(() => getSiteUiLabels(contentLocale.value))
+const guestContactLabels = computed(() => getSiteGuestContactLabels(contentLocale.value))
 const bookingModalLabels = computed(() => getSiteBookingModalLabels(contentLocale.value))
 const dateLocale = computed(() => (contentLocale.value === "en" ? "en-GB" : "fr-FR"))
 
@@ -123,7 +127,11 @@ const copy = computed(() => {
     },
     pricing: content?.copy?.pricing ?? { eyebrow: "", title: "", intro: "" },
     amenities: content?.copy?.amenities ?? { eyebrow: "", title: "", intro: "" },
-    reviews: content?.copy?.reviews ?? { eyebrow: "", title: "", intro: "" },
+    reviews: {
+      eyebrow: content?.copy?.reviews?.eyebrow ?? "",
+      title: content?.copy?.reviews?.title ?? "",
+      intro: content?.copy?.reviews?.intro ?? ""
+    },
     rules: content?.copy?.rules ?? {
       eyebrow: "",
       title: "",
@@ -139,11 +147,17 @@ const copy = computed(() => {
     }
   }
 })
+const siteTemplateConfig = computed(() =>
+  normalizeSiteTemplate(site.value.content.template, { forPublic: true })
+)
 const siteTemplateClass = computed(
-  () => `site-template site-template--${normalizeSiteTemplateId(site.value.content.template?.id)}`
+  () => `site-template site-template--${siteTemplateConfig.value.theme}`
+)
+const siteLayoutClass = computed(
+  () => `site-layout site-layout--${siteTemplateConfig.value.layout}`
 )
 const bookingModalTemplateClass = computed(
-  () => `site-template--${normalizeSiteTemplateId(site.value.content.template?.id)}`
+  () => `site-template--${siteTemplateConfig.value.theme}`
 )
 const bookingModalThemeStyle = computed(() =>
   siteBookingModalThemeStyle(resolvePropertyInvoiceTheme(site.value))
@@ -303,6 +317,7 @@ const departureDate = ref(
 const openBookingPopover = ref<BookingPopover>(null)
 const openBookingModalPopover = ref<BookingPopover>(null)
 const isBookingModalOpen = ref(false)
+const isGuestContactModalOpen = ref(false)
 const isBookingSuccessModalOpen = ref(false)
 const bookingModalStep = ref<"details" | "payment">("details")
 const bookingPaymentClientSecret = ref<string | null>(null)
@@ -744,6 +759,20 @@ function restoreBookingContactFromStorage() {
   })
 }
 
+function openGuestContactModal() {
+  closeBookingPopover()
+  closeBookingModalPopover()
+  closeAmenitiesModal()
+  closeSpacesModal()
+  closeBookingSuccessModal()
+  closeBookingModal()
+  isGuestContactModalOpen.value = true
+}
+
+function closeGuestContactModal() {
+  isGuestContactModalOpen.value = false
+}
+
 function openBookingModal() {
   if (props.livePreview) {
     return
@@ -753,6 +782,7 @@ function openBookingModal() {
   closeAmenitiesModal()
   closeSpacesModal()
   closeBookingSuccessModal()
+  closeGuestContactModal()
   clearBookingModalErrors()
   bookingSubmitError.value = null
   bookingModalStep.value = "details"
@@ -803,6 +833,8 @@ const isStripeConfigured = computed(() =>
   Boolean(String(runtimeConfig.public.stripePublishableKey || "").trim())
 )
 const isStripePaymentsReady = computed(() => Boolean(site.value.stripe_payments_ready))
+
+const contactUsesOwnerAuth = computed(() => props.ownerSitePreview || props.livePreview)
 
 async function bookingApiHeaders(): Promise<Record<string, string> | undefined> {
   if (!props.ownerSitePreview || typeof window === "undefined") {
@@ -1959,7 +1991,7 @@ const vReviewQuoteFade: Directive<HTMLElement> = {
 
 <template>
   <div
-    :class="[siteTemplateClass, { 'property-site-page-view--live-preview': livePreview }]"
+    :class="[siteTemplateClass, siteLayoutClass, { 'property-site-page-view--live-preview': livePreview }]"
     data-live-section="site-top"
   >
     <header class="site-header" data-live-section="site-header">
@@ -1976,7 +2008,18 @@ const vReviewQuoteFade: Directive<HTMLElement> = {
           </div>
         </div>
 
-        <HostivLocaleSelect class="site-header__locale" />
+        <div class="site-header__aside">
+          <button
+            type="button"
+            class="site-header__contact"
+            :aria-label="guestContactLabels.title"
+            @click="openGuestContactModal"
+          >
+            <Mail :size="15" stroke-width="2.2" aria-hidden="true" />
+            <span>{{ guestContactLabels.header }}</span>
+          </button>
+          <HostivLocaleSelect class="site-header__locale" />
+        </div>
       </div>
     </header>
 
@@ -2889,7 +2932,7 @@ const vReviewQuoteFade: Directive<HTMLElement> = {
               class="amenity-card-more"
               @click="openAmenitiesModal"
             >
-              Voir la suite
+              {{ siteUi.amenities.seeMore }}
             </button>
           </article>
         </div>
@@ -2913,8 +2956,6 @@ const vReviewQuoteFade: Directive<HTMLElement> = {
               {{ copy.reviews.intro }}
             </p>
           </div>
-
-          <ReviewsSummaryBlock :reviews="reviews" :locale="contentLocale" variant="site" />
         </div>
 
         <div
@@ -3553,14 +3594,14 @@ const vReviewQuoteFade: Directive<HTMLElement> = {
         <div class="amenities-modal-backdrop" @click="closeAmenitiesModal" />
         <div class="amenities-modal-panel" @click.stop>
           <header class="amenities-modal-header">
-            <h2 id="amenities-modal-title">Tous les équipements</h2>
+            <h2 id="amenities-modal-title">{{ siteUi.amenities.modalTitle }}</h2>
             <p class="amenities-modal-lead">
-              Liste complète des équipements disponibles dans le logement.
+              {{ siteUi.amenities.modalLead }}
             </p>
             <button
               type="button"
               class="amenities-modal-close"
-              aria-label="Fermer"
+              :aria-label="siteUi.amenities.modalCloseAria"
               @click="closeAmenitiesModal"
             >
               ×
@@ -3591,12 +3632,24 @@ const vReviewQuoteFade: Directive<HTMLElement> = {
       </div>
     </Transition>
   </Teleport>
+
+  <SiteGuestContactModal
+    :open="isGuestContactModalOpen"
+    :slug="slug"
+    :brand-name="site.brand_name"
+    :locale="contentLocale"
+    :template-class="bookingModalTemplateClass"
+    :theme-style="bookingModalThemeStyle"
+    :use-owner-auth="contactUsesOwnerAuth"
+    @close="closeGuestContactModal"
+  />
 </template>
 
 <style scoped src="../../../assets/css/pages/index/base.css"></style>
 <style scoped src="../../../assets/css/pages/index/responsive.css"></style>
 <style>
 @import "../../../assets/css/components/hostiv-locale-select.css";
+@import "../../../assets/css/pages/index/site-layouts.css";
 @import "../../../assets/css/pages/index/hero.css";
 
 /* Non-scoped : garantit le header sticky (y compris aperçu live dans iframe). */

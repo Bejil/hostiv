@@ -11,6 +11,8 @@ export type HostivSubscriptionAccess = {
   has_premium_tools: boolean
   has_starter_plus: boolean
   requires_payment: boolean
+  /** Compte administrateur plateforme Hostiv (forfait Pro offert, sans échéance). */
+  is_platform_admin?: boolean
 }
 
 export function isHostivSubscriptionActive(paidUntil: string | null | undefined, now = new Date()) {
@@ -94,6 +96,55 @@ export function resolvePremiumToolsStartedAt(input: {
   start.setUTCFullYear(start.getUTCFullYear() - 1)
 
   return start.toISOString()
+}
+
+/** Date de fin symbolique pour les comptes admin plateforme (forfait Pro sans limite). */
+export const HOSTIV_PLATFORM_ADMIN_PAID_UNTIL = "2099-12-31T23:59:59.999Z"
+
+export function isHostivPlatformAdminSubscriptionAccess(
+  access: Pick<HostivSubscriptionAccess, "is_platform_admin" | "paid_until"> | null | undefined
+) {
+  if (!access) {
+    return false
+  }
+
+  if (access.is_platform_admin === true) {
+    return true
+  }
+
+  const paidUntil =
+    typeof access.paid_until === "string" && access.paid_until.trim()
+      ? access.paid_until.trim()
+      : null
+
+  if (!paidUntil) {
+    return false
+  }
+
+  const end = new Date(paidUntil).getTime()
+  const platformEnd = new Date(HOSTIV_PLATFORM_ADMIN_PAID_UNTIL).getTime()
+
+  return !Number.isNaN(end) && !Number.isNaN(platformEnd) && end >= platformEnd
+}
+
+export function buildHostivPlatformAdminSubscriptionAccess(
+  subscriptionStartedAt?: string | null
+): HostivSubscriptionAccess {
+  const access = buildHostivSubscriptionAccess({
+    subscription_plan: "pro",
+    paid_until: HOSTIV_PLATFORM_ADMIN_PAID_UNTIL,
+    subscription_started_at:
+      typeof subscriptionStartedAt === "string" && subscriptionStartedAt.trim()
+        ? subscriptionStartedAt.trim()
+        : new Date().toISOString(),
+    premium_tools_until: null,
+    premium_tools_started_at: null
+  })
+
+  return {
+    ...access,
+    is_platform_admin: true
+  }
 }
 
 export function buildHostivSubscriptionAccess(input: {

@@ -18,6 +18,7 @@ const RULES: RateLimitRule[] = [
   { prefix: "/api/hostiv/password-reset/confirm", limit: 10, windowMs: 15 * 60 * 1000 },
   { prefix: "/api/hostiv/contact", limit: 5, windowMs: 15 * 60 * 1000 },
   { prefix: "/api/hostiv/signup-checkout", limit: 10, windowMs: 60 * 60 * 1000 },
+  { prefix: "/api/hostiv/promo-code/validate", limit: 30, windowMs: 15 * 60 * 1000 },
   { prefix: "/api/booking/create-payment-intent", limit: 30, windowMs: 15 * 60 * 1000 },
   { prefix: "/api/booking/complete", limit: 30, windowMs: 15 * 60 * 1000 },
   { prefix: "/api/booking/request", limit: 10, windowMs: 15 * 60 * 1000 },
@@ -47,6 +48,10 @@ export function getClientIp(event: H3Event) {
 }
 
 function matchRule(path: string) {
+  if (/^\/api\/sites\/[^/]+\/contact$/.test(path)) {
+    return { prefix: "/api/sites/contact", limit: 5, windowMs: 15 * 60 * 1000 }
+  }
+
   return RULES.find((rule) => path === rule.prefix || path.startsWith(`${rule.prefix}/`))
 }
 

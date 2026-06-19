@@ -1,5 +1,11 @@
 <script setup lang="ts">
 import { ArrowRight, Check, Sparkles, Star } from "@lucide/vue"
+
+defineProps<{
+  /** Page dédiée /tarifs (h1 + espacement header). */
+  asPage?: boolean
+}>()
+
 const { landing } = useHostivLocale()
 const { openSignup } = useHostivAccountModal()
 
@@ -17,6 +23,7 @@ function openSignupWithPlan(planId: "starter" | "pro") {
   <section
     id="tarifs"
     class="hostiv-section hostiv-section--green hostiv-section--pricing"
+    :class="{ 'hostiv-section--pricing-page': asPage }"
     aria-labelledby="hostiv-pricing-title"
   >
     <div class="hostiv-container">
@@ -25,7 +32,13 @@ function openSignupWithPlan(planId: "starter" | "pro") {
         v-scroll-reveal="{ rootMargin: '0px 0px -6% 0px' }"
       >
         <p class="hostiv-eyebrow hostiv-eyebrow--pill">{{ hostivPricing.eyebrow }}</p>
-        <h2 id="hostiv-pricing-title" class="hostiv-h2">{{ hostivPricing.title }}</h2>
+        <component
+          :is="asPage ? 'h1' : 'h2'"
+          id="hostiv-pricing-title"
+          class="hostiv-h2"
+        >
+          {{ hostivPricing.title }}
+        </component>
         <p class="hostiv-section__intro">{{ hostivPricing.intro }}</p>
       </header>
 

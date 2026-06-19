@@ -5,6 +5,7 @@ import {
 import type { HostivLocale } from "../types/hostiv-locale"
 import type { PropertyAdminRecord } from "../types/property-admin"
 import { getAdminUi } from "../data/admin-ui"
+import { parseSiteLayoutId } from "../data/site-layouts"
 import { parseSiteTemplateId } from "../data/site-templates"
 import { hasValidHouseRuleTime } from "./house-rules-time"
 import { isPlatformLinkHidden } from "./platform-links"
@@ -71,8 +72,19 @@ export function getCustomizationBlockMissingLabels(
   const v = getAdminUi(locale).validation
 
   switch (blockId) {
-    case "template":
-      return parseSiteTemplateId(record.content.template?.id) ? [] : [v.selectedTheme]
+    case "template": {
+      const missing: string[] = []
+
+      if (!parseSiteLayoutId(record.content.template?.layout)) {
+        missing.push(v.selectedLayout)
+      }
+
+      if (!parseSiteTemplateId(record.content.template?.theme ?? record.content.template?.id)) {
+        missing.push(v.selectedTheme)
+      }
+
+      return missing
+    }
     case "header": {
       const missing: string[] = []
 

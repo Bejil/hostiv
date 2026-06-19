@@ -23,6 +23,10 @@ export type HostivStaticPage = {
   path: string
   title: string
   description: string
+  /** Balise title complète (sans suffixe automatique). */
+  seoTitle?: string
+  /** Meta description optimisée SEO (sinon `description`). */
+  seoDescription?: string
   eyebrow: string
   lead: string
   sections: HostivStaticPageSection[]

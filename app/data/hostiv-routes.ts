@@ -1,5 +1,9 @@
 import type { HostivLocale } from "../types/hostiv-locale"
 import type { HostivStaticPageId } from "./hostiv-static-page.types"
+import {
+  HOSTIV_RESOURCE_ARTICLE_PATHS,
+  type HostivResourceArticleId
+} from "./hostivResources"
 
 export const HOSTIV_HOME_PATHS: Record<HostivLocale, string> = {
   fr: "/",
@@ -9,6 +13,16 @@ export const HOSTIV_HOME_PATHS: Record<HostivLocale, string> = {
 export const HOSTIV_PASSWORD_RESET_PATHS: Record<HostivLocale, string> = {
   fr: "/mot-de-passe/reinitialiser",
   en: "/en/reset-password"
+}
+
+export const HOSTIV_PRICING_PATHS: Record<HostivLocale, string> = {
+  fr: "/tarifs",
+  en: "/en/pricing"
+}
+
+export const HOSTIV_RESOURCES_PATHS: Record<HostivLocale, string> = {
+  fr: "/ressources",
+  en: "/en/resources"
 }
 
 const PASSWORD_RESET_PATHS = new Set(Object.values(HOSTIV_PASSWORD_RESET_PATHS))
@@ -50,8 +64,22 @@ for (const [pageId, paths] of Object.entries(HOSTIV_STATIC_PATHS) as Array<
   PATH_TO_PAGE_ID.set(paths.en, pageId)
 }
 
+const PRICING_PATHS = new Set(Object.values(HOSTIV_PRICING_PATHS))
+const RESOURCES_INDEX_PATHS = new Set(Object.values(HOSTIV_RESOURCES_PATHS))
+
+const RESOURCE_ARTICLE_PATH_TO_ID = new Map<string, HostivResourceArticleId>()
+
+for (const [articleId, paths] of Object.entries(HOSTIV_RESOURCE_ARTICLE_PATHS) as Array<
+  [HostivResourceArticleId, Record<HostivLocale, string>]
+>) {
+  RESOURCE_ARTICLE_PATH_TO_ID.set(paths.fr, articleId)
+  RESOURCE_ARTICLE_PATH_TO_ID.set(paths.en, articleId)
+}
+
 const HOSTIV_MARKETING_PATHS_FR = new Set([
   "/",
+  "/tarifs",
+  "/ressources",
   "/a-propos",
   "/contact",
   "/mentions-legales",
@@ -76,6 +104,10 @@ export function isHostivMarketingRoute(path: string) {
     return true
   }
 
+  if (normalized.startsWith("/ressources")) {
+    return true
+  }
+
   return HOSTIV_MARKETING_PATHS_FR.has(normalized)
 }
 
@@ -89,6 +121,22 @@ export function getHostivPasswordResetPath(locale: HostivLocale) {
 
 export function getHostivStaticPath(pageId: HostivStaticPageId, locale: HostivLocale) {
   return HOSTIV_STATIC_PATHS[pageId][locale]
+}
+
+export function getHostivPricingPath(locale: HostivLocale) {
+  return HOSTIV_PRICING_PATHS[locale]
+}
+
+export function getHostivResourcesPath(locale: HostivLocale) {
+  return HOSTIV_RESOURCES_PATHS[locale]
+}
+
+export function getHostivResourceArticleIdFromPath(path: string) {
+  return RESOURCE_ARTICLE_PATH_TO_ID.get(normalizeHostivMarketingPath(path)) ?? null
+}
+
+export function isHostivResourcesIndexPath(path: string) {
+  return RESOURCES_INDEX_PATHS.has(normalizeHostivMarketingPath(path))
 }
 
 export function switchHostivLocalePath(path: string, targetLocale: HostivLocale) {
@@ -105,6 +153,20 @@ export function switchHostivLocalePath(path: string, targetLocale: HostivLocale)
 
   if (pageId) {
     return `${HOSTIV_STATIC_PATHS[pageId][targetLocale]}${query}${hash}`
+  }
+
+  if (PRICING_PATHS.has(normalized)) {
+    return `${HOSTIV_PRICING_PATHS[targetLocale]}${query}${hash}`
+  }
+
+  if (RESOURCES_INDEX_PATHS.has(normalized)) {
+    return `${HOSTIV_RESOURCES_PATHS[targetLocale]}${query}${hash}`
+  }
+
+  const resourceArticleId = RESOURCE_ARTICLE_PATH_TO_ID.get(normalized)
+
+  if (resourceArticleId) {
+    return `${HOSTIV_RESOURCE_ARTICLE_PATHS[resourceArticleId][targetLocale]}${query}${hash}`
   }
 
   if (

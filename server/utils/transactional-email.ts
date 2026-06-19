@@ -35,6 +35,7 @@ import {
   buildPlatformPlanPaymentAlert,
   buildPlatformReservationCancelledAlert,
   buildPlatformSignupFailureAlert,
+  buildPropertyCohostInviteEmail,
   buildSignupFailureApologyEmail,
   formatReservationDatesSummary
 } from "./transactional-email-templates"
@@ -512,6 +513,49 @@ export async function sendHostivPasswordResetEmail(options: {
     throw createError({
       statusCode: 502,
       message: "Impossible d’envoyer l’e-mail pour le moment."
+    })
+  }
+}
+
+export async function sendPropertyCohostInviteEmail(options: {
+  to: string
+  brandName: string
+  slug: string
+  inviteUrl: string
+}) {
+  const config = readTransactionalEmailConfig()
+  const to = options.to.trim()
+
+  if (!config || !to) {
+    throw createError({
+      statusCode: 503,
+      message: "Envoi d’e-mail non configuré."
+    })
+  }
+
+  const mail = buildPropertyCohostInviteEmail({
+    brandName: options.brandName,
+    slug: options.slug,
+    inviteUrl: options.inviteUrl
+  })
+
+  try {
+    await sendResendEmail({
+      resendApiKey: config.resendApiKey,
+      from: config.from,
+      to,
+      subject: mail.subject,
+      text: mail.text,
+      html: mail.html
+    })
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error)
+
+    console.error("[transactional-email] cohost-invite:", detail)
+
+    throw createError({
+      statusCode: 502,
+      message: "Impossible d’envoyer l’invitation pour le moment."
     })
   }
 }

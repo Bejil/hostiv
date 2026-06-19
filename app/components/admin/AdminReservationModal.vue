@@ -14,6 +14,7 @@ import { computeStayNights } from "../../utils/booking-stay-nights"
 const props = defineProps<{
   slug: string
   reservation: AdminBookingReservation | null
+  canAccessAccounting?: boolean
 }>()
 
 const { ui, locale } = useAdminUi()
@@ -64,7 +65,10 @@ const computedGuests = computed(() => form.adults + form.children + form.babies)
 const isRefunded = computed(() => Boolean(props.reservation?.refunded_at))
 
 const canRefund = computed(
-  () => Boolean(props.reservation?.stripe_payment_intent_id) && !isRefunded.value
+  () =>
+    props.canAccessAccounting !== false &&
+    Boolean(props.reservation?.stripe_payment_intent_id) &&
+    !isRefunded.value
 )
 
 const canMarkCancelled = computed(

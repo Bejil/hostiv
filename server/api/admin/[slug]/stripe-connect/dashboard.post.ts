@@ -1,4 +1,4 @@
-import { requirePropertyOwner } from "../../../../utils/admin-auth"
+import { requirePropertyPrimaryOwner } from "../../../../utils/admin-auth"
 import { createConnectDashboardLink } from "../../../../utils/stripe-connect"
 import { getPropertyStripeBySlug } from "../../../../utils/property-stripe-repository"
 import { getStripeClient } from "../../../../utils/stripe-client"
@@ -12,7 +12,7 @@ export default defineEventHandler(async (event) => {
   }
 
   try {
-    await requirePropertyOwner(event, slug)
+    await requirePropertyPrimaryOwner(event, slug)
 
     const config = useRuntimeConfig()
     const stripeSecretKey = String(config.stripeSecretKey || "").trim()

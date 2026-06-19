@@ -10,7 +10,14 @@ import {
   readHostivSignupLoginCredentials
 } from "../../utils/hostiv-signup-session"
 
-useHostivMarketingHead()
+const { landing } = useHostivLocale()
+
+useHostivMarketingSeo({
+  title: () => landing.value.seo.signupConfirmationTitle,
+  description: () => landing.value.seo.signupConfirmationDescription,
+  robots: "noindex, nofollow",
+  path: "/inscription/confirmation"
+})
 
 const route = useRoute()
 const router = useRouter()

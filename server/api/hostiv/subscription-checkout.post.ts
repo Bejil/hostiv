@@ -16,7 +16,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const user = await getBearerUser(event)
-  const body = await readBody<{ subscription_plan?: string; property_slug?: string }>(event)
+  const body = await readBody<{ subscription_plan?: string; property_slug?: string; promo_code?: string }>(event)
   const plan = normalizeHostivSubscriptionPlan(body?.subscription_plan)
   const propertySlug = String(body?.property_slug || "").trim().toLowerCase()
 
@@ -57,7 +57,8 @@ export default defineEventHandler(async (event) => {
     email: user.email ?? "",
     plan,
     propertySlug,
-    siteBaseUrl
+    siteBaseUrl,
+    promoCode: body?.promo_code
   })
 
   return checkout

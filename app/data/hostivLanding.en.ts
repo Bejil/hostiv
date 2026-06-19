@@ -11,6 +11,7 @@ export const hostivNavUi = {
   logout: "Log out",
   login: "Log in",
   signup: "Get started",
+  pricing: "Pricing",
   menu: "Menu",
   languageLabel: "Language"
 } as const
@@ -65,17 +66,28 @@ export const hostivStaticUi = {
 } as const
 
 export const hostivSeo = {
-  homeTitle: "Hostiv | Direct booking website for hosts",
+  breadcrumbHomeLabel: "Home",
+  homeTitle: "Hostiv | Vacation rental website generator",
   homeDescription:
-    "Hostiv: direct booking website with no platform commission. Sync calendars and get paid via Stripe — unlike OTAs.",
-  homeOgTitle: "Hostiv — Direct booking, 0% commission",
+    "Create your holiday rental website with direct bookings, iCal sync and Stripe payments. Site builder for hosts — 0% commission on your stays.",
+  homeOgTitle: "Hostiv — Holiday rental site builder, no commission",
   homeOgDescription:
-    "Go direct without the Airbnb or Booking cut. Site, calendar, Stripe payments and admin."
+    "Launch your vacation rental website in minutes. Direct booking, calendar sync and Stripe Connect — no platform commission.",
+  signupConfirmationTitle: "Sign-up confirmed | Hostiv",
+  signupConfirmationDescription: "Your Hostiv account is being activated after sign-up.",
+  pricingPageTitle: "Hostiv pricing | Vacation rental website plans",
+  pricingPageDescription:
+    "Starter (€49/yr) and Pro (€99/yr) plans to create your holiday rental site: direct booking, Stripe and iCal. Zero commission on your stays.",
+  pricingPageOgTitle: "Hostiv pricing — Seasonal rental website from €49/yr",
+  pricingPageOgDescription:
+    "Compare Hostiv plans to publish a short-term rental website and receive direct bookings."
 } as const
 
 export const hostivNavLinks = [
   { label: "Features", href: "#fonctionnalites" },
-  { label: "How it works", href: "#comment" }
+  { label: "How it works", href: "#comment" },
+  { label: "Pricing", href: "/en/pricing" },
+  { label: "FAQ", href: "#faq" }
 ] as const
 
 export const hostivHeroProofPoints = [
@@ -219,7 +231,7 @@ export const hostivPricing = {
   eyebrow: "Pricing",
   title: "Clear plans, an obvious choice",
   intro:
-    "One property per account — launch your direct booking site with no Hostiv commission on your nights.",
+    "Starter for one property, Pro for several — each site has its own annual plan.",
   plans: [
     {
       id: "starter",
@@ -227,15 +239,15 @@ export const hostivPricing = {
       price: 49,
       period: "year",
       accent: "green" as const,
-      tagline: "For hosts who want to launch their direct booking site quickly.",
-      positioning: "Everything you need to start receiving direct bookings.",
+      tagline: "Launch a first direct booking site without advanced add-ons.",
+      positioning: "Everything you need to receive direct bookings on one property.",
       features: [
-        "1 rental website",
-        "Direct booking system",
+        "1 property",
+        "Direct booking",
         "Integrated Stripe payments",
         "Calendar sync (iCal)",
         "Photo gallery",
-        "Reservation management dashboard"
+        "Reservation management"
       ],
       cta: "Start with Starter",
       buttonVariant: "secondary" as const
@@ -243,16 +255,21 @@ export const hostivPricing = {
     {
       id: "pro",
       name: "Pro",
-      price: 69,
+      price: 99,
       period: "year",
       accent: "pro" as const,
       recommended: true,
       badge: "Popular",
       ribbon: "Most popular",
-      tagline: "For hosts who want a more professional, higher-converting site.",
-      positioning: "A more beautiful, credible site that converts more visitors into guests.",
-      includesLabel: "Includes Starter +",
-      extraFeatures: ["Printable welcome guide PDF", "Invoice editing"],
+      tagline: "For multi-property hosts and a more complete backoffice.",
+      positioning: "Multiple sites, PDF guide, invoices and co-hosts — all included.",
+      includesLabel: "Everything in Starter +",
+      extraFeatures: [
+        "Multiple properties",
+        "Printable welcome guide PDF",
+        "PDF invoices",
+        "Co-hosts"
+      ],
       cta: "Go Pro",
       buttonVariant: "primary" as const
     }
@@ -264,15 +281,15 @@ export const hostivPricing = {
     pricePrefix: "+",
     label: "Starter plan add-on",
     tagline:
-      "Printable welcome guide PDF and PDF invoices for direct bookings — nothing else.",
-    note: "Guide PDF and invoices are already included in Pro — no add-on needed.",
-    proNudge:
-      "Pro also includes Starter +, plus premium templates and visit analytics.",
+      "Welcome guide PDF, PDF invoices and co-hosts for your Starter property.",
+    note: "PDF guide, invoices and co-hosts are already included in Pro.",
+    proNudge: "Pro includes these options on every property, plus multi-property support.",
     chooseProCta: "Choose Pro",
-    ariaLabel: "Starter +: welcome guide PDF and invoices for Starter plan",
+    ariaLabel: "Starter +: PDF guide, invoices and co-hosts for Starter plan",
     features: [
       "Personalised welcome guide PDF, ready to print",
-      "PDF invoices for each direct booking"
+      "PDF invoices for each direct booking",
+      "Unlimited co-hosts on the property"
     ]
   },
   trust: ["No commitment", "Set up in minutes", "Secure payments via Stripe"]
@@ -289,6 +306,144 @@ export const hostivCta = {
   ],
   button: "Choose my plan"
 } as const
+
+export const hostivFaqSection = {
+  eyebrow: "FAQ",
+  title: "Frequently asked questions",
+  intro:
+    "Everything you need to know about Hostiv, commission-free direct booking and launching your rental website.",
+  pricingCta: "View pricing",
+  resourcesCta: "Read our guides"
+} as const
+
+const hostivFaqsDirect = [
+  {
+    group: "direct",
+    question: "What is a direct booking website?",
+    answer:
+      "It is a website in your name where guests view your property and book without going through Airbnb or Booking. You keep the guest relationship and margin on every night — Hostiv provides the site, calendar and Stripe payments."
+  },
+  {
+    group: "direct",
+    question: "Is Hostiv an alternative to Airbnb or Booking?",
+    answer:
+      "Hostiv complements OTAs rather than replacing them: keep your listings for visibility and steer part of your traffic to your direct site. You avoid marketplace commission on those bookings."
+  },
+  {
+    group: "direct",
+    question: "Does Hostiv charge commission on my direct bookings?",
+    answer:
+      "No. Hostiv charges no commission on your stay amount. You only pay an annual subscription (Starter or Pro). Standard Stripe card processing fees still apply."
+  },
+  {
+    group: "direct",
+    question: "Can I keep my Airbnb or Booking listing?",
+    answer:
+      "Yes. Import their iCal feeds into Hostiv, export your site iCal URL to each platform, and add a “Book on my website” link in your bio or messages."
+  }
+] as const
+
+const hostivFaqsSetup = [
+  {
+    group: "setup",
+    question: "How long does it take to publish my site?",
+    answer:
+      "Allow about 15 minutes to pick a template, add photos and copy, then publish. Stripe Connect and iCal sync are set up afterwards from your dashboard."
+  },
+  {
+    group: "setup",
+    question: "Do I need technical skills?",
+    answer:
+      "No. Hostiv is built for hosts: visual editor, guided fields and live preview. No code or hosting to manage on your side."
+  },
+  {
+    group: "setup",
+    question: "What is my website address?",
+    answer:
+      "Each property gets a dedicated URL on Hostiv, in the form /your-slug (e.g. hostiv.fr/olive-tree-villa). You choose the slug at sign-up."
+  },
+  {
+    group: "setup",
+    question: "Can I customize my site design?",
+    answer:
+      "Yes: multiple templates, colours, copy, photo gallery, amenities and modular sections. The Pro plan adds premium options for a more professional look."
+  }
+] as const
+
+const hostivFaqsPricing = [
+  {
+    group: "pricing",
+    question: "How much does Hostiv cost?",
+    answer:
+      "Starter is €49/year (1 property). Starter + is +€30/year (PDF guide, invoices, co-hosts). Pro is €99/year (multi-property and all-inclusive)."
+  },
+  {
+    group: "pricing",
+    question: "What is the difference between Starter and Pro?",
+    answer:
+      "Starter covers 1 property with direct booking, Stripe, iCal and reservation management — no PDF guide, invoices or co-hosts. Pro supports multiple properties and includes PDF guide, invoices and co-hosts. On Starter, the Starter + add-on (+€30/year) unlocks those three features for one property."
+  },
+  {
+    group: "pricing",
+    question: "Is there a commitment or free trial?",
+    answer:
+      "No commitment: the subscription is annual and renewable. There is no free trial, but setup is quick and you can reuse OTA content to populate your site."
+  },
+  {
+    group: "pricing",
+    question: "How does online payment work?",
+    answer:
+      "Guests pay by card via Stripe Connect. Funds go to your host Stripe account, minus standard Stripe fees. Hostiv does not take a cut of the stay."
+  }
+] as const
+
+const hostivFaqsAccount = [
+  {
+    group: "account",
+    question: "Do I need a Stripe account?",
+    answer:
+      "Yes. During onboarding you connect a Stripe Connect account (individual or business depending on your situation). That account receives your direct booking payouts."
+  },
+  {
+    group: "account",
+    question: "Can I manage multiple properties?",
+    answer:
+      "Yes, with the Pro plan (€99/year per property). Starter is limited to 1 property; add more from the property switcher in your dashboard."
+  },
+  {
+    group: "account",
+    question: "How do I sync my calendar?",
+    answer:
+      "In Hostiv admin, import iCal feeds from your OTAs. Then paste your Hostiv site iCal URL into Airbnb, Booking or Vrbo calendar settings."
+  },
+  {
+    group: "account",
+    question: "How do I avoid double bookings?",
+    answer:
+      "iCal sync blocks booked dates on both sides. On Hostiv, you can also block or unblock a date manually in Reservations (if it is not already booked). Direct bookings and iCal imports complete the calendar."
+  }
+] as const
+
+export const hostivFaqGroupLabels = {
+  direct: "Direct booking",
+  setup: "Getting started",
+  pricing: "Pricing & payments",
+  account: "Calendar & account"
+} as const
+
+export const hostivFaqGroups = [
+  { id: "direct" as const, label: hostivFaqGroupLabels.direct, items: hostivFaqsDirect },
+  { id: "setup" as const, label: hostivFaqGroupLabels.setup, items: hostivFaqsSetup },
+  { id: "pricing" as const, label: hostivFaqGroupLabels.pricing, items: hostivFaqsPricing },
+  { id: "account" as const, label: hostivFaqGroupLabels.account, items: hostivFaqsAccount }
+] as const
+
+export const hostivFaqs = [
+  ...hostivFaqsDirect,
+  ...hostivFaqsSetup,
+  ...hostivFaqsPricing,
+  ...hostivFaqsAccount
+] as const
 
 export const hostivNotFoundUi = {
   eyebrow: "Error 404",
@@ -404,6 +559,35 @@ export const hostivAccountModalUi = {
   }
 } as const
 
+export const hostivContactModalUi = {
+  close: "Close",
+  title: "Contact us",
+  subtitle: "Describe your request — we will reply by email.",
+  fields: {
+    name: "Full name",
+    email: "Email",
+    subject: "Subject",
+    message: "Message",
+    messagePlaceholder: "Describe your question or situation…"
+  },
+  defaultSubject: "General question",
+  subjectOptions: [
+    "General question",
+    "Account and subscription",
+    "Site and bookings",
+    "Stripe and payments",
+    "Other"
+  ] as const,
+  submit: "Send message",
+  submitting: "Sending…",
+  errors: {
+    required: "Please fill in all required fields.",
+    sendFailed: "Unable to send your message. Please try again later."
+  },
+  success:
+    "Message sent. A confirmation email has been sent to you — we usually reply within 2 business days."
+} as const
+
 export const hostivPasswordResetPageUi = {
   loading: "Checking link…",
   title: "New password",
@@ -425,7 +609,8 @@ export const hostivPasswordResetPageUi = {
     passwordInvalid: "Choose a password that meets all security requirements.",
     saveFailed: "Unable to update your password."
   },
-  seoTitle: "Reset your password | Hostiv"
+  seoTitle: "Reset your password | Hostiv",
+  seoDescription: "Set a new password for your Hostiv account using the link from your email."
 } as const
 
 export const hostivFooter = {
@@ -436,6 +621,8 @@ export const hostivFooter = {
       title: "About",
       links: [
         { label: "About us", href: "/en/about" },
+        { label: "Host guides", href: "/en/resources" },
+        { label: "Pricing", href: "/en/pricing" },
         { label: "Contact us", href: "/en/contact" }
       ]
     },

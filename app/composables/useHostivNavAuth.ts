@@ -1,4 +1,6 @@
 import type { Session } from "@supabase/supabase-js"
+import { listHostivAccessibleProperties } from "./useHostivResolveAdminPath"
+import { readHostivActivePropertySlug, writeHostivActivePropertySlug } from "../utils/hostiv-active-property"
 
 function slugFromUserMetadata(session: Session | null) {
   const raw = session?.user.user_metadata?.property_slug
@@ -32,32 +34,37 @@ export function useHostivNavAuth() {
   let unsubscribe: (() => void) | null = null
 
   async function resolvePropertySlug(activeSession: Session) {
-    const fromMeta = slugFromUserMetadata(activeSession)
+    const properties = await listHostivAccessibleProperties(activeSession)
 
-    if (fromMeta) {
-      propertySlug.value = fromMeta
-      return
-    }
+    if (properties.length) {
+      const slugs = new Set(properties.map((property) => property.slug))
+      const stored = readHostivActivePropertySlug()
 
-    try {
-      const supabase = useSupabaseClient()
-      const { data, error } = await supabase
-        .from("properties")
-        .select("slug")
-        .limit(1)
-
-      if (error) {
-        propertySlug.value = null
+      if (stored && slugs.has(stored)) {
+        propertySlug.value = stored
         return
       }
 
-      const row = Array.isArray(data) ? data[0] : null
-      const slug = row && typeof row.slug === "string" ? row.slug.trim().toLowerCase() : ""
+      const fromMeta = slugFromUserMetadata(activeSession)
 
-      propertySlug.value = slug.length ? slug : null
-    } catch {
-      propertySlug.value = null
+      if (fromMeta && slugs.has(fromMeta)) {
+        propertySlug.value = fromMeta
+        writeHostivActivePropertySlug(fromMeta)
+        return
+      }
+
+      const owned = properties.find((property) => property.role === "owner")
+      const slug = owned?.slug ?? properties[0]?.slug ?? null
+
+      propertySlug.value = slug
+      if (slug) {
+        writeHostivActivePropertySlug(slug)
+      }
+
+      return
     }
+
+    propertySlug.value = slugFromUserMetadata(activeSession)
   }
 
   async function refresh() {

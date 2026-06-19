@@ -14,6 +14,7 @@ import {
   resolveHostivSignupEncryptionSecret
 } from "./hostiv-pending-signup-crypto"
 import { provisionPropertyForUser } from "./hostiv-provision-property"
+import { syncPropertySubscriptionFromAccount } from "./hostiv-property-subscription"
 import { generateHostivEmailVerificationLink } from "./hostiv-email-verification"
 import { resolveHostivSiteBaseUrlForSignupFulfillment } from "./hostiv-site-base-url"
 import {
@@ -23,6 +24,8 @@ import {
 } from "./transactional-email"
 import { applyHostivSubscriptionPaymentToAccount } from "./hostiv-subscription-payment"
 import { recordHostivStripeCheckoutPayment } from "./hostiv-stripe-payment-record"
+import { buildHostivCheckoutUnitAmount, mergeCheckoutMetadata } from "./hostiv-checkout-pricing"
+import { createHostivFreeCheckoutResult } from "./hostiv-free-checkout"
 import { getStripeClient } from "./stripe-client"
 import { requireSupabaseAdmin } from "./supabase"
 
@@ -54,6 +57,7 @@ export type CreateHostivSignupCheckoutInput = {
   propertySlug: string
   plan: HostivSubscriptionPlan
   siteBaseUrl: string
+  promoCode?: string | null
 }
 
 async function assertSignupEmailAvailable(email: string) {
@@ -160,6 +164,41 @@ export async function createHostivSignupCheckoutSession(input: CreateHostivSignu
   const plan = normalizeHostivSubscriptionPlan(input.plan)
   const pendingId = await insertPendingSignup(input, slug, plan)
   const stripe = getStripeClient(input.stripeSecretKey)
+  const originalAmountCents = hostivPlanPriceCents(plan)
+  const { unitAmountCents, promo } = await buildHostivCheckoutUnitAmount({
+    promoCode: input.promoCode,
+    email,
+    originalAmountCents
+  })
+
+  if (unitAmountCents === 0 && promo) {
+    const successUrl = `${siteBase}/inscription/confirmation?session_id={CHECKOUT_SESSION_ID}`
+
+    return createHostivFreeCheckoutResult({
+      checkoutType: HOSTIV_SIGNUP_CHECKOUT_METADATA_TYPE,
+      referenceId: pendingId,
+      baseMetadata: {
+        pending_signup_id: pendingId,
+        subscription_plan: plan,
+        property_slug: slug
+      },
+      promo,
+      customerEmail: email,
+      successUrl,
+      fulfill: async (session) => {
+        const supabase = requireSupabaseAdmin()
+
+        await supabase
+          .from("hostiv_pending_signups")
+          .update({ stripe_session_id: session.id })
+          .eq("id", pendingId)
+
+        await fulfillHostivSignupCheckoutSession(stripe, session, input.encryptionSecret, {
+          requestOrigin: siteBase
+        })
+      }
+    })
+  }
 
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
@@ -169,7 +208,7 @@ export async function createHostivSignupCheckoutSession(input: CreateHostivSignu
         quantity: 1,
         price_data: {
           currency: "eur",
-          unit_amount: hostivPlanPriceCents(plan),
+          unit_amount: unitAmountCents,
           product_data: {
             name: hostivPlanCheckoutLabel(plan),
             description: hostivPlanCheckoutDescription(plan)
@@ -177,12 +216,15 @@ export async function createHostivSignupCheckoutSession(input: CreateHostivSignu
         }
       }
     ],
-    metadata: {
-      hostiv_checkout: HOSTIV_SIGNUP_CHECKOUT_METADATA_TYPE,
-      pending_signup_id: pendingId,
-      subscription_plan: plan,
-      property_slug: slug
-    },
+    metadata: mergeCheckoutMetadata(
+      {
+        hostiv_checkout: HOSTIV_SIGNUP_CHECKOUT_METADATA_TYPE,
+        pending_signup_id: pendingId,
+        subscription_plan: plan,
+        property_slug: slug
+      },
+      promo
+    ),
     success_url: `${siteBase}/inscription/confirmation?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${siteBase}/?signup=cancelled`
   })
@@ -511,6 +553,7 @@ export async function fulfillHostivSignupCheckoutSession(
       subscriptionPlan: plan,
       notifyEmail: pending.email
     })
+    await syncPropertySubscriptionFromAccount(userId, slug)
     await markPendingSignupCompleted(pendingId, userId)
 
     let verificationUrl = ""

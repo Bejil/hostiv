@@ -75,6 +75,12 @@ export type SiteUiLabels = {
     monthTitle: string
     monthText: string
   }
+  amenities: {
+    seeMore: string
+    modalTitle: string
+    modalLead: string
+    modalCloseAria: string
+  }
 }
 
 const SITE_UI_FR: SiteUiLabels = {
@@ -146,6 +152,12 @@ const SITE_UI_FR: SiteUiLabels = {
     weekText: "Dès {min} nuits",
     monthTitle: "Séjour d'un mois",
     monthText: "Dès {min} nuits"
+  },
+  amenities: {
+    seeMore: "Voir la suite",
+    modalTitle: "Tous les équipements",
+    modalLead: "Liste complète des équipements disponibles dans le logement.",
+    modalCloseAria: "Fermer"
   }
 }
 
@@ -217,6 +229,12 @@ const SITE_UI_EN: SiteUiLabels = {
     weekText: "From {min} nights",
     monthTitle: "One-month stay",
     monthText: "From {min} nights"
+  },
+  amenities: {
+    seeMore: "See more",
+    modalTitle: "All amenities",
+    modalLead: "Full list of amenities available in the property.",
+    modalCloseAria: "Close"
   }
 }
 

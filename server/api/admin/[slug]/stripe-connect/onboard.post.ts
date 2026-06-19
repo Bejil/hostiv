@@ -1,4 +1,4 @@
-import { requirePropertyOwner } from "../../../../utils/admin-auth"
+import { requirePropertyPrimaryOwner } from "../../../../utils/admin-auth"
 import {
   buildStripeConnectAdminUrls,
   createConnectOnboardingLink,
@@ -18,7 +18,8 @@ export default defineEventHandler(async (event) => {
   }
 
   try {
-    const user = await requirePropertyOwner(event, slug)
+    const access = await requirePropertyPrimaryOwner(event, slug)
+    const user = access.user
     const config = useRuntimeConfig()
     const stripeSecretKey = String(config.stripeSecretKey || "").trim()
 

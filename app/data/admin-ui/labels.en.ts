@@ -7,8 +7,33 @@ export const adminUiLabelsEn = {
   header: {
     account: "My account",
     settings: "Settings",
+    cohosts: "Co-hosts",
     logout: "Log out",
-    unsaved: "Unsaved"
+    unsaved: "Unsaved",
+    switchProperty: "Switch property",
+    addProperty: "Add a property",
+    roleOwner: "Owner",
+    roleCohost: "Co-host",
+    logoHome: "View site"
+  },
+  properties: {
+    switcherAria: "Your properties",
+    addTitle: "Add a property",
+    addLead: "A new site with its own annual plan — just like when you signed up.",
+    addProOnlyTitle: "Upgrade to Pro to add a property",
+    addProOnlyLead:
+      "Starter is limited to 1 property. To create a second one, you need the Pro plan.",
+    addProOnlyNoticeKicker: "Pro plan required",
+    addProOnlyNoticeLead:
+      "Your current Starter property stays unchanged. The new site is billed separately.",
+    addProOnlyPlanLegend: "Required plan",
+    addProOnlySubmit: "Pay for Pro — €{price}/year and create site",
+    submit: "Pay and create site",
+    submitting: "Redirecting to Stripe…",
+    checkoutFailed: "Unable to start checkout.",
+    created: "Your new property is ready.",
+    cancelled: "Creation cancelled.",
+    verifyFailed: "Unable to confirm property creation."
   },
   common: {
     save: "Save",
@@ -75,13 +100,13 @@ export const adminUiLabelsEn = {
       { id: "general", label: "General", title: "General", description: "Publishing and SEO." },
       {
         id: "customization",
-        label: "Customization",
+        label: "Content",
         title: "Customization",
         description: "Public site content and layout — live preview on the right."
       },
       {
         id: "welcome-guide",
-        label: "Welcome guide",
+        label: "Guide",
         title: "Welcome guide PDF",
         description: "Printable welcome booklet (Starter + or Pro plan)."
       },
@@ -99,13 +124,13 @@ export const adminUiLabelsEn = {
       },
       {
         id: "guest-reviews",
-        label: "Guest reviews",
+        label: "Reviews",
         title: "Guest reviews",
         description: "Feedback left by guests after their stay."
       },
       {
         id: "payouts",
-        label: "Accounting",
+        label: "Finances",
         title: "Accounting",
         description: "Rates, Stripe payouts and payment settings."
       }
@@ -113,9 +138,9 @@ export const adminUiLabelsEn = {
     customization: [
       {
         id: "template",
-        label: "Template",
-        title: "Template",
-        description: "Visual theme applied to the public site."
+        label: "Appearance",
+        title: "Layout & ambiance",
+        description: "Section structure and visual palette (colors, typography, cards) across the whole site."
       },
       {
         id: "header",
@@ -216,7 +241,7 @@ export const adminUiLabelsEn = {
     sublistKicker: "All sections",
     showSections: "Show sections",
     items: [
-      { id: "theme", label: "Choose a theme", section: "customization", blockId: "template" },
+      { id: "theme", label: "Layout and ambiance", section: "customization", blockId: "template" },
       { id: "customization", label: "Customize your page", section: "customization" },
       { id: "gallery", label: "Add images to the gallery", section: "images" },
       { id: "stripe", label: "Set up Stripe payments", section: "payouts" },
@@ -258,9 +283,9 @@ export const adminUiLabelsEn = {
       {
         id: "template",
         section: "template",
-        title: "Step 2 — Visual theme",
-        subtitle: "Choose the look and feel applied across your site.",
-        tips: ["Select a theme"],
+        title: "Step 2 — Site appearance",
+        subtitle: "Choose the layout and visual ambiance applied across your whole site.",
+        tips: ["Layout", "Ambiance"],
         cta: "Next step"
       },
       {
@@ -348,6 +373,29 @@ export const adminUiLabelsEn = {
       lead: "Connect your Stripe account to receive card payments on your site."
     }
   ],
+  accountViews: [
+    {
+      id: "settings",
+      label: "Settings",
+      description: "Identity, password and deletion",
+      title: "Account settings",
+      lead: "Manage your Hostiv details, password and account deletion."
+    },
+    {
+      id: "plans",
+      label: "Plans",
+      description: "Subscriptions and payments",
+      title: "Plans",
+      lead: "View your active plans per property and your Hostiv payment history."
+    },
+    {
+      id: "cohosts",
+      label: "Co-hosts",
+      description: "Invitations and team access",
+      title: "Co-hosts",
+      lead: "Invite someone you trust to help manage your site."
+    }
+  ],
   bookingPricing: [
     {
       id: "night",
@@ -374,6 +422,7 @@ export const adminUiLabelsEn = {
   },
   validation: {
     selectedTheme: "Selected theme",
+    selectedLayout: "Selected layout",
     logo: "Logo",
     brandName: "Display name",
     brandMeta: "Subtitle",
@@ -428,6 +477,17 @@ export const adminUiLabelsEn = {
       title: "PDF invoices",
       lead: "To generate a PDF invoice per direct booking, enable Starter +.",
       starterPlusCta: "Enable Starter + — €{price} / year"
+    },
+    cohosts: {
+      title: "Co-hosts",
+      lead: "Invite someone you trust to help manage your site. This feature is not included in Starter alone.",
+      optionsIntro: "Two ways to unlock co-hosts:",
+      starterPlusOption:
+        "Starter + — +€{price} / year on top of Starter: PDF welcome guide, invoices and unlimited co-hosts.",
+      proOption:
+        "Pro — €{proPrice} / year, all-inclusive: multiple properties, PDF guide, invoices and unlimited co-hosts.",
+      starterPlusCta: "Enable Starter + — €{price} / year",
+      proCta: "Upgrade to Pro — €{proPrice} / year"
     }
   }
 } as const

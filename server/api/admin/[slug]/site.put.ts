@@ -1,9 +1,7 @@
 import type { PropertyAdminUpdatePayload } from "../../../../app/types/property-admin"
 import { requirePropertyAdminAccess } from "../../../utils/admin-auth"
-import {
-  assertCanPublishProperty,
-  getSubscriptionAccessForOwner
-} from "../../../utils/hostiv-subscription"
+import { assertCanPublishProperty } from "../../../utils/hostiv-property-subscription"
+import { getSubscriptionAccessForOwner } from "../../../utils/hostiv-subscription"
 import { assertStripeReadyForPublish } from "../../../utils/stripe-connect"
 import { getPropertyAdminBySlug, updatePropertyAdmin } from "../../../utils/property-admin-repository"
 import { requireSupabaseAdmin } from "../../../utils/supabase"
@@ -48,8 +46,22 @@ export default defineEventHandler(async (event) => {
   }
 
   if (body.published === true) {
+    if (!access.isPrimaryOwner && !access.isPlatformAdmin) {
+      throw createError({
+        statusCode: 403,
+        message: "Seul l’hôte principal peut publier le site."
+      })
+    }
+
     await assertStripeReadyForPublish(slug)
-    await assertCanPublishProperty(ownerUserId)
+    await assertCanPublishProperty(ownerUserId, slug)
+  }
+
+  if (body.published === false && existing.published && !access.isPrimaryOwner && !access.isPlatformAdmin) {
+    throw createError({
+      statusCode: 403,
+      message: "Seul l’hôte principal peut dépublier le site."
+    })
   }
 
   if (body.calendar_config) {

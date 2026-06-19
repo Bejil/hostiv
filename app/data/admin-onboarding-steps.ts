@@ -1,5 +1,6 @@
 import type { HostivLocale } from "../types/hostiv-locale"
 import type { PropertyAdminRecord } from "../types/property-admin"
+import { parseSiteLayoutId } from "./site-layouts"
 import { parseSiteTemplateId } from "./site-templates"
 import { getAdminUi } from "./admin-ui"
 import type { AdminSectionId } from "./admin-nav-sections"
@@ -110,8 +111,19 @@ export function getOnboardingStepMissingLabels(
 
       return missing
     }
-    case "template":
-      return parseSiteTemplateId(record.content.template?.id) ? [] : [v.selectedTheme]
+    case "template": {
+      const missing: string[] = []
+
+      if (!parseSiteLayoutId(record.content.template?.layout)) {
+        missing.push(v.selectedLayout)
+      }
+
+      if (!parseSiteTemplateId(record.content.template?.theme ?? record.content.template?.id)) {
+        missing.push(v.selectedTheme)
+      }
+
+      return missing
+    }
     case "seo": {
       const missing: string[] = []
       const hero = record.content?.copy?.hero

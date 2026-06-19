@@ -1,13 +1,17 @@
 import { createClient } from "@supabase/supabase-js"
 import type { User } from "@supabase/supabase-js"
 import type { H3Event } from "h3"
+import type { PropertyAdminAccessRole } from "../../app/types/property-cohost"
 import { getPropertyOwnerUserId } from "./property-admin-repository"
+import { getPropertyIdBySlug, isPropertyCohostUser } from "./property-cohost"
 import { isPlatformAdminEmail } from "./platform-admin-auth"
 
 export type PropertyAdminAccessContext = {
   user: User
   ownerUserId: string
   isPlatformAdmin: boolean
+  role: PropertyAdminAccessRole
+  isPrimaryOwner: boolean
 }
 
 function getBearerToken(event: H3Event) {
@@ -70,17 +74,55 @@ export async function requirePropertyAdminAccess(
   }
 
   if (ownerUserId === user.id) {
-    return { user, ownerUserId, isPlatformAdmin: false }
+    return {
+      user,
+      ownerUserId,
+      isPlatformAdmin: false,
+      role: "owner",
+      isPrimaryOwner: true
+    }
   }
 
   if (isPlatformAdminEmail(user.email)) {
-    return { user, ownerUserId, isPlatformAdmin: true }
+    return {
+      user,
+      ownerUserId,
+      isPlatformAdmin: true,
+      role: "platform_admin",
+      isPrimaryOwner: false
+    }
+  }
+
+  const propertyId = await getPropertyIdBySlug(slug)
+
+  if (propertyId && (await isPropertyCohostUser(propertyId, user.id))) {
+    return {
+      user,
+      ownerUserId,
+      isPlatformAdmin: false,
+      role: "cohost",
+      isPrimaryOwner: false
+    }
   }
 
   throw createError({
     statusCode: 403,
     message: "Vous n’êtes pas autorisé à administrer ce site."
   })
+}
+
+/** Hôte principal uniquement (pas les co-hôtes). */
+export async function requirePropertyPrimaryOwner(event: H3Event, slug: string) {
+  const access = await requirePropertyAdminAccess(event, slug)
+
+  if (!access.isPrimaryOwner && !access.isPlatformAdmin) {
+    throw createError({
+      statusCode: 403,
+      message: "Réservé à l’hôte principal."
+    })
+  }
+
+  return access
 }
 
 export async function requirePropertyOwner(event: H3Event, slug: string) {
@@ -111,23 +153,13 @@ export async function getAuthenticatedUserFromEvent(event: H3Event) {
   return data.user
 }
 
-/** true si l’utilisateur connecté peut administrer le site (propriétaire ou admin plateforme). */
+/** true si l’utilisateur connecté peut administrer le site (propriétaire, co-hôte ou admin plateforme). */
 export async function isPropertyOwnerUser(event: H3Event, slug: string): Promise<boolean> {
-  const user = await getAuthenticatedUserFromEvent(event)
+  try {
+    await requirePropertyAdminAccess(event, slug)
 
-  if (!user) {
-    return false
-  }
-
-  const ownerUserId = await getPropertyOwnerUserId(slug)
-
-  if (!ownerUserId) {
-    return false
-  }
-
-  if (ownerUserId === user.id) {
     return true
+  } catch {
+    return false
   }
-
-  return isPlatformAdminEmail(user.email)
 }

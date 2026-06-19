@@ -1,6 +1,7 @@
 import type { BenefitIconId } from "../data/benefit-icons"
 import type { LocationHighlightIconId } from "../data/location-highlight-icons"
 import type { SiteTemplateId } from "../data/site-templates"
+import type { PropertySiteTemplateConfig, SiteLayoutId } from "../data/site-layouts"
 import type { AmenityPreviewSection, AmenitySection } from "./amenity"
 import type { PropertyWelcomeGuide } from "./welcome-guide"
 import type { HostivSubscriptionPlan } from "../utils/hostiv-subscription-plan"
@@ -35,6 +36,8 @@ export type PropertyCalendarFeed = {
 
 export type PropertyCalendarConfig = {
   ics_feeds: PropertyCalendarFeed[]
+  /** Dates ISO (YYYY-MM-DD) bloquées manuellement dans l’admin. */
+  manual_blocks?: string[]
 }
 
 export type PropertyLocation = {
@@ -207,8 +210,11 @@ export type PropertySiteLocaleBase = {
 }
 
 export type PropertySiteContent = {
-  template: {
-    id: SiteTemplateId | null
+  template: PropertySiteTemplateConfig & {
+    /** @deprecated Utiliser `theme`. */
+    id?: SiteTemplateId | null
+    layout?: SiteLayoutId
+    theme?: SiteTemplateId
   }
   copy: PropertySiteCopy
   /** Textes de section en anglais (parallèle à `copy`). */
@@ -232,7 +238,9 @@ export type PropertySiteContent = {
   reviews: PropertyReview[]
   reviews_en?: PropertyReview[]
   amenity_catalog: AmenitySection[]
+  amenity_catalog_en?: AmenitySection[]
   amenity_preview_sections: AmenityPreviewSection[]
+  amenity_preview_sections_en?: AmenityPreviewSection[]
   welcome_guide: PropertyWelcomeGuide
   /** Guide d’accueil PDF en anglais (parallèle à `welcome_guide`). */
   welcome_guide_en?: PropertyWelcomeGuide

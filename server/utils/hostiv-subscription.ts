@@ -1,7 +1,8 @@
 import type { HostivSubscriptionAccess } from "../../app/utils/hostiv-subscription-access"
-import { buildHostivSubscriptionAccess, isHostivSubscriptionActive } from "../../app/utils/hostiv-subscription-access"
-import { getPropertySiteBySlug } from "./property-site-repository"
-import { getUserEmailById, sendHostivSubscriptionExpiredEmail } from "./transactional-email"
+import {
+  getSubscriptionAccessForProperty,
+  unpublishPropertyIfPropertySubscriptionExpired
+} from "./hostiv-property-subscription"
 import { requireSupabaseAdmin } from "./supabase"
 
 export type HostivAccountRow = {
@@ -50,84 +51,17 @@ export async function getHostivAccountByUserId(userId: string): Promise<HostivAc
   }
 }
 
-/** Dépublie le site si le forfait est expiré. Retourne true si une mise à jour a eu lieu. */
+/** Dépublie le site si le forfait du logement est expiré. */
 export async function unpublishPropertyIfSubscriptionExpired(
   ownerUserId: string,
   propertySlug: string
 ): Promise<boolean> {
-  const account = await getHostivAccountByUserId(ownerUserId)
-
-  if (!account || isHostivSubscriptionActive(account.paid_until)) {
-    return false
-  }
-
-  const supabase = requireSupabaseAdmin()
-  const slug = propertySlug.trim().toLowerCase()
-
-  const { data: property, error: readError } = await supabase
-    .from("properties")
-    .select("id, published")
-    .eq("slug", slug)
-    .eq("owner_user_id", ownerUserId)
-    .maybeSingle()
-
-  if (readError || !property?.published) {
-    return false
-  }
-
-  const { error: updateError } = await supabase
-    .from("properties")
-    .update({ published: false })
-    .eq("id", property.id)
-
-  if (updateError) {
-    console.error("[hostiv-subscription] unpublish:", updateError.message)
-
-    return false
-  }
-
-  const ownerEmail = await getUserEmailById(ownerUserId)
-
-  if (ownerEmail) {
-    const site = await getPropertySiteBySlug(slug, { publishedOnly: false })
-    const brandName = site?.brand_name?.trim() || slug
-
-    void sendHostivSubscriptionExpiredEmail({
-      to: ownerEmail,
-      slug,
-      brandName,
-      paidUntil: account.paid_until
-    })
-  }
-
-  return true
+  return unpublishPropertyIfPropertySubscriptionExpired(ownerUserId, propertySlug)
 }
 
 export async function getSubscriptionAccessForOwner(
   ownerUserId: string,
   propertySlug: string
 ): Promise<HostivSubscriptionAccess> {
-  await unpublishPropertyIfSubscriptionExpired(ownerUserId, propertySlug)
-
-  const account = await getHostivAccountByUserId(ownerUserId)
-
-  return buildHostivSubscriptionAccess({
-    subscription_plan: account?.subscription_plan,
-    paid_until: account?.paid_until,
-    subscription_started_at: account?.subscription_started_at,
-    premium_tools_until: account?.premium_tools_until,
-    premium_tools_started_at: account?.premium_tools_started_at
-  })
-}
-
-export async function assertCanPublishProperty(ownerUserId: string) {
-  const account = await getHostivAccountByUserId(ownerUserId)
-
-  if (!account || !isHostivSubscriptionActive(account.paid_until)) {
-    throw createError({
-      statusCode: 402,
-      message:
-        "Votre forfait Hostiv a expiré. Renouvelez-le pour publier votre site."
-    })
-  }
+  return getSubscriptionAccessForProperty(ownerUserId, propertySlug)
 }

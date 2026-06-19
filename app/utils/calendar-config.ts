@@ -1,7 +1,10 @@
 import type { PropertyCalendarConfig, PropertyCalendarFeed } from "../types/property-site"
 
+const ISO_INPUT_DATE_RE = /^\d{4}-\d{2}-\d{2}$/
+
 export const DEFAULT_CALENDAR_CONFIG: PropertyCalendarConfig = {
-  ics_feeds: []
+  ics_feeds: [],
+  manual_blocks: []
 }
 
 function asText(value: unknown) {
@@ -16,6 +19,28 @@ function createFeedId(index: number, seed: string) {
     .replace(/^-+|-+$/g, "")
 
   return slug || `ics-${index + 1}`
+}
+
+function normalizeManualBlocks(value: unknown) {
+  if (!Array.isArray(value)) {
+    return [] as string[]
+  }
+
+  const unique = new Set<string>()
+
+  for (const item of value) {
+    if (typeof item !== "string") {
+      continue
+    }
+
+    const date = item.trim()
+
+    if (ISO_INPUT_DATE_RE.test(date)) {
+      unique.add(date)
+    }
+  }
+
+  return [...unique].sort((a, b) => a.localeCompare(b))
 }
 
 export function normalizeCalendarConfig(config: Partial<PropertyCalendarConfig> | null | undefined): PropertyCalendarConfig {
@@ -34,6 +59,7 @@ export function normalizeCalendarConfig(config: Partial<PropertyCalendarConfig> 
           enabled: typeof feed?.enabled === "boolean" ? feed.enabled : true
         }
       })
-      .filter((feed) => feed.name.trim() || feed.url.trim())
+      .filter((feed) => feed.name.trim() || feed.url.trim()),
+    manual_blocks: normalizeManualBlocks(config?.manual_blocks)
   }
 }

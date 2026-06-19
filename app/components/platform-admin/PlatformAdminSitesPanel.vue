@@ -81,8 +81,8 @@ function openDeleteModal(site: PlatformAdminSiteRow) {
   deleteModalOpen.value = true
 }
 
-function closeDeleteModal() {
-  if (deleteLoading.value) {
+function closeDeleteModal(force = false) {
+  if (!force && deleteLoading.value) {
     return
   }
 
@@ -109,7 +109,7 @@ async function confirmDeleteSite() {
       }
     )
 
-    closeDeleteModal()
+    closeDeleteModal(true)
     await load()
   } catch (err: unknown) {
     const e = err as { data?: { message?: string }; message?: string }

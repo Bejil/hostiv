@@ -11,6 +11,62 @@ export const adminUiLabelsExtendedFr = {
     seoTitle: "SEO",
     seoHint: "Titre, description et image de partage sont gérés dans la personnalisation."
   },
+  cohosts: {
+    kicker: "Équipe",
+    title: "Co-hôtes",
+    description:
+      "Invitez une personne de confiance à gérer le site avec vous. Les co-hôtes ont accès au backoffice, sauf la publication, Stripe et la suppression du compte.",
+    emailLabel: "E-mail du co-hôte",
+    emailPlaceholder: "prenom@exemple.com",
+    inviteCta: "Envoyer l’invitation",
+    inviting: "Envoi…",
+    membersTitle: "Co-hôtes actifs",
+    pendingTitle: "Invitations en attente",
+    emptyMembers: "Aucun co-hôte pour le moment.",
+    emptyPending: "Aucune invitation en cours.",
+    removeMember: "Retirer",
+    removeConfirmTitle: "Retirer ce co-hôte ?",
+    removeConfirmMessage: "{email} n’aura plus accès au backoffice de ce site.",
+    removeConfirmCta: "Retirer le co-hôte",
+    removingMember: "Retrait…",
+    revokeInvite: "Annuler",
+    inviteSent: "Invitation envoyée.",
+    memberRemoved: "Co-hôte retiré.",
+    inviteRevoked: "Invitation annulée.",
+    lockedCta: "Débloquer les co-hôtes",
+    inviteRequiresPremium: "L’invitation de co-hôtes est réservée aux forfaits Pro et Starter +.",
+    expiresOn: "Expire le {date}",
+    invitePageChecking: "Vérification de l’invitation…",
+    invitePageLead: "Vous êtes invité·e à co-gérer {brand} (/{slug}).",
+    invitePageEmailHint: "Connectez-vous avec l’adresse {email}.",
+    invitePageCreateHint: "Aucun compte Hostiv pour cette adresse. Créez le vôtre pour rejoindre l’équipe.",
+    invitePageConfirmPassword: "Confirmer le mot de passe",
+    invitePageCreateCta: "Créer mon compte et accepter",
+    invitePageCreating: "Création du compte…",
+    invitePageFirstNameRequired: "Indiquez votre prénom.",
+    invitePageAcceptCta: "Accepter l’invitation",
+    invitePageAccepting: "Acceptation…",
+    invitePageSignInCta: "Se connecter et accepter",
+    invitePageSigningIn: "Connexion…",
+    invitePageInvalidToken: "Lien d’invitation invalide.",
+    invitePageVerifyFailed: "Impossible de vérifier cette invitation.",
+    invitePageAcceptFailed: "Impossible d’accepter l’invitation.",
+    invitePageSignInFailed: "Connexion impossible.",
+    invitePageAlreadyAccepted: "Cette invitation a déjà été acceptée.",
+    invitePageExpired: "Cette invitation a expiré.",
+    invitePageInvalid: "Invitation introuvable ou invalide."
+  },
+  layout: {
+    listAria: "Mises en page du site",
+    statusActive: "Sélectionnée",
+    choose: "Choisir"
+  },
+  appearance: {
+    layoutLegend: "Mise en page",
+    layoutHint: "Structure du hero, de la réservation et des sections sur tout le site.",
+    themeLegend: "Ambiance",
+    themeHint: "Couleurs, typographies et style des cartes sur l’ensemble du site."
+  },
   welcomeGuide: {
     lockedTitle: "Guide d’accueil",
     lockedLead:
@@ -38,6 +94,14 @@ export const adminUiLabelsExtendedFr = {
     planUpdating: "Mise à jour…",
     payCta: "Payer {price}€ / an"
   },
+  promoCode: {
+    label: "Code promo",
+    placeholder: "Saisissez votre code",
+    apply: "Appliquer",
+    applying: "Vérification…",
+    remove: "Retirer",
+    applied: "Code appliqué :"
+  },
   publishStripe: {
     title: "Publication impossible",
     subtitle:
@@ -57,10 +121,16 @@ export const adminUiLabelsExtendedFr = {
     statusInactive: "Inactif",
     statusStarterPlusActive: "Starter + actif",
     statusActive: "Actif",
+    statusPlatformAdmin: "Actif — équipe Hostiv",
     periodUntil: "Jusqu’au {date}",
     periodSince: "Depuis le {date}",
     periodRange: "Du {start} au {end}",
+    periodUnlimited: "Illimité",
     kicker: "Abonnement Hostiv",
+    platformAdminPriceLabel: "Offert",
+    platformAdminNote:
+      "Compte administrateur Hostiv : forfait Pro actif sans limite de durée, sans paiement annuel.",
+    platformAdminRenewalNote: "Aucun renouvellement requis pour ce compte.",
     starterPlusPeriodLabel: "Starter +",
     renewalNote: "Renouvellement manuel · 12 mois, sans reconduction automatique",
     footerExpired:
@@ -132,14 +202,21 @@ export const adminUiLabelsExtendedFr = {
       otherCalendars: "Autres calendriers",
       icsExportLink: "Lien ICS export",
       externalCalendar: "Calendrier externe",
-      loadingList: "Chargement des réservations..."
+      loadingList: "Chargement des réservations...",
+      manualBlockHint:
+        "Cliquez sur une date disponible pour la bloquer manuellement, ou sur un blocage manuel pour la rouvrir.",
+      clickToBlock: "Cliquer pour bloquer cette date",
+      clickToUnblock: "Cliquer pour débloquer cette date",
+      manualBlockSource: "Blocage manuel",
+      hostivReservationSource: "Réservation Hostiv"
     },
     errors: {
       invoicePdf: "Impossible de générer la facture PDF.",
       delete: "Suppression impossible.",
       icsLoad: "Impossible de charger les calendriers ICS.",
       listLoad: "Impossible de charger les réservations.",
-      icsUrl: "Impossible de générer le lien ICS."
+      icsUrl: "Impossible de générer le lien ICS.",
+      manualBlock: "Impossible d’enregistrer le blocage manuel."
     },
     empty: {
       title: "Aucune réservation pour le moment",
@@ -257,7 +334,7 @@ export const adminUiLabelsExtendedFr = {
     generating: "Génération du lien…",
     urlLabel: "URL ICS",
     hint:
-      "Collez ce lien dans la section « importer un calendrier » de votre plateforme externe. Seules les réservations confirmées sur votre site y figurent.",
+      "Collez ce lien dans la section « importer un calendrier » de votre plateforme externe. Y figurent les réservations confirmées et les blocages manuels de votre admin.",
     rotateHint:
       "Si ce lien a été partagé par erreur, régénérez-le : l’ancien lien sera immédiatement invalidé.",
     rotateCta: "Régénérer le lien",
@@ -501,6 +578,8 @@ export const adminUiLabelsExtendedFr = {
     settingsTitle: "Paramètres du compte",
     settingsSubtitle:
       "Gérez vos informations Hostiv, votre mot de passe et la suppression de compte. Les demandes et réservations sont envoyées à l’e-mail de ce compte.",
+    pageTitle: "Compte — {name}",
+    pageBack: "Retour au backoffice",
     deleteSlugMismatch: "Saisissez exactement « {slug} » pour confirmer.",
     deleteFailed: "Impossible de supprimer le compte.",
     loading: "Chargement…",
@@ -541,6 +620,27 @@ export const adminUiLabelsExtendedFr = {
       lastName: "Nom",
       email: "E-mail"
     },
+    plans: {
+      loading: "Chargement des forfaits…",
+      loadFailed: "Impossible de charger vos forfaits.",
+      propertiesTitle: "Forfaits par logement",
+      propertiesLead:
+        "Chaque logement a son propre forfait annuel Hostiv. Les dates et options actives sont indiquées ci-dessous.",
+      currentPropertyBadge: "Site actuel",
+      unpublishedBadge: "Non publié",
+      paymentsTitle: "Historique des paiements",
+      paymentsLead: "Paiements Stripe enregistrés sur votre compte Hostiv (50 derniers).",
+      paymentsEmpty: "Aucun paiement enregistré pour le moment.",
+      paymentsDate: "Date",
+      paymentsProduct: "Produit",
+      paymentsProperty: "Logement",
+      paymentsAmount: "Montant",
+      checkoutTypes: {
+        hostiv_signup: "Inscription",
+        hostiv_subscription: "Forfait annuel",
+        hostiv_premium_tools: "Starter +"
+      }
+    },
     deleteModal: {
       title: "Supprimer définitivement votre compte ?",
       subtitle: "Cette action est irréversible. Les éléments suivants seront supprimés :",
@@ -549,7 +649,8 @@ export const adminUiLabelsExtendedFr = {
         "Votre site /{slug} et tous ses contenus",
         "Les fichiers et images associés",
         "Votre compte Stripe Connect",
-        "L’historique des réservations enregistrées sur ce site"
+        "L’historique des réservations enregistrées sur ce site",
+        "Les accès co-hôtes sur ce site (et leurs comptes Hostiv s’ils n’ont pas d’autre site)"
       ],
       confirmLabel: "Pour confirmer, saisissez l’adresse de votre site :",
       confirmation: "Confirmation",
@@ -559,7 +660,8 @@ export const adminUiLabelsExtendedFr = {
   },
   onboardingFields: {
     examplesLabel: "Exemples :",
-    themeLegend: "Thème",
+    layoutLegend: "Mise en page",
+    themeLegend: "Ambiance",
     labels: {
       logo: "Logo",
       brandName: "Nom affiché",

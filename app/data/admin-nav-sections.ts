@@ -4,6 +4,7 @@ import { ADMIN_CUSTOMIZATION_ICONS, ADMIN_TOP_NAV_ICONS } from "./admin-ui/nav-i
 
 export type AdminTopSectionId =
   | "general"
+  | "account"
   | "customization"
   | "welcome-guide"
   | "images"
@@ -33,6 +34,7 @@ type AdminNavIcon =
   | "search"
   | "layout"
   | "user"
+  | "users"
   | "heart"
   | "star"
   | "map"
@@ -95,6 +97,10 @@ export function isAdminSectionId(value: string): value is AdminSectionId {
 const adminTopSectionIdSet = new Set(getAdminTopNavItems("fr").map((item) => item.id))
 
 export function isAdminTopSectionId(value: string): value is AdminTopSectionId {
+  if (value === "account") {
+    return true
+  }
+
   return adminTopSectionIdSet.has(value as AdminTopSectionId)
 }
 

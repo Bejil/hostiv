@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { Menu, X } from "@lucide/vue"
+import { getHostivPricingPath } from "../../data/hostiv-routes"
 
 const route = useRoute()
 const { scrollToTop } = useHostivScrollToTop()
 const { openLogin, openSignup } = useHostivAccountModal()
 const { ready, isLoggedIn, adminPath, sitePath, logout } = useHostivNavAuth()
-const { landing, homePath } = useHostivLocale()
+const { landing, homePath, locale } = useHostivLocale()
+
+const pricingPath = computed(() => getHostivPricingPath(locale.value))
 
 const isOpen = ref(false)
 
@@ -50,8 +53,6 @@ async function onLogout() {
       </NuxtLink>
 
       <div class="hostiv-nav__actions">
-        <HostivLocaleSelect class="hostiv-nav__locale" />
-
         <template v-if="ready && isLoggedIn">
           <NuxtLink
             v-if="sitePath"
@@ -74,6 +75,9 @@ async function onLogout() {
           </button>
         </template>
         <template v-else-if="ready">
+          <NuxtLink :to="pricingPath" class="hostiv-nav__link hostiv-nav__link--pricing">
+            {{ landing.navUi.pricing }}
+          </NuxtLink>
           <button type="button" class="hostiv-btn hostiv-btn--ghost hostiv-btn--sm" @click="onLogin">
             {{ landing.navUi.login }}
           </button>
@@ -81,6 +85,7 @@ async function onLogout() {
             {{ landing.navUi.signup }}
           </button>
         </template>
+
         <button
           type="button"
           class="hostiv-nav__toggle"
@@ -92,6 +97,8 @@ async function onLogout() {
           <X v-if="isOpen" :size="22" />
           <Menu v-else :size="22" />
         </button>
+
+        <HostivLocaleSelect class="hostiv-nav__locale" />
       </div>
     </div>
 

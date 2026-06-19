@@ -5,6 +5,9 @@ export type PlatformAdminAuditAction =
   | "site.delete"
   | "member.delete"
   | "member.update"
+  | "promo_code.create"
+  | "promo_code.update"
+  | "promo_code.delete"
 
 export type PlatformAdminAuditLogRow = {
   id: string

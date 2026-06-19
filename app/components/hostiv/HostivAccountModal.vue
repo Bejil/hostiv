@@ -4,6 +4,8 @@ import type { HostivAccountModalMode } from "../../composables/useHostivAccountM
 import type { HostivPricingPlanId } from "../../data/hostivLanding"
 import { useHostivPropertySlugCheck } from "../../composables/useHostivPropertySlugCheck"
 import { startHostivSignupCheckout } from "../../composables/useHostivSubscriptionCheckout"
+import { useHostivPromoCode } from "../../composables/useHostivPromoCode"
+import HostivPromoCodeField from "../HostivPromoCodeField.vue"
 import { clearHostivSignupLoginCredentials } from "../../utils/hostiv-signup-session"
 import { isHostivPasswordValid } from "../../utils/hostiv-password-rules"
 import HostivPasswordRulesChecklist from "../HostivPasswordRulesChecklist.vue"
@@ -46,6 +48,12 @@ const success = ref("")
 const showForgotPassword = ref(false)
 const forgotSuccess = ref(false)
 const modalPanelRef = ref<HTMLElement | null>(null)
+
+const signupPromo = useHostivPromoCode({
+  context: "hostiv_signup",
+  email,
+  subscriptionPlan: selectedPlan
+})
 
 function scrollSignupPasswordRulesIntoView() {
   const run = () => {
@@ -157,9 +165,10 @@ const payButtonLabel = computed(() => {
   }
 
   const plan = activePricingPlan.value
+  const price = signupPromo.finalAmountEur ?? plan.price
 
   return formatModalCopy(modal.value.buttons.pay, {
-    price: plan.price,
+    price,
     period: plan.period,
     name: plan.name
   })
@@ -304,7 +313,8 @@ async function onSignupSubmit() {
       password: pass,
       property_name: trimmedProperty,
       property_slug: propertySlug.value,
-      subscription_plan: selectedPlan.value
+      subscription_plan: selectedPlan.value,
+      promo_code: signupPromo.promoCodeForCheckout || undefined
     })
   } catch (cause) {
     const err = cause as { data?: { message?: string }; message?: string }
@@ -602,6 +612,20 @@ async function onLoginSubmit() {
               </div>
 
               <p v-if="error" class="hostiv-modal__error" role="alert">{{ error }}</p>
+
+              <HostivPromoCodeField
+                context="hostiv_signup"
+                :email="email"
+                :subscription-plan="selectedPlan"
+                :code="signupPromo.code"
+                :applied-code="signupPromo.applied?.code ?? null"
+                :validating="signupPromo.validating"
+                :error="signupPromo.error"
+                compact
+                @update:code="signupPromo.code = $event"
+                @apply="signupPromo.applyPromoCode()"
+                @clear="signupPromo.clearPromo()"
+              />
 
               <button
                 type="submit"

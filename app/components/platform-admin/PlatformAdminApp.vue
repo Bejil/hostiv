@@ -6,6 +6,7 @@ import PlatformAdminHeader from "./PlatformAdminHeader.vue"
 import PlatformAdminLoginGate from "./PlatformAdminLoginGate.vue"
 import PlatformAdminMembersPanel from "./PlatformAdminMembersPanel.vue"
 import PlatformAdminNav from "./PlatformAdminNav.vue"
+import PlatformAdminPromoCodesPanel from "./PlatformAdminPromoCodesPanel.vue"
 import PlatformAdminRevenuePanel from "./PlatformAdminRevenuePanel.vue"
 import PlatformAdminSitesPanel from "./PlatformAdminSitesPanel.vue"
 import type { PlatformAdminSectionId } from "../../types/platform-admin"
@@ -33,6 +34,7 @@ const refreshKey = ref(0)
 const dashboardRef = ref<{ load: () => Promise<void> } | null>(null)
 const sitesRef = ref<{ load: () => Promise<void> } | null>(null)
 const membersRef = ref<{ load: () => Promise<void> } | null>(null)
+const promoCodesRef = ref<{ load: () => Promise<void> } | null>(null)
 const revenueRef = ref<{ load: () => Promise<void> } | null>(null)
 
 onMounted(() => {
@@ -67,6 +69,7 @@ async function refreshCurrentPanel() {
     dashboard: dashboardRef,
     sites: sitesRef,
     members: membersRef,
+    "promo-codes": promoCodesRef,
     revenue: revenueRef
   } as const
 
@@ -118,6 +121,13 @@ async function refreshCurrentPanel() {
             v-if="activeSection === 'members'"
             :key="`members-${refreshKey}`"
             ref="membersRef"
+            :platform-fetch="platformFetch"
+            :platform-request="platformRequest"
+          />
+          <PlatformAdminPromoCodesPanel
+            v-if="activeSection === 'promo-codes'"
+            :key="`promo-codes-${refreshKey}`"
+            ref="promoCodesRef"
             :platform-fetch="platformFetch"
             :platform-request="platformRequest"
           />

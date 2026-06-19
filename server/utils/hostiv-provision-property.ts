@@ -66,7 +66,7 @@ async function backfillBrandNameFromSignup(
 
 function buildEmptySiteContent() {
   return {
-    template: { id: null },
+    template: { layout: null, theme: null, id: null },
     copy: {
       header: {
         brand_name: "",
@@ -158,21 +158,6 @@ export async function provisionPropertyForUser(input: {
       statusCode: 409,
       message: "Ce nom de site est déjà utilisé."
     })
-  }
-
-  const { data: owned } = await supabase
-    .from("properties")
-    .select("slug")
-    .eq("owner_user_id", input.userId)
-    .limit(1)
-    .maybeSingle()
-
-  if (owned?.slug) {
-    const ownedSlug = String(owned.slug)
-
-    await backfillBrandNameFromSignup(supabase, ownedSlug, displayName)
-
-    return { slug: ownedSlug, created: false as const }
   }
 
   const plan = normalizeHostivSubscriptionPlan(input.subscriptionPlan)

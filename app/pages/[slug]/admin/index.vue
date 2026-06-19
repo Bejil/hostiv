@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import AdminAlert from "../../../components/admin/AdminAlert.vue"
-import AdminAccountSettingsModal from "../../../components/admin/AdminAccountSettingsModal.vue"
 import AdminIcon from "../../../components/admin/AdminIcon.vue"
 import AdminLoginModal from "../../../components/admin/AdminLoginModal.vue"
 import AdminLiveEditor from "../../../components/admin/AdminLiveEditor.vue"
@@ -9,6 +8,8 @@ import AdminProUpgradeModal from "../../../components/admin/AdminProUpgradeModal
 import AdminStarterPlusSuccessModal from "../../../components/admin/AdminStarterPlusSuccessModal.vue"
 import AdminPublishPaywall from "../../../components/admin/AdminPublishPaywall.vue"
 import AdminSetupGuide from "../../../components/admin/AdminSetupGuide.vue"
+import AdminPropertySwitcher from "../../../components/admin/AdminPropertySwitcher.vue"
+import AdminAddPropertyModal from "../../../components/admin/AdminAddPropertyModal.vue"
 import HostivFooter from "../../../components/hostiv/HostivFooter.vue"
 import { adminProFeatureKey } from "../../../composables/admin-pro-feature-context"
 import { adminSectionNavKey } from "../../../composables/admin-section-nav-context"
@@ -19,7 +20,7 @@ import {
 import { useAdminSectionNavigation } from "../../../composables/useAdminSectionNavigation"
 import type { PropertyAdminRecord } from "../../../types/property-admin"
 import type { HostivSubscriptionAccess } from "../../../utils/hostiv-subscription-access"
-import { withPropertyAdminSubscriptionAccess } from "../../../utils/merge-property-admin-subscription-access"
+import { withPropertyAdminAccess, withPropertyAdminSubscriptionAccess } from "../../../utils/merge-property-admin-subscription-access"
 import type { PropertySiteRecord } from "../../../types/property-site"
 import { faviconMimeType } from "../../../utils/favicon-mime"
 import {
@@ -27,7 +28,9 @@ import {
   readSignupPropertyName
 } from "../../../utils/signup-property-name"
 import { useSupabaseClient } from "../../../composables/useSupabaseClient"
-import { verifyHostivSubscriptionCheckout } from "../../../composables/useHostivSubscriptionCheckout"
+import { verifyHostivSubscriptionCheckout, verifyHostivPropertyAddCheckout } from "../../../composables/useHostivSubscriptionCheckout"
+import { useHostivProperties } from "../../../composables/useHostivProperties"
+import { writeHostivActivePropertySlug } from "../../../utils/hostiv-active-property"
 import {
   clearAdminDraft,
   loadAdminDraft,
@@ -54,7 +57,21 @@ const route = useRoute()
 const router = useRouter()
 const { ui, formatDate } = useAdminUi()
 const slug = computed(() => String(route.params.slug))
-const sectionNav = useAdminSectionNavigation(slug)
+const draft = ref<PropertyAdminRecord | null>(null)
+
+const canAccessAccounting = computed(() => {
+  const access = draft.value?.admin_access
+
+  if (!access) {
+    return false
+  }
+
+  return access.role !== "cohost"
+})
+
+const sectionNav = useAdminSectionNavigation(slug, {
+  canAccessAccounting: () => canAccessAccounting.value
+})
 
 provide(adminSectionNavKey, sectionNav)
 
@@ -64,8 +81,14 @@ const accountMenuOpen = ref(false)
 const accountMenuRef = ref<HTMLElement | null>(null)
 
 useAdminHeaderStickyTop(adminHeaderRef)
-const accountModalOpen = ref(false)
+const addPropertyModalOpen = ref(false)
 let closeAccountMenuTimer: ReturnType<typeof setTimeout> | null = null
+
+const {
+  properties: accessibleProperties,
+  loading: propertiesLoading,
+  fetchProperties: fetchAccessibleProperties
+} = useHostivProperties()
 
 const {
   authenticated,
@@ -85,8 +108,6 @@ const {
 } = usePropertyAdmin(slug)
 
 const { propertyAsset } = usePropertyAsset(slug)
-
-const draft = ref<PropertyAdminRecord | null>(null)
 
 const subscriptionAccess = computed(() => draft.value?.subscription_access ?? null)
 
@@ -122,6 +143,14 @@ const showEditor = computed(
     !subscriptionBlocksEditor.value
 )
 
+const showAddPropertyButton = computed(
+  () => authenticated.value && accessibleProperties.value.some((property) => property.role === "owner")
+)
+
+const addPropertyProPlanOnly = computed(
+  () => accessibleProperties.value.filter((property) => property.role === "owner").length >= 1
+)
+
 const subscriptionReturnMessage = ref<string | null>(null)
 const subscriptionVerifying = ref(false)
 const starterPlusSuccessOpen = ref(false)
@@ -153,6 +182,88 @@ async function clearSubscriptionQuery() {
   delete query.session_id
 
   await navigateTo({ path: route.path, query }, { replace: true })
+}
+
+async function clearPropertyAddQuery() {
+  const query = { ...route.query }
+
+  delete query.property_add
+  delete query.session_id
+
+  await navigateTo({ path: route.path, query }, { replace: true })
+}
+
+async function handlePropertyAddReturn() {
+  const status = route.query.property_add
+
+  if (status === "cancelled") {
+    subscriptionReturnMessage.value = ui.value.properties.cancelled
+    await clearPropertyAddQuery()
+    return
+  }
+
+  if (status !== "success") {
+    return
+  }
+
+  const sessionId = String(route.query.session_id || "").trim()
+
+  if (!sessionId) {
+    subscriptionReturnMessage.value = ui.value.shell.paymentIncomplete
+    await clearPropertyAddQuery()
+    return
+  }
+
+  if (subscriptionVerifying.value) {
+    return
+  }
+
+  const supabase = useSupabaseClient()
+  const { data: sessionData } = await supabase.auth.getSession()
+  const token = sessionData.session?.access_token
+
+  if (!token) {
+    return
+  }
+
+  subscriptionVerifying.value = true
+  let redirectedToNewProperty = false
+
+  try {
+    const result = await verifyHostivPropertyAddCheckout(token, sessionId)
+
+    if (result.fulfilled && result.slug) {
+      subscriptionReturnMessage.value = ui.value.properties.created
+      writeHostivActivePropertySlug(result.slug)
+      await fetchAccessibleProperties()
+
+      if (result.slug !== slug.value) {
+        if (import.meta.client) {
+          sessionStorage.setItem("hostiv-property-created-notice", "1")
+        }
+
+        redirectedToNewProperty = true
+        await navigateTo(`/${result.slug}/admin`, { replace: true })
+        return
+      }
+
+      await fetchSite()
+      await syncDraftFromSite({ force: true })
+    } else {
+      subscriptionReturnMessage.value = ui.value.shell.paymentPending
+    }
+  } catch (err: unknown) {
+    const e = err as { data?: { message?: string }; message?: string }
+
+    subscriptionReturnMessage.value =
+      e.data?.message || e.message || ui.value.properties.verifyFailed
+  } finally {
+    subscriptionVerifying.value = false
+
+    if (!redirectedToNewProperty) {
+      await clearPropertyAddQuery()
+    }
+  }
 }
 
 async function handleSubscriptionReturn() {
@@ -239,6 +350,24 @@ watch(
   { immediate: true }
 )
 
+watch(
+  () => [route.query.property_add, route.query.session_id] as const,
+  () => {
+    void handlePropertyAddReturn()
+  },
+  { immediate: true }
+)
+
+watch(
+  () => authenticated.value,
+  (isAuthenticated) => {
+    if (isAuthenticated) {
+      void fetchAccessibleProperties()
+    }
+  },
+  { immediate: true }
+)
+
 function onOpenWelcomeGuideAfterStarterPlus() {
   starterPlusSuccessOpen.value = false
   closeProUpgrade()
@@ -283,8 +412,15 @@ const showLoginModal = computed(
 
 async function ensurePropertyExists() {
   const onboarding = route.query.onboarding === "1"
-  const maxAttempts = onboarding ? 10 : 1
+  const propertyAddReturn =
+    route.query.property_add === "success" && Boolean(String(route.query.session_id || "").trim())
+  const maxAttempts = onboarding || propertyAddReturn ? 15 : 1
   const delayMs = 600
+
+  if (propertyAddReturn) {
+    initAuthListener()
+    await handlePropertyAddReturn()
+  }
 
   try {
     for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
@@ -296,7 +432,7 @@ async function ensurePropertyExists() {
         const e = err as { statusCode?: number; statusMessage?: string; data?: { statusMessage?: string } }
 
         if (e.statusCode === 404) {
-          if (onboarding && attempt < maxAttempts) {
+          if ((onboarding || propertyAddReturn) && attempt < maxAttempts) {
             await new Promise((resolve) => window.setTimeout(resolve, delayMs))
             continue
           }
@@ -400,11 +536,23 @@ useHead({
 function applySubscriptionAccessToDraft(access: HostivSubscriptionAccess) {
   if (draft.value) {
     draft.value = withPropertyAdminSubscriptionAccess(draft.value, access)
+    applyFreshAdminContextToDraft()
   }
 
   if (site.value) {
     site.value = withPropertyAdminSubscriptionAccess(site.value, access)
   }
+}
+
+function applyFreshAdminContextToDraft() {
+  if (!draft.value || !site.value) {
+    return
+  }
+
+  draft.value = withPropertyAdminAccess(
+    withPropertyAdminSubscriptionAccess(draft.value, site.value.subscription_access),
+    site.value.admin_access
+  )
 }
 
 async function syncDraftFromSite(options: { force?: boolean } = {}) {
@@ -423,19 +571,19 @@ async function syncDraftFromSite(options: { force?: boolean } = {}) {
     const storedDraft = loadAdminDraft(slug.value)
 
     if (storedDraft) {
-      draft.value = withPropertyAdminSubscriptionAccess(
-        clonePropertyAdminRecord(storedDraft),
-        freshAccess
+      draft.value = withPropertyAdminAccess(
+        withPropertyAdminSubscriptionAccess(
+          clonePropertyAdminRecord(storedDraft),
+          freshAccess
+        ),
+        site.value.admin_access
       )
       isDirty.value = true
       return
     }
 
     if (isDirty.value && draft.value) {
-      if (freshAccess) {
-        draft.value = withPropertyAdminSubscriptionAccess(draft.value, freshAccess)
-      }
-
+      applyFreshAdminContextToDraft()
       return
     }
   } else {
@@ -443,9 +591,12 @@ async function syncDraftFromSite(options: { force?: boolean } = {}) {
   }
 
   try {
-    draft.value = withPropertyAdminSubscriptionAccess(
-      clonePropertyAdminRecord(site.value),
-      freshAccess
+    draft.value = withPropertyAdminAccess(
+      withPropertyAdminSubscriptionAccess(
+        clonePropertyAdminRecord(site.value),
+        freshAccess
+      ),
+      site.value.admin_access
     )
 
     try {
@@ -521,6 +672,20 @@ onMounted(() => {
   try {
     configError.value = null
     void loadPublicBranding()
+
+    if (import.meta.client && sessionStorage.getItem("hostiv-property-created-notice") === "1") {
+      sessionStorage.removeItem("hostiv-property-created-notice")
+      subscriptionReturnMessage.value = ui.value.properties.created
+    }
+
+    const propertyAddReturn =
+      route.query.property_add === "success" && Boolean(String(route.query.session_id || "").trim())
+
+    if (propertyAddReturn) {
+      initAuthListener()
+      void handlePropertyAddReturn()
+    }
+
     void ensurePropertyExists().then(() => {
       if (!propertyExists.value) {
         loading.value = false
@@ -528,7 +693,9 @@ onMounted(() => {
       }
 
       initAuthListener()
-      void bootstrap()
+      void bootstrap().then(() => {
+        void handlePropertyAddReturn()
+      })
     })
   } catch (err: unknown) {
     configError.value =
@@ -643,6 +810,34 @@ watch(
   }
 )
 
+watch(
+  () => route.query.section,
+  (section) => {
+    const id = Array.isArray(section) ? section[0] : section
+
+    if (id === "cohosts") {
+      void router.replace({
+        path: route.path,
+        query: {
+          ...route.query,
+          section: "account",
+          account_view: "cohosts"
+        }
+      })
+    }
+  },
+  { immediate: true }
+)
+
+watch(
+  () => [sectionNav.activeMenuSection.value, canAccessAccounting.value] as const,
+  ([section, canAccessPayouts]) => {
+    if (section === "payouts" && !canAccessPayouts) {
+      sectionNav.selectSection("general")
+    }
+  }
+)
+
 async function persistDraft(): Promise<boolean> {
   if (!draft.value) {
     return false
@@ -691,64 +886,31 @@ function closeAccountMenuSoon() {
 
 function openAccountSettings() {
   accountMenuOpen.value = false
-  accountModalOpen.value = true
+  sectionNav.selectSection("account")
 }
 
-function closeAccountSettings() {
-  accountModalOpen.value = false
+function openAddPropertyModal() {
+  accountMenuOpen.value = false
+  subscriptionReturnMessage.value = null
+  addPropertyModalOpen.value = true
+}
+
+function closeAddPropertyModal() {
+  addPropertyModalOpen.value = false
 }
 
 function previewUrl(path: string) {
   return propertyAsset(path)
 }
 
-const savebarDocked = ref(false)
-const savebarDockSentinelRef = ref<HTMLElement | null>(null)
-let savebarDockObserver: IntersectionObserver | null = null
-
-function teardownSavebarDockObserver() {
-  savebarDockObserver?.disconnect()
-  savebarDockObserver = null
-  savebarDocked.value = false
-}
-
-function setupSavebarDockObserver() {
-  teardownSavebarDockObserver()
-
-  const node = savebarDockSentinelRef.value
-
-  if (!node || !showEditor.value || !isDirty.value) {
-    return
-  }
-
-  const savebarEl = node.previousElementSibling
-
-  const marginBottom =
-    savebarEl instanceof HTMLElement && savebarEl.offsetHeight > 0
-      ? savebarEl.offsetHeight
-      : 60
-
-  savebarDockObserver = new IntersectionObserver(
-    ([entry]) => {
-      savebarDocked.value = entry.isIntersecting
-    },
-    { threshold: 0, rootMargin: `0px 0px -${marginBottom}px 0px` }
-  )
-
-  savebarDockObserver.observe(node)
-}
-
 watch(
-  [savebarDockSentinelRef, showEditor, isDirty],
-  () => {
-    void nextTick(() => setupSavebarDockObserver())
-  },
-  { flush: "post" }
+  () => slug.value,
+  (value) => {
+    if (authenticated.value) {
+      writeHostivActivePropertySlug(value)
+    }
+  }
 )
-
-onUnmounted(() => {
-  teardownSavebarDockObserver()
-})
 
 useSeoMeta({
   title: () => `Admin — ${brandLabel.value}`,
@@ -768,23 +930,38 @@ useHead({
     <header ref="adminHeaderRef" class="admin-page__header">
       <div class="admin-page__header-inner">
         <div class="admin-page__brand">
-          <div class="admin-page__logo">
+          <NuxtLink
+            :to="`/${slug}`"
+            class="admin-page__logo admin-page__logo-link"
+            :aria-label="ui.header.logoHome"
+            :title="ui.header.logoHome"
+          >
             <img
               v-if="headerLogoUrl"
               :src="headerLogoUrl"
               :alt="logoAlt"
               class="admin-page__logo-img"
             />
-          </div>
+          </NuxtLink>
           <div>
             <h1 class="admin-page__title">{{ brandLabel }}</h1>
-            <p class="admin-page__meta">
+            <p v-if="!authenticated" class="admin-page__meta">
               <span class="admin-page__slug">/{{ slug }}</span>
             </p>
           </div>
         </div>
 
         <div class="admin-page__actions">
+          <div v-if="authenticated" class="admin-page__header-tools">
+            <AdminPropertySwitcher
+              :current-slug="slug"
+              :properties="accessibleProperties"
+              :loading="propertiesLoading"
+              :can-add-property="showAddPropertyButton"
+              @add-property="openAddPropertyModal"
+            />
+          </div>
+
           <template v-if="userEmail || authenticated">
             <span v-if="showEditor && isDirty" class="admin-page__dirty">
               <span class="admin-page__dirty-dot" aria-hidden="true" />
@@ -877,7 +1054,11 @@ useHead({
             <AdminAlert v-if="saveMessage" variant="success" :message="saveMessage" />
           </div>
 
-          <AdminMainTabs v-if="showEditor && draft" :slug="slug" :record="draft" />
+          <AdminMainTabs
+            v-if="showEditor && draft"
+            :slug="slug"
+            :record="draft"
+          />
 
           <section class="admin-workspace">
             <div v-if="!showEditor && !subscriptionBlocksEditor" class="admin-empty">
@@ -920,6 +1101,19 @@ useHead({
       </template>
     </main>
 
+    <div
+      v-if="showEditor && isDirty"
+      class="admin-savebar-anchor"
+    >
+      <footer class="admin-savebar" aria-live="polite">
+        <p>{{ ui.shell.savebarUnsaved }} <strong>{{ brandLabel }}</strong></p>
+        <button type="button" class="admin-btn admin-btn--primary" :disabled="saving" @click="onSave">
+          <AdminIcon name="save" :size="16" />
+          {{ saving ? ui.common.saving : ui.common.save }}
+        </button>
+      </footer>
+    </div>
+
     <AdminProUpgradeModal
       v-if="authenticated && propertyExists"
       :open="modalOpen"
@@ -938,33 +1132,14 @@ useHead({
     />
 
     <div class="admin-page__bottom">
-      <footer
-        v-if="showEditor && isDirty"
-        class="admin-savebar"
-        :class="{ 'admin-savebar--floating': !savebarDocked }"
-        aria-live="polite"
-      >
-        <p>{{ ui.shell.savebarUnsaved }} <strong>{{ brandLabel }}</strong></p>
-        <button type="button" class="admin-btn admin-btn--primary" :disabled="saving" @click="onSave">
-          <AdminIcon name="save" :size="16" />
-          {{ saving ? ui.common.saving : ui.common.save }}
-        </button>
-      </footer>
-
-      <div
-        v-if="showEditor && isDirty"
-        ref="savebarDockSentinelRef"
-        class="admin-savebar-dock-sentinel"
-        aria-hidden="true"
-      />
-
       <HostivFooter v-if="propertyExistsChecked && propertyExists" />
     </div>
 
-    <AdminAccountSettingsModal
-      :open="accountModalOpen"
-      :slug="slug"
-      @close="closeAccountSettings"
+    <AdminAddPropertyModal
+      :open="addPropertyModalOpen"
+      :return-slug="slug"
+      :pro-plan-only="addPropertyProPlanOnly"
+      @close="closeAddPropertyModal"
     />
 
     <AdminSetupGuide v-if="showEditor && draft" :slug="slug" :record="draft" />

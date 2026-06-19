@@ -13,12 +13,28 @@ import {
   type AdminSectionId,
   type AdminTopSectionId
 } from "../data/admin-nav-sections"
+import { isAdminAccountViewId } from "../data/admin-account-sections"
 import { useSupabaseClient } from "./useSupabaseClient"
 
-export function useAdminSectionNavigation(slug: MaybeRefOrGetter<string>) {
+export function useAdminSectionNavigation(
+  slug: MaybeRefOrGetter<string>,
+  options?: {
+    canAccessAccounting?: MaybeRefOrGetter<boolean>
+  }
+) {
   const route = useRoute()
   const router = useRouter()
   const editorScrollRef = ref<HTMLElement | null>(null)
+
+  function canLoadStripeConnect() {
+    const flag = options?.canAccessAccounting
+
+    if (flag === undefined) {
+      return true
+    }
+
+    return toValue(flag)
+  }
 
   function parseRouteSections(): { menu: AdminTopSectionId; block: AdminNavSectionId | null } {
     const raw = route.query.section
@@ -185,11 +201,19 @@ export function useAdminSectionNavigation(slug: MaybeRefOrGetter<string>) {
     const query = { ...route.query, section: id }
     delete query.block
 
+    if (id === "account") {
+      if (!isAdminAccountViewId(String(query.account_view))) {
+        query.account_view = "settings"
+      }
+    } else {
+      delete query.account_view
+    }
+
     router.replace({ path: route.path, query })
   }
 
   watch(
-    () => [route.query.section, route.query.block] as const,
+    () => [route.query.section, route.query.block, route.query.account_view] as const,
     () => {
       const parsed = parseRouteSections()
 
@@ -200,6 +224,13 @@ export function useAdminSectionNavigation(slug: MaybeRefOrGetter<string>) {
       if (activeCustomizationBlock.value !== parsed.block) {
         activeCustomizationBlock.value = parsed.block
       }
+
+      if (parsed.menu === "account" && !isAdminAccountViewId(String(route.query.account_view))) {
+        router.replace({
+          path: route.path,
+          query: { ...route.query, section: "account", account_view: "settings" }
+        })
+      }
     }
   )
 
@@ -207,9 +238,27 @@ export function useAdminSectionNavigation(slug: MaybeRefOrGetter<string>) {
     () => toValue(slug),
     () => {
       void loadUpcomingReservationCount()
-      void loadStripeConnectStatus()
+
+      if (canLoadStripeConnect()) {
+        void loadStripeConnectStatus()
+      } else {
+        updateStripeConnectStatus(null)
+      }
     }
   )
+
+  if (options?.canAccessAccounting !== undefined) {
+    watch(
+      () => toValue(options.canAccessAccounting),
+      (canAccess) => {
+        if (canAccess) {
+          void loadStripeConnectStatus()
+        } else {
+          updateStripeConnectStatus(null)
+        }
+      }
+    )
+  }
 
   async function authHeaders(): Promise<Record<string, string>> {
     const supabase = useSupabaseClient()
@@ -246,7 +295,7 @@ export function useAdminSectionNavigation(slug: MaybeRefOrGetter<string>) {
   async function loadStripeConnectStatus() {
     const normalizedSlug = toValue(slug).trim()
 
-    if (!normalizedSlug) {
+    if (!normalizedSlug || !canLoadStripeConnect()) {
       updateStripeConnectStatus(null)
       return
     }
@@ -286,7 +335,12 @@ export function useAdminSectionNavigation(slug: MaybeRefOrGetter<string>) {
     }
 
     void loadUpcomingReservationCount()
-    void loadStripeConnectStatus()
+
+    if (canLoadStripeConnect()) {
+      void loadStripeConnectStatus()
+    } else {
+      updateStripeConnectStatus(null)
+    }
   }
 
   return {

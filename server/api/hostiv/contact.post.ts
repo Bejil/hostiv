@@ -7,6 +7,27 @@ import {
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
+const CONTACT_ERRORS = {
+  fr: {
+    unavailable: "Envoi de message indisponible pour le moment.",
+    nameRequired: "Indiquez votre nom.",
+    invalidEmail: "Adresse e-mail invalide.",
+    messageTooShort: "Votre message doit contenir au moins 10 caractères.",
+    sendFailed: "Impossible d’envoyer votre message. Réessayez plus tard."
+  },
+  en: {
+    unavailable: "Message delivery is unavailable right now.",
+    nameRequired: "Please enter your name.",
+    invalidEmail: "Invalid email address.",
+    messageTooShort: "Your message must be at least 10 characters.",
+    sendFailed: "Unable to send your message. Please try again later."
+  }
+} as const
+
+function contactErrors(locale: string) {
+  return locale === "en" ? CONTACT_ERRORS.en : CONTACT_ERRORS.fr
+}
+
 /** Dotenv n’ignore pas les `#` en fin de ligne — évite un `from` invalide chez Resend. */
 function stripEnvInlineComment(value: string) {
   return value.replace(/\s+#.*$/, "").trim()
@@ -23,11 +44,13 @@ export default defineEventHandler(async (event) => {
   if (!resendApiKey || !from) {
     throw createError({
       statusCode: 503,
-      message: "Envoi de message indisponible pour le moment."
+      message: contactErrors("fr").unavailable
     })
   }
 
   const body = await readBody(event)
+  const locale = body?.locale === "en" ? "en" : "fr"
+  const errors = contactErrors(locale)
   const name = typeof body?.name === "string" ? body.name.trim() : ""
   const email = typeof body?.email === "string" ? body.email.trim() : ""
   const subject = typeof body?.subject === "string" ? body.subject.trim() : "Question générale"
@@ -39,17 +62,17 @@ export default defineEventHandler(async (event) => {
   }
 
   if (!name || name.length < 2) {
-    throw createError({ statusCode: 400, message: "Indiquez votre nom." })
+    throw createError({ statusCode: 400, message: errors.nameRequired })
   }
 
   if (!EMAIL_RE.test(email)) {
-    throw createError({ statusCode: 400, message: "Adresse e-mail invalide." })
+    throw createError({ statusCode: 400, message: errors.invalidEmail })
   }
 
   if (!message || message.length < 10) {
     throw createError({
       statusCode: 400,
-      message: "Votre message doit contenir au moins 10 caractères."
+      message: errors.messageTooShort
     })
   }
 
@@ -125,7 +148,7 @@ export default defineEventHandler(async (event) => {
 
     throw createError({
       statusCode: 502,
-      message: `Impossible d’envoyer votre message. Réessayez plus tard.${devResendHint(detail)}`
+      message: `${errors.sendFailed}${devResendHint(detail)}`
     })
   }
 

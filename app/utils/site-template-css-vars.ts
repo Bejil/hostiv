@@ -62,9 +62,7 @@ const BOOKING_MODAL_BUTTON_RADIUS: Record<SiteTemplateId, string> = {
   signature: "999px",
   riviera: "999px",
   panorama: "999px",
-  toky: "0",
   cabin: "999px",
-  resort: "4px",
   marina: "999px"
 }
 
@@ -72,9 +70,7 @@ const BOOKING_MODAL_PANEL_RADIUS: Record<SiteTemplateId, string> = {
   signature: "24px",
   riviera: "32px",
   panorama: "24px",
-  toky: "0",
   cabin: "24px",
-  resort: "8px",
   marina: "24px"
 }
 
@@ -82,9 +78,7 @@ const BOOKING_MODAL_FIELD_RADIUS: Record<SiteTemplateId, string> = {
   signature: "16px",
   riviera: "999px",
   panorama: "16px",
-  toky: "0",
   cabin: "16px",
-  resort: "0",
   marina: "16px"
 }
 

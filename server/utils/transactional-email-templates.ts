@@ -1002,6 +1002,45 @@ export function buildHostivPasswordResetEmail(options: {
   }
 }
 
+export function buildPropertyCohostInviteEmail(options: {
+  brandName: string
+  slug: string
+  inviteUrl: string
+}) {
+  const bodyHtml = buildTransactionalBody({
+    eyebrow: "Équipe Hostiv",
+    title: `Invitation co-hôte — ${escapeHtmlText(options.brandName)}`,
+    paragraphs: [
+      `Vous avez été invité·e à co-gérer le site <strong style="color:${C.ink};">/${escapeHtmlText(options.slug)}</strong> sur Hostiv.`,
+      `Connectez-vous avec cette adresse e-mail pour accepter l’invitation. Le lien est valable <strong style="color:${C.ink};">7 jours</strong>.`
+    ],
+    cta: {
+      label: "Accepter l’invitation",
+      href: options.inviteUrl
+    },
+    paddingBottom: "32px"
+  })
+
+  const text = [
+    `Invitation co-hôte pour ${options.brandName} (/${options.slug})`,
+    "",
+    options.inviteUrl,
+    "",
+    "Ce lien expire dans 7 jours."
+  ].join("\n")
+
+  return {
+    subject: `Hostiv — Invitation co-hôte · ${options.brandName}`,
+    preheader: "Accédez au backoffice en tant que co-hôte.",
+    html: buildTransactionalDocument({
+      title: "Invitation co-hôte",
+      preheader: "Gérez le site avec l’hôte principal.",
+      bodyHtml
+    }),
+    text
+  }
+}
+
 export function buildHostivPasswordChangedEmail(options: { email: string }) {
   const bodyHtml = buildTransactionalBody({
     eyebrow: "Sécurité du compte",

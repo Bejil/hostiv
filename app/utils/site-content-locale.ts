@@ -1,4 +1,5 @@
 import type { HostivLocale } from "../types/hostiv-locale"
+import type { AmenityPreviewSection, AmenitySection } from "../types/amenity"
 import type {
   PropertyBenefitCard,
   PropertyFeaturedSpace,
@@ -12,6 +13,7 @@ import type {
   PropertySiteRecord,
   PropertyVisualCard
 } from "../types/property-site"
+import { withAmenityPreviewHasMore } from "./amenity-preview"
 
 export const LOCALIZED_SITE_LIST_KEYS = [
   "featured_spaces",
@@ -191,6 +193,95 @@ export function seedLocalizedSiteLists(
   return changed ? next : null
 }
 
+const LOCALIZED_AMENITY_KEYS = [
+  ["amenity_catalog", "amenity_catalog_en"],
+  ["amenity_preview_sections", "amenity_preview_sections_en"]
+] as const
+
+/** Duplique catalogues / cartes équipements FR↔EN quand la cible est vide. */
+export function seedLocalizedAmenityContent(
+  content: PropertySiteContent,
+  targetLocale: HostivLocale
+): PropertySiteContent | null {
+  const next = { ...content }
+  let changed = false
+
+  for (const [sourceKey, targetKey] of LOCALIZED_AMENITY_KEYS) {
+    const sourceList = content[sourceKey as keyof PropertySiteContent]
+    const targetList = content[targetKey as keyof PropertySiteContent]
+
+    if (
+      !(Array.isArray(targetList) && targetList.length > 0) &&
+      Array.isArray(sourceList) &&
+      sourceList.length > 0
+    ) {
+      const cloned = cloneSiteContentList(sourceList)
+
+      ;(next as Record<string, unknown>)[targetKey] =
+        targetKey === "amenity_preview_sections_en"
+          ? withAmenityPreviewHasMore(cloned as AmenityPreviewSection[])
+          : cloned
+      changed = true
+    }
+  }
+
+  return changed ? next : null
+}
+
+export function resolveLocalizedAmenitySection(
+  locale: HostivLocale,
+  frSection: AmenitySection,
+  enSection: AmenitySection | undefined
+): AmenitySection {
+  if (locale === "fr" || !enSection) {
+    return frSection
+  }
+
+  const enItemsById = new Map(enSection.items.map((item) => [item.id, item]))
+
+  return {
+    ...frSection,
+    title: resolveLocaleContentField(locale, frSection.title, enSection.title) || frSection.title,
+    items: frSection.items.map((frItem) => {
+      const enItem = enItemsById.get(frItem.id)
+
+      if (!enItem) {
+        return frItem
+      }
+
+      const name = resolveLocaleContentField(locale, frItem.name, enItem.name) || frItem.name
+      const frDescription = frItem.description?.trim()
+      const enDescription = enItem.description?.trim()
+      let description: string | undefined
+
+      if (frDescription || enDescription) {
+        description =
+          resolveLocaleContentField(locale, frDescription, enDescription) ||
+          frDescription ||
+          enDescription
+      }
+
+      return description ? { ...frItem, name, description } : { ...frItem, name }
+    })
+  }
+}
+
+export function resolveLocalizedAmenitySections(
+  locale: HostivLocale,
+  frSections: AmenitySection[],
+  enSections: AmenitySection[] | undefined
+): AmenitySection[] {
+  if (locale === "fr" || !enSections?.length) {
+    return frSections
+  }
+
+  const enById = new Map(enSections.map((section) => [section.id, section]))
+
+  return frSections.map((section) =>
+    resolveLocalizedAmenitySection(locale, section, enById.get(section.id))
+  )
+}
+
 function buildLocaleBase(content: PropertySiteContent): PropertySiteLocaleBase {
   const existing = content.locale_base
 
@@ -316,6 +407,18 @@ export function applySiteContentLocale(
   const localeBase = buildLocaleBase(content)
   const sourceContent = contentWithLocaleBase(content, localeBase)
   const lists = resolveLocalizedSiteLists(sourceContent, locale)
+  const amenityCatalog = resolveLocalizedAmenitySections(
+    locale,
+    sourceContent.amenity_catalog ?? [],
+    content.amenity_catalog_en
+  )
+  const amenityPreviewSections = withAmenityPreviewHasMore(
+    resolveLocalizedAmenitySections(
+      locale,
+      sourceContent.amenity_preview_sections ?? [],
+      content.amenity_preview_sections_en
+    ) as AmenityPreviewSection[]
+  )
   const mergedCopy =
     locale === "en"
       ? mergeSiteCopyOverride(localeBase.copy, content.copy_en)
@@ -331,6 +434,8 @@ export function applySiteContentLocale(
       ...content,
       locale_base: localeBase,
       copy: mergedCopy,
+      amenity_catalog: amenityCatalog,
+      amenity_preview_sections: amenityPreviewSections,
       ...lists
     }
   }

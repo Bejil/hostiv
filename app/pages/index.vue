@@ -6,14 +6,11 @@ import HostivNav from "../components/hostiv/HostivNav.vue"
 
 const { landing } = useHostivLocale()
 
-useHostivMarketingHead()
-
-useSeoMeta({
+useHostivMarketingSeo({
   title: () => landing.value.seo.homeTitle,
   description: () => landing.value.seo.homeDescription,
   ogTitle: () => landing.value.seo.homeOgTitle,
-  ogDescription: () => landing.value.seo.homeOgDescription,
-  twitterCard: "summary_large_image"
+  ogDescription: () => landing.value.seo.homeOgDescription
 })
 </script>
 

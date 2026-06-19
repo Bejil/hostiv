@@ -1,3 +1,5 @@
+import type { HostivStaticPage } from "../data/hostivStaticPages"
+
 export function hostivFaviconHeadLinks() {
   const appBaseURL = useRuntimeConfig().app.baseURL || "/"
   const faviconIco = `${appBaseURL}favicon.ico`.replace(/\/{2,}/g, "/")
@@ -15,15 +17,7 @@ export function useHostivMarketingHead() {
   const faviconSvg = `${appBaseURL}favicon.svg`.replace(/\/{2,}/g, "/")
 
   useHead({
-    link: [
-      { rel: "preconnect", href: "https://fonts.googleapis.com" },
-      { rel: "preconnect", href: "https://fonts.gstatic.com", crossorigin: "" },
-      {
-        rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap"
-      },
-      ...hostivFaviconHeadLinks()
-    ],
+    link: [...hostivFaviconHeadLinks()],
     htmlAttrs: {
       class: "hostiv-marketing"
     }
@@ -32,14 +26,14 @@ export function useHostivMarketingHead() {
   return { faviconIco, faviconSvg }
 }
 
-export function useHostivPageSeo(title: string, description: string) {
-  useHostivMarketingHead()
+export function useHostivPageSeo(page: Pick<HostivStaticPage, "title" | "description" | "seoTitle" | "seoDescription">) {
+  const title = page.seoTitle ?? `${page.title} | Hostiv`
+  const description = page.seoDescription ?? page.description
 
-  useSeoMeta({
-    title: `${title} | Hostiv`,
+  useHostivMarketingSeo({
+    title,
     description,
-    ogTitle: `${title} | Hostiv`,
-    ogDescription: description,
-    twitterCard: "summary"
+    ogTitle: title,
+    ogDescription: description
   })
 }

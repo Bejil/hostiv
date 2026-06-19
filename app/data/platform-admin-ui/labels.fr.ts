@@ -13,7 +13,8 @@ export const platformAdminUiFr = {
     account: "Mon compte",
     logout: "Déconnexion",
     refresh: "Actualiser",
-    platformLabel: "Administration plateforme"
+    platformLabel: "Administration plateforme",
+    logoHome: "Retour au site Hostiv"
   },
   common: {
     cancel: "Annuler",
@@ -212,7 +213,9 @@ export const platformAdminUiFr = {
       last30d: "30 derniers jours",
       signup: "Inscriptions",
       renewal: "Renouvellements",
-      premiumTools: "Starter+"
+      premiumTools: "Starter+",
+      discounts: "Réductions accordées",
+      promoPayments: "Paiements avec code"
     },
     columns: {
       date: "Date",
@@ -220,6 +223,7 @@ export const platformAdminUiFr = {
       product: "Produit",
       member: "Membre",
       site: "Site",
+      promo: "Code promo",
       amount: "Montant"
     },
     checkoutTypes: {
@@ -227,7 +231,71 @@ export const platformAdminUiFr = {
       hostiv_subscription: "Renouvellement",
       hostiv_premium_tools: "Starter+"
     },
-    empty: "Aucun paiement enregistré pour le moment."
+    empty: "Aucun paiement enregistré pour le moment.",
+    historyNote: "Les montants affichés sont nets encaissés. La colonne code promo indique les réductions appliquées."
+  },
+  promoCodes: {
+    title: "Codes promo",
+    intro: "Créez et gérez les codes de réduction appliqués aux paiements forfait Hostiv.",
+    createCta: "Nouveau code",
+    empty: "Aucun code promo",
+    emptyHint: "Créez un code pour proposer une réduction sur inscription ou renouvellement.",
+    allEmails: "Tous les e-mails",
+    columns: {
+      title: "Titre",
+      code: "Code",
+      discount: "Réduction",
+      validity: "Validité",
+      emails: "E-mails",
+      status: "Statut"
+    },
+    status: {
+      active: "Actif",
+      upcoming: "À venir",
+      expired: "Expiré",
+      unknown: "—"
+    },
+    fields: {
+      title: "Titre",
+      description: "Description",
+      code: "Code",
+      generateCodeCta: "Générer",
+      validFrom: "Début de validité",
+      validUntil: "Fin de validité",
+      discountPercent: "Réduction (%)",
+      allowedEmails: "E-mails autorisés",
+      allowedEmailsHint: "Ajoutez * pour tous les e-mails, ou des adresses séparées par Entrée ou une virgule.",
+      allowedEmailsPlaceholder: "ex. client@exemple.com",
+      allowedEmailsPlaceholderWildcard: "Tous les e-mails (*)",
+      allowedEmailsInvalid: "Adresse e-mail invalide.",
+      removeEmailTag: "Retirer"
+    },
+    editModal: {
+      titleCreate: "Nouveau code promo",
+      titleEdit: "Modifier le code promo",
+      subtitleCreate: "Définissez la réduction, la validité et les e-mails autorisés.",
+      subtitleEdit: "Mettez à jour les paramètres de ce code promo.",
+      generatingCode: "Génération…",
+      generateFailed: "Impossible de générer un code promo.",
+      codeRequired: "Indiquez un code promo.",
+      checkingCode: "Vérification…",
+      codeAvailable: "Code disponible.",
+      codeTaken: "Ce code est déjà utilisé.",
+      saveFailed: "Impossible d’enregistrer le code promo."
+    },
+    deleteModal: {
+      title: "Supprimer ce code promo ?",
+      body: "Le code",
+      confirm: "Supprimer",
+      deleting: "Suppression…"
+    },
+    pagination: {
+      aria: "Pagination des codes promo",
+      range: "{start}–{end} sur {total}",
+      page: "Page {page} / {total}",
+      prev: "Précédent",
+      next: "Suivant"
+    }
   },
   reservations: {
     title: "Réservations",

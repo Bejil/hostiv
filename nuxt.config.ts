@@ -1,15 +1,25 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 
+import { getHostivMarketingPrerenderPaths } from "./app/utils/hostiv-marketing-seo"
+
 /** Racine `/` = Hostiv (marketing) ; site location : `/:slug` (ex. `/thegrandappartement`) */
 const appBaseURL = process.env.NUXT_APP_BASE_URL || "/"
+
+const hostivMarketingPrerenderRules = Object.fromEntries(
+  getHostivMarketingPrerenderPaths().map((path) => [path, { prerender: true }])
+)
 
 export default defineNuxtConfig({
   compatibilityDate: "2025-07-15",
   devtools: { enabled: true },
   modules: ["@nuxt/ui"],
+  routeRules: hostivMarketingPrerenderRules,
   nitro: {
     externals: {
       external: ["playwright-core"]
+    },
+    prerender: {
+      routes: getHostivMarketingPrerenderPaths()
     }
   },
   css: ["~/assets/css/nuxt-ui-admin.css"],
@@ -24,7 +34,12 @@ export default defineNuxtConfig({
   },
   app: {
     baseURL: appBaseURL,
-    head: {}
+    head: {
+      meta: [
+        { name: "og:site_name", content: "Hostiv" },
+        { property: "og:type", content: "website" }
+      ]
+    }
   },
   runtimeConfig: {
     supabaseUrl: process.env.SUPABASE_URL || "",

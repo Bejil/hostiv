@@ -1,181 +1,44 @@
 <script setup lang="ts">
-import { ChevronDown } from "@lucide/vue"
-import { adminUiFormat } from "../../data/admin-ui"
-import {
-  DEFAULT_SITE_TEMPLATE_ID,
-  getSiteTemplateOptions,
-  type SiteTemplateId
-} from "../../data/site-templates"
+import { getSiteTemplateOptions, type SiteTemplateId } from "../../data/site-templates"
 
-const props = defineProps<{
+defineProps<{
   modelValue: SiteTemplateId | null
 }>()
-
-const { ui, locale } = useAdminUi()
-const ext = computed(() => ui.value.extended)
-const templateOptions = computed(() => getSiteTemplateOptions(locale.value))
 
 const emit = defineEmits<{
   "update:modelValue": [value: SiteTemplateId]
 }>()
 
-const open = ref(false)
-const rootRef = ref<HTMLElement | null>(null)
-const triggerRef = ref<HTMLButtonElement | null>(null)
-const panelStyle = ref<Record<string, string>>({})
-
-const selectedOption = computed(() => {
-  const options = templateOptions.value
-  const match = options.find((option) => option.id === props.modelValue)
-
-  if (match) {
-    return match
-  }
-
-  return (
-    options.find((option) => option.id === DEFAULT_SITE_TEMPLATE_ID) ?? options[0]
-  )
-})
-
-function updatePanelPosition() {
-  const trigger = triggerRef.value
-
-  if (!trigger) {
-    return
-  }
-
-  const rect = trigger.getBoundingClientRect()
-  const maxHeight = Math.min(320, Math.max(120, window.innerHeight - rect.bottom - 16))
-
-  panelStyle.value = {
-    top: `${rect.bottom + 6}px`,
-    left: `${rect.left}px`,
-    width: `${rect.width}px`,
-    maxHeight: `${maxHeight}px`
-  }
-}
-
-function toggleOpen() {
-  open.value = !open.value
-
-  if (open.value) {
-    nextTick(updatePanelPosition)
-  }
-}
+const { ui, locale } = useAdminUi()
+const ext = computed(() => ui.value.extended.template)
+const templateOptions = computed(() => getSiteTemplateOptions(locale.value))
 
 function selectTemplate(id: SiteTemplateId) {
   emit("update:modelValue", id)
-  open.value = false
 }
-
-function onDocumentClick(event: MouseEvent) {
-  if (!open.value) {
-    return
-  }
-
-  const target = event.target
-
-  if (!(target instanceof Node) || !rootRef.value?.contains(target)) {
-    open.value = false
-  }
-}
-
-function onDocumentKeydown(event: KeyboardEvent) {
-  if (open.value && event.key === "Escape") {
-    open.value = false
-  }
-}
-
-watch(open, (isOpen) => {
-  if (!isOpen) {
-    return
-  }
-
-  nextTick(updatePanelPosition)
-})
-
-onMounted(() => {
-  document.addEventListener("click", onDocumentClick)
-  document.addEventListener("keydown", onDocumentKeydown)
-  window.addEventListener("resize", updatePanelPosition)
-  window.addEventListener("scroll", updatePanelPosition, true)
-})
-
-onUnmounted(() => {
-  document.removeEventListener("click", onDocumentClick)
-  document.removeEventListener("keydown", onDocumentKeydown)
-  window.removeEventListener("resize", updatePanelPosition)
-  window.removeEventListener("scroll", updatePanelPosition, true)
-})
 </script>
 
 <template>
-  <div
-    ref="rootRef"
-    class="admin-template-select"
-    :class="{ 'admin-template-select--open': open }"
-  >
+  <div class="admin-theme-grid" role="listbox" :aria-label="ext.listAria">
     <button
-      ref="triggerRef"
+      v-for="option in templateOptions"
+      :key="option.id"
       type="button"
-      class="admin-template-item__button admin-template-select__trigger"
-      :class="[`admin-template-item--${selectedOption.id}`]"
-      aria-haspopup="listbox"
-      :aria-expanded="open"
-      :aria-label="adminUiFormat(ext.template.ariaSelected, { name: selectedOption.name })"
-      @click.stop="toggleOpen"
+      class="admin-theme-card"
+      :class="{
+        'admin-theme-card--active': modelValue === option.id,
+        [`admin-template-item--${option.id}`]: true
+      }"
+      role="option"
+      :aria-selected="modelValue === option.id"
+      :title="option.description"
+      @click="selectTemplate(option.id)"
     >
-      <span class="admin-template-item__swatch" aria-hidden="true" />
-      <span class="admin-template-item__copy">
-        <span class="admin-template-item__meta">
-          <strong>{{ selectedOption.name }}</strong>
-          <span class="admin-template-item__eyebrow">{{ selectedOption.eyebrow }}</span>
-        </span>
-        <span class="admin-template-item__description admin-template-select__trigger-desc">
-          {{ selectedOption.description }}
-        </span>
+      <span class="admin-theme-card__swatch admin-template-item__swatch" aria-hidden="true" />
+      <span class="admin-theme-card__copy">
+        <strong>{{ option.name }}</strong>
+        <span>{{ option.eyebrow }}</span>
       </span>
-      <ChevronDown class="admin-template-select__chevron" :size="18" aria-hidden="true" />
     </button>
-
-    <Teleport to="body">
-      <ul
-        v-show="open"
-        class="admin-template-editor admin-template-select__panel"
-        :style="panelStyle"
-        role="listbox"
-        :aria-label="ext.template.listAria"
-      >
-        <li
-          v-for="option in templateOptions"
-          :key="option.id"
-          class="admin-template-item"
-          :class="{
-            'admin-template-item--active': modelValue === option.id,
-            [`admin-template-item--${option.id}`]: true
-          }"
-          role="option"
-          :aria-selected="modelValue === option.id"
-        >
-          <button
-            type="button"
-            class="admin-template-item__button"
-            @click="selectTemplate(option.id)"
-          >
-            <span class="admin-template-item__swatch" aria-hidden="true" />
-            <span class="admin-template-item__copy">
-              <span class="admin-template-item__meta">
-                <strong>{{ option.name }}</strong>
-                <span class="admin-template-item__eyebrow">{{ option.eyebrow }}</span>
-              </span>
-              <span class="admin-template-item__description">{{ option.description }}</span>
-            </span>
-            <span class="admin-template-item__status">
-              {{ modelValue === option.id ? ext.template.statusActive : ext.template.choose }}
-            </span>
-          </button>
-        </li>
-      </ul>
-    </Teleport>
   </div>
 </template>

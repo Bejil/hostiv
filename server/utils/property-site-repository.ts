@@ -8,7 +8,7 @@ import type {
 } from "../../app/types/property-site"
 import { normalizeBookingConfig } from "../../app/utils/booking-config"
 import { normalizeCalendarConfig } from "../../app/utils/calendar-config"
-import { normalizeSiteTemplateId } from "../../app/data/site-templates"
+import { normalizeSiteTemplate } from "../../app/data/site-layouts"
 import { normalizeReviewRatingValue } from "../../app/utils/platform-rating-stars"
 import { normalizeHostivSubscriptionPlan } from "../../app/utils/hostiv-subscription-plan"
 import { asGalleryText, filledGalleryImages } from "../../app/utils/gallery-category-admin"
@@ -37,9 +37,7 @@ function normalizeSpaceGalleryCategories(
 function normalizeContent(content: PropertySiteContent): PropertySiteContent {
   return {
     ...content,
-    template: {
-      id: normalizeSiteTemplateId(content.template?.id)
-    },
+    template: normalizeSiteTemplate(content.template, { forPublic: true }),
     email: content.email ?? DEFAULT_EMAIL_CONTENT,
     space_gallery_categories: normalizeSpaceGalleryCategories(content.space_gallery_categories),
     reviews: (content.reviews ?? []).map((review) => ({

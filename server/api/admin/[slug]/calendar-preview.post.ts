@@ -1,7 +1,7 @@
 import { normalizeCalendarConfig } from "../../../../app/utils/calendar-config"
 import { requirePropertyOwner } from "../../../utils/admin-auth"
-import { getMergedBlockedNightDates } from "../../../utils/calendar-blocked"
-import { assertValidCalendarConfigFeeds } from "../../../utils/validate-calendar-config"
+import { getPropertyBlockedNightDates } from "../../../utils/calendar-blocked"
+import { assertValidCalendarConfig } from "../../../utils/validate-calendar-config"
 
 export default defineEventHandler(async (event) => {
   const slug = getRouterParam(event, "slug")
@@ -14,10 +14,13 @@ export default defineEventHandler(async (event) => {
 
   const body = await readBody(event)
 
-  assertValidCalendarConfigFeeds(body as Parameters<typeof assertValidCalendarConfigFeeds>[0])
+  assertValidCalendarConfig(body as Parameters<typeof assertValidCalendarConfig>[0])
 
   const calendarConfig = normalizeCalendarConfig(body)
-  const { dates, dateSources, feedBlocks, sources } = await getMergedBlockedNightDates(calendarConfig.ics_feeds)
+  const { dates, dateSources, feedBlocks, sources } = await getPropertyBlockedNightDates(
+    slug,
+    calendarConfig
+  )
 
   return {
     dates,

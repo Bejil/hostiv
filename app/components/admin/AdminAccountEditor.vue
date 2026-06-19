@@ -176,11 +176,13 @@ onMounted(() => {
               :label="ext.account.fields.firstName"
               autocomplete="given-name"
               required
+              full-width
             />
             <AdminField
               v-model="lastName"
               :label="ext.account.fields.lastName"
               autocomplete="family-name"
+              full-width
             />
             <AdminField
               v-model="email"

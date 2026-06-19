@@ -6,9 +6,13 @@ import {
   hostivPlanPriceCents
 } from "../../app/utils/hostiv-subscription-pricing"
 import { applyHostivSubscriptionPaymentToAccount } from "./hostiv-subscription-payment"
+import { applyHostivSubscriptionPaymentToProperty } from "./hostiv-property-subscription"
 import { recordHostivStripeCheckoutPayment } from "./hostiv-stripe-payment-record"
+import { buildHostivCheckoutUnitAmount, mergeCheckoutMetadata } from "./hostiv-checkout-pricing"
+import { createHostivFreeCheckoutResult, isHostivFreeCheckoutSessionId } from "./hostiv-free-checkout"
+import { getPropertySubscriptionBySlug } from "./hostiv-property-subscription"
+import { getHostivStripePaymentBySessionId } from "./hostiv-stripe-payment-record"
 import { getStripeClient } from "./stripe-client"
-import { requireSupabaseAdmin } from "./supabase"
 import {
   getUserEmailById,
   sendHostivPlanPurchasedEmail,
@@ -24,6 +28,7 @@ type CreateHostivSubscriptionCheckoutInput = {
   plan: HostivSubscriptionPlan
   propertySlug: string
   siteBaseUrl: string
+  promoCode?: string | null
 }
 
 export async function createHostivSubscriptionCheckoutSession(input: CreateHostivSubscriptionCheckoutInput) {
@@ -39,6 +44,33 @@ export async function createHostivSubscriptionCheckoutSession(input: CreateHosti
   const slug = input.propertySlug.trim().toLowerCase()
   const plan = normalizeHostivSubscriptionPlan(input.plan)
   const stripe = getStripeClient(input.stripeSecretKey)
+  const originalAmountCents = hostivPlanPriceCents(plan)
+  const { unitAmountCents, promo } = await buildHostivCheckoutUnitAmount({
+    promoCode: input.promoCode,
+    email: input.email,
+    originalAmountCents
+  })
+
+  const successUrl = `${siteBase}/${encodeURIComponent(slug)}/admin?subscription=success&session_id={CHECKOUT_SESSION_ID}`
+
+  if (unitAmountCents === 0 && promo) {
+    return createHostivFreeCheckoutResult({
+      checkoutType: HOSTIV_SUBSCRIPTION_CHECKOUT_METADATA_TYPE,
+      referenceId: `${input.userId}_${Date.now()}`,
+      baseMetadata: {
+        user_id: input.userId,
+        subscription_plan: plan,
+        property_slug: slug
+      },
+      promo,
+      customerEmail: input.email,
+      clientReferenceId: input.userId,
+      successUrl,
+      fulfill: async (session) => {
+        await fulfillHostivSubscriptionCheckoutFromSession(session, input.userId)
+      }
+    })
+  }
 
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
@@ -49,7 +81,7 @@ export async function createHostivSubscriptionCheckoutSession(input: CreateHosti
         quantity: 1,
         price_data: {
           currency: "eur",
-          unit_amount: hostivPlanPriceCents(plan),
+          unit_amount: unitAmountCents,
           product_data: {
             name: hostivPlanCheckoutLabel(plan),
             description: hostivPlanCheckoutDescription(plan)
@@ -57,13 +89,16 @@ export async function createHostivSubscriptionCheckoutSession(input: CreateHosti
         }
       }
     ],
-    metadata: {
-      hostiv_checkout: HOSTIV_SUBSCRIPTION_CHECKOUT_METADATA_TYPE,
-      user_id: input.userId,
-      subscription_plan: plan,
-      property_slug: slug
-    },
-    success_url: `${siteBase}/${encodeURIComponent(slug)}/admin?subscription=success&session_id={CHECKOUT_SESSION_ID}`,
+    metadata: mergeCheckoutMetadata(
+      {
+        hostiv_checkout: HOSTIV_SUBSCRIPTION_CHECKOUT_METADATA_TYPE,
+        user_id: input.userId,
+        subscription_plan: plan,
+        property_slug: slug
+      },
+      promo
+    ),
+    success_url: successUrl,
     cancel_url: `${siteBase}/${encodeURIComponent(slug)}/admin?subscription=cancelled`
   })
 
@@ -87,6 +122,32 @@ export async function fulfillHostivSubscriptionCheckoutSession(
   expectedUserId?: string
 ) {
   const session = await stripe.checkout.sessions.retrieve(sessionId)
+
+  return fulfillHostivSubscriptionCheckoutFromSession(session, expectedUserId)
+}
+
+export async function fulfillHostivSubscriptionCheckoutFromSession(
+  session: Stripe.Checkout.Session,
+  expectedUserId?: string
+) {
+  const sessionId = session.id?.trim()
+
+  if (sessionId && isHostivFreeCheckoutSessionId(sessionId)) {
+    const existing = await getHostivStripePaymentBySessionId(sessionId)
+
+    if (existing) {
+      const propertySubscription = existing.property_slug
+        ? await getPropertySubscriptionBySlug(existing.property_slug)
+        : null
+
+      return {
+        fulfilled: true as const,
+        session,
+        paid_until: propertySubscription?.paid_until ?? null,
+        subscription_plan: existing.subscription_plan
+      }
+    }
+  }
 
   if (!isHostivSubscriptionCheckoutSession(session)) {
     throw createError({
@@ -116,17 +177,17 @@ export async function fulfillHostivSubscriptionCheckoutSession(
   }
 
   const plan = normalizeHostivSubscriptionPlan(session.metadata?.subscription_plan)
-  const payment = await applyHostivSubscriptionPaymentToAccount(userId, plan)
-  const supabase = requireSupabaseAdmin()
   const propertySlug = String(session.metadata?.property_slug || "").trim().toLowerCase()
 
-  if (propertySlug) {
-    await supabase
-      .from("properties")
-      .update({ subscription_plan: payment.subscription_plan })
-      .eq("owner_user_id", userId)
-      .eq("slug", propertySlug)
+  if (!propertySlug) {
+    throw createError({
+      statusCode: 400,
+      message: "Logement introuvable pour ce paiement."
+    })
   }
+
+  const payment = await applyHostivSubscriptionPaymentToProperty(propertySlug, plan, userId)
+  await applyHostivSubscriptionPaymentToAccount(userId, plan)
 
   const ownerEmail =
     String(session.customer_email || "").trim() || (await getUserEmailById(userId))

@@ -1,4 +1,4 @@
-import { requirePropertyOwner } from "../../../../../utils/admin-auth"
+import { requirePropertyPrimaryOwner } from "../../../../../utils/admin-auth"
 import { refundAdminBookingReservation } from "../../../../../utils/booking-refund"
 import { getAdminBookingReservationById } from "../../../../../utils/booking-reservation-repository"
 
@@ -10,7 +10,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: "Paramètres manquants." })
   }
 
-  await requirePropertyOwner(event, slug)
+  await requirePropertyPrimaryOwner(event, slug)
 
   const config = useRuntimeConfig()
   const stripeSecretKey = String(config.stripeSecretKey || "").trim()

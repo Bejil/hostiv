@@ -8,7 +8,7 @@ const props = defineProps<{
 const { landing, homePath } = useHostivLocale()
 const staticUi = computed(() => landing.value.staticUi)
 
-useHostivPageSeo(props.page.title, props.page.description)
+useHostivPageSeo(props.page)
 </script>
 
 <template>

@@ -1,3 +1,4 @@
+import { normalizeSiteTemplate } from "./site-layouts"
 import {
   DEFAULT_SITE_TEMPLATE_ID,
   normalizeSiteTemplateId,
@@ -86,21 +87,6 @@ const SITE_TEMPLATE_INVOICE_THEMES: Record<SiteTemplateId, SiteTemplateInvoiceTh
     topBandHeight: 6,
     layout: "minimal"
   },
-  toky: {
-    id: "toky",
-    name: "Toky",
-    pageBackground: hex("ffffff"),
-    cardBackground: hex("ffffff"),
-    accent: hex("111111"),
-    accentSecondary: hex("f5c400"),
-    accentText: hex("ffffff"),
-    ink: hex("111111"),
-    muted: hex("4a4a4a"),
-    border: hex("111111"),
-    danger: hex("b42318"),
-    topBandHeight: 4,
-    layout: "editorial"
-  },
   cabin: {
     id: "cabin",
     name: "Cabin",
@@ -115,21 +101,6 @@ const SITE_TEMPLATE_INVOICE_THEMES: Record<SiteTemplateId, SiteTemplateInvoiceTh
     danger: hex("b42318"),
     topBandHeight: 6,
     layout: "warm"
-  },
-  resort: {
-    id: "resort",
-    name: "Resort",
-    pageBackground: hex("ffffff"),
-    cardBackground: hex("ffffff"),
-    accent: hex("d41212"),
-    accentSecondary: hex("1a1a1a"),
-    accentText: hex("ffffff"),
-    ink: hex("1a1a1a"),
-    muted: hex("5c5c5c"),
-    border: hex("e8e8e8"),
-    danger: hex("b42318"),
-    topBandHeight: 5,
-    layout: "minimal"
   },
   marina: {
     id: "marina",
@@ -162,7 +133,9 @@ export function getSiteTemplateInvoiceThemeLabel(templateId: unknown): string {
 }
 
 export function resolvePropertyInvoiceTheme(property: {
-  content?: { template?: { id?: unknown } }
+  content?: { template?: { id?: unknown; theme?: unknown; layout?: unknown } }
 }) {
-  return getSiteTemplateInvoiceTheme(property.content?.template?.id)
+  return getSiteTemplateInvoiceTheme(
+    normalizeSiteTemplate(property.content?.template, { forPublic: true }).theme
+  )
 }

@@ -7,8 +7,33 @@ export const adminUiLabelsFr = {
   header: {
     account: "Mon compte",
     settings: "Paramètres",
+    cohosts: "Co-hôtes",
     logout: "Déconnexion",
-    unsaved: "Non enregistré"
+    unsaved: "Non enregistré",
+    switchProperty: "Changer de logement",
+    addProperty: "Ajouter un logement",
+    roleOwner: "Propriétaire",
+    roleCohost: "Co-hôte",
+    logoHome: "Voir le site"
+  },
+  properties: {
+    switcherAria: "Vos logements",
+    addTitle: "Ajouter un logement",
+    addLead: "Un nouveau site avec son propre forfait annuel — comme lors de votre inscription.",
+    addProOnlyTitle: "Passer en Pro pour ajouter un logement",
+    addProOnlyLead:
+      "Le forfait Starter est limité à 1 logement. Pour en créer un second, vous devez souscrire au forfait Pro.",
+    addProOnlyNoticeKicker: "Forfait Pro requis",
+    addProOnlyNoticeLead:
+      "Votre logement Starter actuel reste inchangé. Le nouveau site sera facturé séparément, à part.",
+    addProOnlyPlanLegend: "Forfait requis",
+    addProOnlySubmit: "Payer le forfait Pro — {price}€ / an et créer le site",
+    submit: "Payer et créer le site",
+    submitting: "Redirection vers Stripe…",
+    checkoutFailed: "Impossible de lancer le paiement.",
+    created: "Votre nouveau logement est prêt.",
+    cancelled: "Création annulée.",
+    verifyFailed: "Impossible de confirmer la création du logement."
   },
   common: {
     save: "Enregistrer",
@@ -75,13 +100,13 @@ export const adminUiLabelsFr = {
       { id: "general", label: "Général", title: "Général", description: "Publication et SEO." },
       {
         id: "customization",
-        label: "Personnalisation",
+        label: "Contenu",
         title: "Personnalisation",
         description: "Contenu et mise en page du site public — aperçu live à droite."
       },
       {
         id: "welcome-guide",
-        label: "Guide d'accueil",
+        label: "Guide",
         title: "Guide d'accueil PDF",
         description: "Livret d’accueil PDF imprimable (Starter + ou forfait Pro)."
       },
@@ -99,13 +124,13 @@ export const adminUiLabelsFr = {
       },
       {
         id: "guest-reviews",
-        label: "Avis voyageurs",
+        label: "Avis",
         title: "Avis voyageurs",
         description: "Commentaires laissés par vos voyageurs après leur séjour."
       },
       {
         id: "payouts",
-        label: "Comptabilité",
+        label: "Finances",
         title: "Comptabilité",
         description: "Tarifs, encaissement Stripe et réception des paiements."
       }
@@ -113,9 +138,9 @@ export const adminUiLabelsFr = {
     customization: [
       {
         id: "template",
-        label: "Template",
-        title: "Template",
-        description: "Ambiance visuelle, UI et UX appliquées au site public."
+        label: "Apparence",
+        title: "Mise en page & ambiance",
+        description: "Structure des sections et palette graphique (couleurs, typos, cartes) sur tout le site."
       },
       {
         id: "header",
@@ -216,7 +241,7 @@ export const adminUiLabelsFr = {
     sublistKicker: "Toutes les sections",
     showSections: "Afficher les sections",
     items: [
-      { id: "theme", label: "Choisissez un thème", section: "customization", blockId: "template" },
+      { id: "theme", label: "Mise en page et ambiance", section: "customization", blockId: "template" },
       { id: "customization", label: "Personnalisation de la page", section: "customization" },
       { id: "gallery", label: "Ajoutez des images dans la galerie", section: "images" },
       { id: "stripe", label: "Paramétrez les paiements Stripe", section: "payouts" },
@@ -258,9 +283,9 @@ export const adminUiLabelsFr = {
       {
         id: "template",
         section: "template",
-        title: "Étape 2 — Thème visuel",
-        subtitle: "Choisissez l’ambiance graphique appliquée à tout le site.",
-        tips: ["Sélectionnez un thème"],
+        title: "Étape 2 — Apparence du site",
+        subtitle: "Choisissez la mise en page et l’ambiance graphique appliquées à tout le site.",
+        tips: ["Mise en page", "Ambiance"],
         cta: "Étape suivante"
       },
       {
@@ -348,6 +373,29 @@ export const adminUiLabelsFr = {
       lead: "Connectez votre compte Stripe pour recevoir les paiements par carte sur votre site."
     }
   ],
+  accountViews: [
+    {
+      id: "settings",
+      label: "Paramètres",
+      description: "Identité, mot de passe et suppression",
+      title: "Paramètres du compte",
+      lead: "Gérez vos informations Hostiv, votre mot de passe et la suppression de compte."
+    },
+    {
+      id: "plans",
+      label: "Forfaits",
+      description: "Abonnements et paiements",
+      title: "Forfaits",
+      lead: "Consultez vos forfaits actifs par logement et l’historique de vos paiements Hostiv."
+    },
+    {
+      id: "cohosts",
+      label: "Co-hôtes",
+      description: "Invitations et accès équipe",
+      title: "Co-hôtes",
+      lead: "Invitez une personne de confiance à gérer le site avec vous."
+    }
+  ],
   bookingPricing: [
     {
       id: "night",
@@ -374,6 +422,7 @@ export const adminUiLabelsFr = {
   },
   validation: {
     selectedTheme: "Thème sélectionné",
+    selectedLayout: "Mise en page sélectionnée",
     logo: "Logo",
     brandName: "Nom affiché",
     brandMeta: "Sous-titre",
@@ -428,6 +477,17 @@ export const adminUiLabelsFr = {
       title: "Factures PDF",
       lead: "Pour générer une facture PDF par réservation directe, activez l’option Starter +.",
       starterPlusCta: "Activer Starter + — {price}€ / an"
+    },
+    cohosts: {
+      title: "Co-hôtes",
+      lead: "Invitez une personne de confiance à gérer le site avec vous. Cette fonctionnalité n’est pas incluse dans le forfait Starter seul.",
+      optionsIntro: "Deux options pour débloquer les co-hôtes :",
+      starterPlusOption:
+        "Starter + — +{price}€ / an en complément de votre forfait Starter : guide PDF, factures et co-hôtes illimités.",
+      proOption:
+        "Pro — {proPrice}€ / an, tout inclus : multi-logements, guide PDF, factures et co-hôtes illimités.",
+      starterPlusCta: "Activer Starter + — {price}€ / an",
+      proCta: "Passer en Pro — {proPrice}€ / an"
     }
   }
 } as const

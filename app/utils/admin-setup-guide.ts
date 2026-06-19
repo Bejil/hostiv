@@ -7,6 +7,7 @@ import type { PropertyAdminRecord } from "../types/property-admin"
 import type { StripeConnectStatus } from "../types/stripe-connect"
 import { getAdminUi } from "../data/admin-ui"
 import { isCustomizationBlockComplete } from "./admin-customization-block-completion"
+import { parseSiteLayoutId } from "../data/site-layouts"
 import { parseSiteTemplateId } from "../data/site-templates"
 import { hasConfiguredSeoKeywords } from "./seo-keywords"
 import { stripeConnectNeedsAttention } from "./admin-stripe-connect-attention"
@@ -50,7 +51,10 @@ function hasText(value: unknown) {
 }
 
 export function isSetupGuideThemeComplete(record: PropertyAdminRecord) {
-  return Boolean(parseSiteTemplateId(record.content.template?.id))
+  return (
+    Boolean(parseSiteLayoutId(record.content.template?.layout)) &&
+    Boolean(parseSiteTemplateId(record.content.template?.theme ?? record.content.template?.id))
+  )
 }
 
 export function isSetupGuideGalleryComplete(record: PropertyAdminRecord) {
@@ -160,9 +164,9 @@ export function buildSetupGuideProgress(
     hasLoadError?: boolean
   },
   skipped: ReadonlySet<string>,
-  locale: HostivLocale = "fr"
+  locale: HostivLocale = "fr",
+  items = getAdminSetupGuideItems(locale)
 ): AdminSetupGuideProgress {
-  const items = getAdminSetupGuideItems(locale)
   const requiredItems = items.filter((item) => !item.optional)
   const requiredCompleted = requiredItems.filter((item) =>
     isSetupGuideItemComplete(item.id, record, stripe, skipped, locale)

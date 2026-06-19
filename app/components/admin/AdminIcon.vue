@@ -114,6 +114,12 @@ const size = computed(() => props.size ?? 18)
       <path d="M20 21a8 8 0 1 0-16 0" />
       <circle cx="12" cy="8" r="4" />
     </template>
+    <template v-else-if="name === 'users'">
+      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+    </template>
     <template v-else-if="name === 'quote'">
       <path d="M7.5 12H4a4 4 0 0 1 0-8h1.5M16.5 12H13a4 4 0 0 1 0-8h1.5M7.5 20H6a4 4 0 0 1 0-8h1.5M16.5 20H15a4 4 0 0 1 0-8h1.5" />
     </template>

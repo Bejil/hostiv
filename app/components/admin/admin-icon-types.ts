@@ -23,6 +23,7 @@ export type AdminIconName =
   | "heart"
   | "star"
   | "user"
+  | "users"
   | "quote"
   | "key"
   | "home"

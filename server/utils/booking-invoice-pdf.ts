@@ -181,14 +181,6 @@ function drawTemplateBadge(
 }
 
 function tableHeaderColor(theme: SiteTemplateInvoiceTheme) {
-  if (theme.id === "marina") {
-    return theme.accent
-  }
-
-  if (theme.id === "toky") {
-    return theme.accent
-  }
-
   return theme.accent
 }
 

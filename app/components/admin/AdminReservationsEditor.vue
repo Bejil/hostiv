@@ -20,12 +20,14 @@ import {
 } from "../../utils/filter-admin-reservations"
 import { adminUiFormat } from "../../data/admin-ui"
 import { compareInputDates, parisInputDateFromDate } from "../../utils/input-date"
+import { enumerateStayNights } from "../../utils/stay-nights"
 import { useAdminProFeatureGate } from "../../composables/admin-pro-feature-context"
 
 const props = defineProps<{
   slug: string
   modelValue: PropertyCalendarConfig
   saveDraft?: () => Promise<boolean>
+  canAccessAccounting?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -56,7 +58,29 @@ const icsExportUrl = ref("")
 const icsExportLoading = ref(false)
 const icsExportRotating = ref(false)
 const icsExportError = ref<string | null>(null)
+const manualBlockSaving = ref(false)
 let refreshTimer: ReturnType<typeof setTimeout> | null = null
+
+const manualBlocks = computed(() => props.modelValue?.manual_blocks ?? [])
+
+const reservedNightDates = computed(() => {
+  const dates = new Set<string>()
+
+  for (const reservation of reservations.value) {
+    if (reservation.status === "cancelled") {
+      continue
+    }
+
+    for (const night of enumerateStayNights(
+      reservation.arrival_date,
+      reservation.departure_date
+    )) {
+      dates.add(night)
+    }
+  }
+
+  return dates
+})
 
 const reservationStatusLabels = computed<Record<AdminBookingReservationStatus, string>>(() => ({
   upcoming: ext.value.status.upcoming,
@@ -401,8 +425,25 @@ function onReservationDeleted() {
   emit("reservations-changed")
 }
 
+function patchCalendarConfig(patch: Partial<PropertyCalendarConfig>) {
+  emit("update:modelValue", {
+    ...props.modelValue,
+    ...patch
+  })
+}
+
+async function persistCalendarConfig(patch: Partial<PropertyCalendarConfig>) {
+  patchCalendarConfig(patch)
+
+  await nextTick()
+
+  if (props.saveDraft) {
+    await props.saveDraft()
+  }
+}
+
 function patchFeeds(nextFeeds: PropertyCalendarFeed[]) {
-  emit("update:modelValue", { ics_feeds: nextFeeds })
+  patchCalendarConfig({ ics_feeds: nextFeeds })
 }
 
 async function persistFeeds(nextFeeds: PropertyCalendarFeed[]) {
@@ -431,11 +472,85 @@ function shiftCalendarMonths(delta: number) {
   visibleMonth.value = addMonths(visibleMonth.value, delta)
 }
 
+function isManuallyBlocked(isoDate: string) {
+  return manualBlocks.value.includes(isoDate)
+}
+
+function isExternallyBlocked(isoDate: string) {
+  if (!blockedDates.value.has(isoDate)) {
+    return false
+  }
+
+  if (isManuallyBlocked(isoDate) || reservedNightDates.value.has(isoDate)) {
+    return false
+  }
+
+  return true
+}
+
+function canToggleManualBlock(isoDate: string) {
+  if (manualBlockSaving.value || previewLoading.value) {
+    return false
+  }
+
+  if (reservedNightDates.value.has(isoDate)) {
+    return false
+  }
+
+  if (isExternallyBlocked(isoDate)) {
+    return false
+  }
+
+  return true
+}
+
+async function toggleManualBlock(isoDate: string) {
+  if (!canToggleManualBlock(isoDate)) {
+    return
+  }
+
+  manualBlockSaving.value = true
+  previewError.value = null
+
+  const nextBlocks = new Set(manualBlocks.value)
+
+  if (nextBlocks.has(isoDate)) {
+    nextBlocks.delete(isoDate)
+  } else {
+    nextBlocks.add(isoDate)
+  }
+
+  try {
+    await persistCalendarConfig({
+      manual_blocks: [...nextBlocks].sort((a, b) => a.localeCompare(b))
+    })
+    await refreshPreview()
+  } catch (err: unknown) {
+    const e = err as { data?: { message?: string }; message?: string }
+
+    previewError.value = e.data?.message || e.message || ext.value.errors.manualBlock
+  } finally {
+    manualBlockSaving.value = false
+  }
+}
+
+function formatBlockedSource(source: string) {
+  if (source === "Blocage manuel") {
+    return ext.value.calendar.manualBlockSource
+  }
+
+  if (source === "Réservation Hostiv") {
+    return ext.value.calendar.hostivReservationSource
+  }
+
+  return source
+}
+
 function blockedDateTooltip(isoDate: string) {
   const names = blockedDateSources.value[isoDate]
 
   if (names?.length) {
-    return names.join(" · ")
+    return names.map(formatBlockedSource).join(" · ")
   }
 
   if (!blockedDates.value.has(isoDate)) {
@@ -500,24 +615,46 @@ function buildCalendarDays(month: Date) {
     isoDate: string
     label: number
     isBlocked: boolean
+    isManual: boolean
+    isToggleable: boolean
     tooltip?: string
   }[] = []
 
   for (let i = 0; i < startWeekday; i += 1) {
-    cells.push({ key: `empty-${i}`, isoDate: "", label: 0, isBlocked: false })
+    cells.push({
+      key: `empty-${i}`,
+      isoDate: "",
+      label: 0,
+      isBlocked: false,
+      isManual: false,
+      isToggleable: false
+    })
   }
 
   for (let day = 1; day <= daysInMonth; day += 1) {
     const date = new Date(month.getFullYear(), month.getMonth(), day)
     const isoDate = toInputDate(date)
     const isBlocked = blockedDates.value.has(isoDate)
+    const isManual = isManuallyBlocked(isoDate)
+    const isToggleable = canToggleManualBlock(isoDate) || isManual
+    let tooltip: string | undefined
+
+    if (isManual) {
+      tooltip = ext.value.calendar.clickToUnblock
+    } else if (isBlocked) {
+      tooltip = blockedDateTooltip(isoDate)
+    } else if (isToggleable) {
+      tooltip = ext.value.calendar.clickToBlock
+    }
 
     cells.push({
       key: isoDate,
       isoDate,
       label: day,
       isBlocked,
-      tooltip: isBlocked ? blockedDateTooltip(isoDate) : undefined
+      isManual,
+      isToggleable,
+      tooltip
     })
   }
 
@@ -631,7 +768,15 @@ async function rotateIcsExportUrl() {
 }
 
 watch(
-  feeds,
+  reservations,
+  () => {
+    void refreshPreview()
+  },
+  { deep: true }
+)
+
+watch(
+  [feeds, manualBlocks],
   () => {
     if (refreshTimer) {
       clearTimeout(refreshTimer)
@@ -690,6 +835,8 @@ onUnmounted(() => {
         </button>
       </div>
 
+      <p class="admin-reservations__calendar-hint">{{ ext.calendar.manualBlockHint }}</p>
+
       <p v-if="previewError" class="admin-reservations__error">{{ previewError }}</p>
 
       <div class="admin-reservations-calendar booking-calendar-shell">
@@ -713,17 +860,31 @@ onUnmounted(() => {
                 <span v-if="!day.isoDate" class="calendar-day-cell calendar-day-cell-empty" />
 
                 <span v-else class="calendar-day-cell">
-                  <AdminHoverTooltip v-if="day.isBlocked && day.tooltip" :label="day.tooltip">
+                  <AdminHoverTooltip v-if="day.tooltip" :label="day.tooltip">
+                    <button
+                      v-if="day.isToggleable"
+                      type="button"
+                      class="calendar-day-button is-toggleable"
+                      :class="{
+                        'is-manual': day.isManual,
+                        'is-reserved': day.isBlocked && !day.isManual,
+                        'is-disabled': day.isBlocked && !day.isManual
+                      }"
+                      :disabled="manualBlockSaving || previewLoading"
+                      :aria-label="`${day.label} — ${day.tooltip}`"
+                      @click="toggleManualBlock(day.isoDate)"
+                    >
+                      {{ day.label }}
+                    </button>
                     <span
+                      v-else
                       class="calendar-day-button is-disabled is-reserved"
                       :aria-label="`${day.label} — ${day.tooltip}`"
                     >
                       {{ day.label }}
                     </span>
                   </AdminHoverTooltip>
-                  <span v-else class="calendar-day-button">
-                    {{ day.label }}
-                  </span>
+                  <span v-else class="calendar-day-button">{{ day.label }}</span>
                 </span>
               </template>
             </div>
@@ -833,6 +994,7 @@ onUnmounted(() => {
 
           <div class="admin-reservations-list__actions">
             <button
+              v-if="canAccessAccounting !== false"
               type="button"
               class="admin-btn admin-btn--secondary admin-btn--sm admin-btn--icon-only"
               :aria-label="
@@ -925,6 +1087,7 @@ onUnmounted(() => {
     <AdminReservationModal
       :slug="slug"
       :reservation="selectedReservation"
+      :can-access-accounting="canAccessAccounting !== false"
       @close="closeReservationModal"
       @saved="onReservationSaved"
       @deleted="onReservationDeleted"

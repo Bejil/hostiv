@@ -1,4 +1,4 @@
-import { requirePropertyOwner } from "../../../utils/admin-auth"
+import { requirePropertyPrimaryOwner } from "../../../utils/admin-auth"
 import {
   normalizePlatformFeePercent,
   refreshPropertyStripeStatus,
@@ -13,7 +13,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: "Slug manquant." })
   }
 
-  await requirePropertyOwner(event, slug)
+  await requirePropertyPrimaryOwner(event, slug)
 
   const config = useRuntimeConfig()
   const stripeSecretKey = String(config.stripeSecretKey || "").trim()

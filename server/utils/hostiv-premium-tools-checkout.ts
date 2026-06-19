@@ -1,7 +1,11 @@
 import type Stripe from "stripe"
 import { hostivPricing } from "../../app/data/hostivLanding"
-import { applyHostivPremiumToolsPaymentToAccount } from "./hostiv-premium-tools-payment"
+import { applyHostivPremiumToolsPayment } from "./hostiv-premium-tools-payment"
 import { recordHostivStripeCheckoutPayment } from "./hostiv-stripe-payment-record"
+import { buildHostivCheckoutUnitAmount, mergeCheckoutMetadata } from "./hostiv-checkout-pricing"
+import { createHostivFreeCheckoutResult, isHostivFreeCheckoutSessionId } from "./hostiv-free-checkout"
+import { getPropertySubscriptionBySlug } from "./hostiv-property-subscription"
+import { getHostivStripePaymentBySessionId } from "./hostiv-stripe-payment-record"
 import { getStripeClient } from "./stripe-client"
 import {
   getUserEmailById,
@@ -19,6 +23,7 @@ type CreateHostivPremiumToolsCheckoutInput = {
   email: string
   propertySlug: string
   siteBaseUrl: string
+  promoCode?: string | null
 }
 
 export async function createHostivPremiumToolsCheckoutSession(
@@ -35,7 +40,32 @@ export async function createHostivPremiumToolsCheckoutSession(
 
   const slug = input.propertySlug.trim().toLowerCase()
   const stripe = getStripeClient(input.stripeSecretKey)
-  const amountCents = Math.round(premiumAddon.price * 100)
+  const originalAmountCents = Math.round(premiumAddon.price * 100)
+  const { unitAmountCents, promo } = await buildHostivCheckoutUnitAmount({
+    promoCode: input.promoCode,
+    email: input.email,
+    originalAmountCents
+  })
+
+  const successUrl = `${siteBase}/${encodeURIComponent(slug)}/admin?subscription=success&session_id={CHECKOUT_SESSION_ID}`
+
+  if (unitAmountCents === 0 && promo) {
+    return createHostivFreeCheckoutResult({
+      checkoutType: HOSTIV_PREMIUM_TOOLS_CHECKOUT_METADATA_TYPE,
+      referenceId: `${input.userId}_${Date.now()}`,
+      baseMetadata: {
+        user_id: input.userId,
+        property_slug: slug
+      },
+      promo,
+      customerEmail: input.email,
+      clientReferenceId: input.userId,
+      successUrl,
+      fulfill: async (session) => {
+        await fulfillHostivPremiumToolsCheckoutFromSession(session, input.userId)
+      }
+    })
+  }
 
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
@@ -46,7 +76,7 @@ export async function createHostivPremiumToolsCheckoutSession(
         quantity: 1,
         price_data: {
           currency: "eur",
-          unit_amount: amountCents,
+          unit_amount: unitAmountCents,
           product_data: {
             name: `Hostiv ${premiumAddon.name}`,
             description: `${premiumAddon.tagline} Paiement annuel unique, sans reconduction automatique.`
@@ -54,12 +84,15 @@ export async function createHostivPremiumToolsCheckoutSession(
         }
       }
     ],
-    metadata: {
-      hostiv_checkout: HOSTIV_PREMIUM_TOOLS_CHECKOUT_METADATA_TYPE,
-      user_id: input.userId,
-      property_slug: slug
-    },
-    success_url: `${siteBase}/${encodeURIComponent(slug)}/admin?subscription=success&session_id={CHECKOUT_SESSION_ID}`,
+    metadata: mergeCheckoutMetadata(
+      {
+        hostiv_checkout: HOSTIV_PREMIUM_TOOLS_CHECKOUT_METADATA_TYPE,
+        user_id: input.userId,
+        property_slug: slug
+      },
+      promo
+    ),
+    success_url: successUrl,
     cancel_url: `${siteBase}/${encodeURIComponent(slug)}/admin?subscription=cancelled`
   })
 
@@ -83,6 +116,33 @@ export async function fulfillHostivPremiumToolsCheckoutSession(
   expectedUserId?: string
 ) {
   const session = await stripe.checkout.sessions.retrieve(sessionId)
+
+  return fulfillHostivPremiumToolsCheckoutFromSession(session, expectedUserId)
+}
+
+export async function fulfillHostivPremiumToolsCheckoutFromSession(
+  session: Stripe.Checkout.Session,
+  expectedUserId?: string
+) {
+  const sessionId = session.id?.trim()
+
+  if (sessionId && isHostivFreeCheckoutSessionId(sessionId)) {
+    const existing = await getHostivStripePaymentBySessionId(sessionId)
+
+    if (existing) {
+      const propertySubscription = existing.property_slug
+        ? await getPropertySubscriptionBySlug(existing.property_slug)
+        : null
+
+      return {
+        fulfilled: true as const,
+        session,
+        paid_until: propertySubscription?.paid_until ?? null,
+        premium_tools_until: propertySubscription?.premium_tools_until ?? null,
+        premium_tools_started_at: propertySubscription?.premium_tools_started_at ?? null
+      }
+    }
+  }
 
   if (!isHostivPremiumToolsCheckoutSession(session)) {
     throw createError({
@@ -111,8 +171,16 @@ export async function fulfillHostivPremiumToolsCheckoutSession(
     })
   }
 
-  const payment = await applyHostivPremiumToolsPaymentToAccount(userId)
   const propertySlug = String(session.metadata?.property_slug || "").trim().toLowerCase()
+
+  if (!propertySlug) {
+    throw createError({
+      statusCode: 400,
+      message: "Site introuvable pour ce paiement."
+    })
+  }
+
+  const payment = await applyHostivPremiumToolsPayment(userId, propertySlug)
   const ownerEmail =
     String(session.customer_email || "").trim() || (await getUserEmailById(userId))
 

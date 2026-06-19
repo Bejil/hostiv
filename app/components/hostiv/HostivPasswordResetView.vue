@@ -26,10 +26,6 @@ const showPasswordRules = computed(
     (password.value.length > 0 && !isHostivPasswordValid(password.value))
 )
 
-useHead(() => ({
-  title: copy.value.seoTitle
-}))
-
 async function loadToken() {
   if (!token.value) {
     status.value = "error"

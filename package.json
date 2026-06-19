@@ -11,6 +11,7 @@
     "setup:pdf": "npx playwright-core install chromium"
   },
   "dependencies": {
+    "@fontsource-variable/plus-jakarta-sans": "^5.2.8",
     "@lucide/vue": "^1.16.0",
     "@nuxt/ui": "^4.8.1",
     "@stripe/stripe-js": "^9.5.0",

@@ -5,10 +5,11 @@ import type { AdminNavSectionId } from "../../data/admin-nav-sections"
 import { getAdminCustomizationBlocks } from "../../data/admin-nav-sections"
 import AdminCustomizationBlockBody from "./AdminCustomizationBlockBody.vue"
 import AdminIcon from "./AdminIcon.vue"
-import AdminTemplateEditor from "./AdminTemplateEditor.vue"
+import AdminSiteAppearanceEditor from "./AdminSiteAppearanceEditor.vue"
 import AdminCustomizationBlockStatus from "./AdminCustomizationBlockStatus.vue"
 import { useAdminEditorContext } from "../../composables/admin-editor-context"
 import { isCustomizationBlockComplete } from "../../utils/admin-customization-block-completion"
+import { normalizeSiteTemplate } from "../../data/site-layouts"
 
 const props = defineProps<{
   openBlockId: AdminNavSectionId | null
@@ -75,6 +76,16 @@ const blockIconById = computed(() =>
 function isBlockComplete(blockId: AdminNavSectionId) {
   return isCustomizationBlockComplete(ctx.record.value, blockId, locale.value)
 }
+
+function patchTemplate(patch: Parameters<typeof normalizeSiteTemplate>[0]) {
+  ctx.patchContent(
+    "template",
+    normalizeSiteTemplate({
+      ...ctx.record.value.content.template,
+      ...patch
+    })
+  )
+}
 </script>
 
 <template>
@@ -93,9 +104,11 @@ function isBlockComplete(blockId: AdminNavSectionId) {
           </div>
           <p>{{ templateBlock.description }}</p>
         </div>
-        <AdminTemplateEditor
-          :model-value="ctx.record.value.content.template.id"
-          @update:model-value="ctx.patchContent('template', { id: $event })"
+        <AdminSiteAppearanceEditor
+          :layout="ctx.record.value.content.template.layout"
+          :theme="ctx.record.value.content.template.theme ?? ctx.record.value.content.template.id"
+          @update:layout="patchTemplate({ layout: $event })"
+          @update:theme="patchTemplate({ theme: $event, id: $event })"
         />
       </div>
     </div>

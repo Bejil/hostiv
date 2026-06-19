@@ -11,6 +11,62 @@ export const adminUiLabelsExtendedEn = {
     seoTitle: "SEO",
     seoHint: "Title, description and share image are managed in Customization."
   },
+  cohosts: {
+    kicker: "Team",
+    title: "Co-hosts",
+    description:
+      "Invite someone you trust to manage the site with you. Co-hosts can use the dashboard except publishing, Stripe and account deletion.",
+    emailLabel: "Co-host email",
+    emailPlaceholder: "name@example.com",
+    inviteCta: "Send invitation",
+    inviting: "Sending…",
+    membersTitle: "Active co-hosts",
+    pendingTitle: "Pending invitations",
+    emptyMembers: "No co-hosts yet.",
+    emptyPending: "No pending invitations.",
+    removeMember: "Remove",
+    removeConfirmTitle: "Remove this co-host?",
+    removeConfirmMessage: "{email} will no longer have access to this site’s dashboard.",
+    removeConfirmCta: "Remove co-host",
+    removingMember: "Removing…",
+    revokeInvite: "Cancel",
+    inviteSent: "Invitation sent.",
+    memberRemoved: "Co-host removed.",
+    inviteRevoked: "Invitation cancelled.",
+    lockedCta: "Unlock co-hosts",
+    inviteRequiresPremium: "Co-host invitations require Pro or Starter +.",
+    expiresOn: "Expires {date}",
+    invitePageChecking: "Checking invitation…",
+    invitePageLead: "You’re invited to co-manage {brand} (/{slug}).",
+    invitePageEmailHint: "Sign in with {email}.",
+    invitePageCreateHint: "No Hostiv account for this address yet. Create one to join the team.",
+    invitePageConfirmPassword: "Confirm password",
+    invitePageCreateCta: "Create account and accept",
+    invitePageCreating: "Creating account…",
+    invitePageFirstNameRequired: "Enter your first name.",
+    invitePageAcceptCta: "Accept invitation",
+    invitePageAccepting: "Accepting…",
+    invitePageSignInCta: "Sign in and accept",
+    invitePageSigningIn: "Signing in…",
+    invitePageInvalidToken: "Invalid invitation link.",
+    invitePageVerifyFailed: "Unable to verify this invitation.",
+    invitePageAcceptFailed: "Unable to accept the invitation.",
+    invitePageSignInFailed: "Unable to sign in.",
+    invitePageAlreadyAccepted: "This invitation has already been accepted.",
+    invitePageExpired: "This invitation has expired.",
+    invitePageInvalid: "Invitation not found or invalid."
+  },
+  layout: {
+    listAria: "Site layouts",
+    statusActive: "Selected",
+    choose: "Choose"
+  },
+  appearance: {
+    layoutLegend: "Layout",
+    layoutHint: "Hero, booking strip and section structure across the whole site.",
+    themeLegend: "Ambiance",
+    themeHint: "Colors, typography and card styling across the whole site."
+  },
   welcomeGuide: {
     lockedTitle: "Welcome guide",
     lockedLead:
@@ -38,6 +94,14 @@ export const adminUiLabelsExtendedEn = {
     planUpdating: "Updating…",
     payCta: "Pay €{price} / year"
   },
+  promoCode: {
+    label: "Promo code",
+    placeholder: "Enter your code",
+    apply: "Apply",
+    applying: "Checking…",
+    remove: "Remove",
+    applied: "Code applied:"
+  },
   publishStripe: {
     title: "Unable to publish",
     subtitle:
@@ -57,10 +121,16 @@ export const adminUiLabelsExtendedEn = {
     statusInactive: "Inactive",
     statusStarterPlusActive: "Starter + active",
     statusActive: "Active",
+    statusPlatformAdmin: "Active — Hostiv team",
     periodUntil: "Until {date}",
     periodSince: "Since {date}",
     periodRange: "From {start} to {end}",
+    periodUnlimited: "Unlimited",
     kicker: "Hostiv subscription",
+    platformAdminPriceLabel: "Included",
+    platformAdminNote:
+      "Hostiv platform admin account: Pro plan active with no time limit and no annual payment.",
+    platformAdminRenewalNote: "No renewal required for this account.",
     starterPlusPeriodLabel: "Starter +",
     renewalNote: "Manual renewal · 12 months, no auto-renewal",
     footerExpired: "Plan expired — renew to restore full dashboard access.",
@@ -131,14 +201,21 @@ export const adminUiLabelsExtendedEn = {
       otherCalendars: "Other calendars",
       icsExportLink: "ICS export link",
       externalCalendar: "External calendar",
-      loadingList: "Loading reservations..."
+      loadingList: "Loading reservations...",
+      manualBlockHint:
+        "Click an available date to block it manually, or click a manual block to reopen it.",
+      clickToBlock: "Click to block this date",
+      clickToUnblock: "Click to unblock this date",
+      manualBlockSource: "Manual block",
+      hostivReservationSource: "Hostiv booking"
     },
     errors: {
       invoicePdf: "Unable to generate PDF invoice.",
       delete: "Unable to delete.",
       icsLoad: "Unable to load ICS calendars.",
       listLoad: "Unable to load reservations.",
-      icsUrl: "Unable to generate ICS link."
+      icsUrl: "Unable to generate ICS link.",
+      manualBlock: "Unable to save the manual block."
     },
     empty: {
       title: "No reservations yet",
@@ -253,7 +330,7 @@ export const adminUiLabelsExtendedEn = {
     generating: "Generating link…",
     urlLabel: "ICS URL",
     hint:
-      "Paste this link in the « import calendar » section of your external platform. Only confirmed bookings on your site are included.",
+      "Paste this link in the « import calendar » section of your external platform. Confirmed bookings and manual admin blocks are included.",
     rotateHint:
       "If this link was shared by mistake, regenerate it — the old link will stop working immediately.",
     rotateCta: "Regenerate link",
@@ -492,6 +569,8 @@ export const adminUiLabelsExtendedEn = {
     settingsTitle: "Account settings",
     settingsSubtitle:
       "Manage your Hostiv details, password and account deletion. Booking requests are sent to this account email.",
+    pageTitle: "Account — {name}",
+    pageBack: "Back to dashboard",
     deleteSlugMismatch: "Type exactly « {slug} » to confirm.",
     deleteFailed: "Unable to delete account.",
     loading: "Loading…",
@@ -532,6 +611,27 @@ export const adminUiLabelsExtendedEn = {
       lastName: "Last name",
       email: "Email"
     },
+    plans: {
+      loading: "Loading plans…",
+      loadFailed: "Unable to load your plans.",
+      propertiesTitle: "Plans per property",
+      propertiesLead:
+        "Each property has its own annual Hostiv plan. Active dates and options are shown below.",
+      currentPropertyBadge: "Current site",
+      unpublishedBadge: "Unpublished",
+      paymentsTitle: "Payment history",
+      paymentsLead: "Stripe payments recorded on your Hostiv account (last 50).",
+      paymentsEmpty: "No payments recorded yet.",
+      paymentsDate: "Date",
+      paymentsProduct: "Product",
+      paymentsProperty: "Property",
+      paymentsAmount: "Amount",
+      checkoutTypes: {
+        hostiv_signup: "Signup",
+        hostiv_subscription: "Annual plan",
+        hostiv_premium_tools: "Starter+"
+      }
+    },
     deleteModal: {
       title: "Permanently delete your account?",
       subtitle: "This action cannot be undone. The following will be deleted:",
@@ -540,7 +640,8 @@ export const adminUiLabelsExtendedEn = {
         "Your /{slug} site and all its content",
         "Associated files and images",
         "Your Stripe Connect account",
-        "Booking history recorded on this site"
+        "Booking history recorded on this site",
+        "Co-host access to this site (and their Hostiv accounts if they have no other site)"
       ],
       confirmLabel: "To confirm, enter your site address:",
       confirmation: "Confirmation",
@@ -550,7 +651,8 @@ export const adminUiLabelsExtendedEn = {
   },
   onboardingFields: {
     examplesLabel: "Examples:",
-    themeLegend: "Theme",
+    layoutLegend: "Layout",
+    themeLegend: "Ambiance",
     labels: {
       logo: "Logo",
       brandName: "Display name",

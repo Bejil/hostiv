@@ -9,8 +9,11 @@ export const hostivStaticPagesEn: Record<HostivStaticPageId, HostivStaticPage> =
     id: "a-propos",
     path: "/en/about",
     title: "About us",
+    seoTitle: "About Hostiv | Vacation rental website generator",
     description:
       "Hostiv helps short-term rental hosts receive direct bookings with a dedicated website and Stripe payments.",
+    seoDescription:
+      "Hostiv is a holiday rental website builder for hosts: direct booking, iCal sync and Stripe payments with no commission on stays.",
     eyebrow: "About",
     lead: "Hostiv was born from a simple observation: hosts lose a significant share of revenue to platform commissions.",
     sections: [
@@ -39,8 +42,11 @@ export const hostivStaticPagesEn: Record<HostivStaticPageId, HostivStaticPage> =
     id: "contact",
     path: "/en/contact",
     title: "Contact us",
+    seoTitle: "Contact Hostiv | Host support",
     description:
       "Contact the Hostiv team for any question about your account, website or direct bookings.",
+    seoDescription:
+      "Questions about your Hostiv account, subscription or website? Contact our team — reply within 2 business days.",
     eyebrow: "Contact",
     lead: "A question about Hostiv, your subscription or publishing your site? Write to us.",
     sections: [
@@ -63,7 +69,10 @@ export const hostivStaticPagesEn: Record<HostivStaticPageId, HostivStaticPage> =
     id: "mentions-legales",
     path: "/en/legal-notice",
     title: "Legal notice",
+    seoTitle: "Legal notice | Hostiv",
     description: "Legal notice for the Hostiv website — publisher, hosting and intellectual property.",
+    seoDescription:
+      "Publisher, hosting and intellectual property information for the Hostiv website.",
     eyebrow: "Legal information",
     lead: "Information required under French law on confidence in the digital economy (LCEN).",
     updatedAt: "May 2026",
@@ -102,8 +111,11 @@ export const hostivStaticPagesEn: Record<HostivStaticPageId, HostivStaticPage> =
     id: "politique-de-confidentialite",
     path: "/en/privacy-policy",
     title: "Privacy policy",
+    seoTitle: "Privacy policy | Hostiv",
     description:
       "How Hostiv collects and processes your personal data — hosts, guests and marketing site visitors.",
+    seoDescription:
+      "Hostiv personal data: processing for hosts, guests and visitors. Your GDPR rights and the host’s role.",
     eyebrow: "Personal data",
     lead: "This policy describes processing carried out by the Hostiv service publisher and the role of hosts for data collected on their sites.",
     updatedAt: "May 2026",
@@ -175,7 +187,9 @@ export const hostivStaticPagesEn: Record<HostivStaticPageId, HostivStaticPage> =
     id: "conditions-generales",
     path: "/en/terms-of-use",
     title: "Terms of use",
+    seoTitle: "Hostiv terms of use | Service conditions",
     description: "Terms of use of the Hostiv service for hosts.",
+    seoDescription: "Terms of use of the Hostiv service for short-term rental hosts.",
     eyebrow: "Terms",
     lead: "These terms govern access to and use of the Hostiv service by hosts. By creating an account, you accept them.",
     updatedAt: "May 2026",

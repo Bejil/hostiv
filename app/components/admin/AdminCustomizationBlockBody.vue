@@ -32,6 +32,8 @@ const ctx = useAdminEditorContext()
 const liveEditor = useAdminLiveEditorContext()
 const sectionNav = inject(adminSectionNavKey)
 
+const isCohost = computed(() => ctx.record.value.admin_access?.role === "cohost")
+
 function onSiteImageUploaded() {
   liveEditor?.bumpSitePreviewAssets()
 }
@@ -310,15 +312,17 @@ function patchAmenityPreviewSections(sections: AmenityPreviewSection[]) {
     />
     <p class="admin-booking-pricing-notice">
       {{ ext.customization.bookingNotice }}
-      <strong>{{ ext.customization.bookingNoticeAccounting }}</strong>.
-      <button
-        v-if="sectionNav"
-        type="button"
-        class="admin-booking-pricing-notice__link"
-        @click="sectionNav.selectSection('payouts')"
-      >
-        {{ ext.customization.openAccounting }}
-      </button>
+      <template v-if="!isCohost">
+        <strong>{{ ext.customization.bookingNoticeAccounting }}</strong>.
+        <button
+          v-if="sectionNav"
+          type="button"
+          class="admin-booking-pricing-notice__link"
+          @click="sectionNav.selectSection('payouts')"
+        >
+          {{ ext.customization.openAccounting }}
+        </button>
+      </template>
     </p>
   </div>
 

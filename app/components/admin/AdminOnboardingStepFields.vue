@@ -4,10 +4,11 @@ import AdminField from "./AdminField.vue"
 import AdminGeneralImagesEditor from "./AdminGeneralImagesEditor.vue"
 import AdminImageUpload from "./AdminImageUpload.vue"
 import AdminLocationMapEditor from "./AdminLocationMapEditor.vue"
-import AdminTemplateEditor from "./AdminTemplateEditor.vue"
+import AdminSiteAppearanceEditor from "./AdminSiteAppearanceEditor.vue"
 import type { AdminOnboardingStepId } from "../../data/admin-onboarding-steps"
 import { useAdminEditorContext } from "../../composables/admin-editor-context"
 import { useAdminLiveEditorContext } from "../../composables/admin-live-editor-context"
+import { normalizeSiteTemplate } from "../../data/site-layouts"
 
 defineProps<{
   stepId: AdminOnboardingStepId
@@ -40,6 +41,16 @@ const hostQuoteExamples = computed(() => [...fieldExamples.value.hostQuote])
 const hostIntroExamples = computed(() => [...fieldExamples.value.hostIntro])
 const nightPriceExamples = computed(() => [...fieldExamples.value.nightPrice])
 const includedGuestsExamples = computed(() => [...fieldExamples.value.includedGuests])
+
+function patchTemplate(patch: Parameters<typeof normalizeSiteTemplate>[0]) {
+  ctx.patchContent(
+    "template",
+    normalizeSiteTemplate({
+      ...record.value.content.template,
+      ...patch
+    })
+  )
+}
 </script>
 
 <template>
@@ -81,13 +92,11 @@ const includedGuestsExamples = computed(() => [...fieldExamples.value.includedGu
 
     <!-- Template -->
     <div v-else-if="stepId === 'template'" class="admin-onboarding-fields__section">
-      <p class="admin-onboarding-fields__legend">
-        {{ onboardingFields.themeLegend }}
-        <span class="admin-field__required" aria-hidden="true">*</span>
-      </p>
-      <AdminTemplateEditor
-        :model-value="record.content.template.id"
-        @update:model-value="ctx.patchContent('template', { id: $event })"
+      <AdminSiteAppearanceEditor
+        :layout="record.content.template.layout"
+        :theme="record.content.template.theme ?? record.content.template.id"
+        @update:layout="patchTemplate({ layout: $event })"
+        @update:theme="patchTemplate({ theme: $event, id: $event })"
       />
     </div>
 

@@ -5,6 +5,7 @@ export type PlatformAdminSectionId =
   | "sites"
   | "members"
   | "revenue"
+  | "promo-codes"
   | "reservations"
   | "signups"
   | "guest-reviews"
@@ -117,6 +118,9 @@ export type PlatformAdminRevenuePaymentRow = {
   member_email: string | null
   property_slug: string | null
   amount_eur: number
+  amount_subtotal_eur: number | null
+  discount_eur: number | null
+  promo_code: string | null
   currency: string
 }
 
@@ -129,6 +133,8 @@ export type PlatformAdminRevenueReport = {
     signup_eur: number
     subscription_eur: number
     premium_tools_eur: number
+    discount_total_eur: number
+    promo_payments_count: number
   }
   payments: PlatformAdminRevenuePaymentRow[]
 }

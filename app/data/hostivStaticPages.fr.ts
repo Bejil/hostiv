@@ -9,8 +9,11 @@ export const hostivStaticPagesFr: Record<HostivStaticPageId, HostivStaticPage> =
     id: "a-propos",
     path: "/a-propos",
     title: "Qui sommes-nous ?",
+    seoTitle: "À propos de Hostiv | Générateur de site location saisonnière",
     description:
       "Hostiv aide les propriétaires de locations saisonnières à recevoir des réservations directes avec un site dédié et des paiements Stripe.",
+    seoDescription:
+      "Hostiv est un générateur de site de location vacances pour hôtes : réservation directe, sync iCal et paiements Stripe, sans commission sur les nuitées.",
     eyebrow: "À propos",
     lead: "Hostiv est né d’un constat simple : les hôtes perdent une part importante de leurs revenus sur les commissions des plateformes.",
     sections: [
@@ -39,7 +42,10 @@ export const hostivStaticPagesFr: Record<HostivStaticPageId, HostivStaticPage> =
     id: "contact",
     path: "/contact",
     title: "Nous contacter",
+    seoTitle: "Contact Hostiv | Support hôtes",
     description: "Contactez l’équipe Hostiv pour toute question sur votre compte, votre site ou vos réservations directes.",
+    seoDescription:
+      "Une question sur votre compte, abonnement ou site Hostiv ? Contactez notre équipe — réponse sous 2 jours ouvrés.",
     eyebrow: "Contact",
     lead: "Une question sur Hostiv, votre abonnement ou la mise en ligne de votre site ? Écrivez-nous.",
     sections: [
@@ -62,7 +68,10 @@ export const hostivStaticPagesFr: Record<HostivStaticPageId, HostivStaticPage> =
     id: "mentions-legales",
     path: "/mentions-legales",
     title: "Mentions légales",
+    seoTitle: "Mentions légales | Hostiv",
     description: "Mentions légales du site Hostiv — éditeur, hébergement et propriété intellectuelle.",
+    seoDescription:
+      "Éditeur, hébergement et propriété intellectuelle du site Hostiv — informations légales conformes à la LCEN.",
     eyebrow: "Informations légales",
     lead: "Conformément aux dispositions des articles 6-III et 19 de la loi n° 2004-575 du 21 juin 2004 pour la confiance dans l’économie numérique (LCEN).",
     updatedAt: "mai 2026",
@@ -101,8 +110,11 @@ export const hostivStaticPagesFr: Record<HostivStaticPageId, HostivStaticPage> =
     id: "politique-de-confidentialite",
     path: "/politique-de-confidentialite",
     title: "Politique de confidentialité",
+    seoTitle: "Politique de confidentialité | Hostiv",
     description:
       "Comment Hostiv collecte et traite vos données personnelles — hôtes, voyageurs et visiteurs du site marketing.",
+    seoDescription:
+      "Données personnelles Hostiv : traitements pour hôtes, voyageurs et visiteurs. Vos droits RGPD et rôle des hôtes.",
     eyebrow: "Données personnelles",
     lead: "Cette politique décrit les traitements réalisés par l’éditeur du service Hostiv et le rôle des hôtes pour les données collectées sur leurs sites.",
     updatedAt: "mai 2026",
@@ -176,7 +188,10 @@ export const hostivStaticPagesFr: Record<HostivStaticPageId, HostivStaticPage> =
     id: "conditions-generales",
     path: "/conditions-generales",
     title: "Conditions générales d’utilisation",
+    seoTitle: "CGU Hostiv | Conditions d’utilisation",
     description: "Conditions générales d’utilisation du service Hostiv pour les hôtes.",
+    seoDescription:
+      "Conditions générales d’utilisation du service Hostiv pour les hôtes de locations saisonnières.",
     eyebrow: "CGU",
     lead: "Les présentes conditions régissent l’accès et l’utilisation du service Hostiv par les hôtes. En créant un compte, vous les acceptez.",
     updatedAt: "mai 2026",

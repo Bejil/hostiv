@@ -15,7 +15,8 @@ export const platformAdminUiEn: PlatformAdminUi = {
     account: "My account",
     logout: "Sign out",
     refresh: "Refresh",
-    platformLabel: "Platform administration"
+    platformLabel: "Platform administration",
+    logoHome: "Back to Hostiv website"
   },
   common: {
     cancel: "Cancel",
@@ -214,7 +215,9 @@ export const platformAdminUiEn: PlatformAdminUi = {
       last30d: "Last 30 days",
       signup: "Sign-ups",
       renewal: "Renewals",
-      premiumTools: "Starter+"
+      premiumTools: "Starter+",
+      discounts: "Discounts granted",
+      promoPayments: "Payments with code"
     },
     columns: {
       date: "Date",
@@ -222,6 +225,7 @@ export const platformAdminUiEn: PlatformAdminUi = {
       product: "Product",
       member: "Member",
       site: "Site",
+      promo: "Promo code",
       amount: "Amount"
     },
     checkoutTypes: {
@@ -231,7 +235,70 @@ export const platformAdminUiEn: PlatformAdminUi = {
     },
     empty: "No payments recorded yet.",
     historyNote:
-      "Only payments recorded after this history feature was enabled appear here. New Stripe payments are added automatically."
+      "Amounts shown are net collected. The promo code column shows discounts applied at checkout."
+  },
+  promoCodes: {
+    title: "Promo codes",
+    intro: "Create and manage discount codes for Hostiv plan payments.",
+    createCta: "New code",
+    empty: "No promo codes",
+    emptyHint: "Create a code to offer a discount on sign-up or renewal.",
+    allEmails: "All emails",
+    columns: {
+      title: "Title",
+      code: "Code",
+      discount: "Discount",
+      validity: "Validity",
+      emails: "Emails",
+      status: "Status"
+    },
+    status: {
+      active: "Active",
+      upcoming: "Upcoming",
+      expired: "Expired",
+      unknown: "—"
+    },
+    fields: {
+      title: "Title",
+      description: "Description",
+      code: "Code",
+      generateCodeCta: "Generate",
+      validFrom: "Valid from",
+      validUntil: "Valid until",
+      discountPercent: "Discount (%)",
+      allowedEmails: "Allowed emails",
+      allowedEmailsHint: "Add * for all emails, or addresses separated by Enter or a comma.",
+      allowedEmailsPlaceholder: "e.g. guest@example.com",
+      allowedEmailsPlaceholderWildcard: "All emails (*)",
+      allowedEmailsInvalid: "Invalid email address.",
+      removeEmailTag: "Remove"
+    },
+    editModal: {
+      titleCreate: "New promo code",
+      titleEdit: "Edit promo code",
+      subtitleCreate: "Set the discount, validity window and allowed emails.",
+      subtitleEdit: "Update this promo code’s settings.",
+      generatingCode: "Generating…",
+      generateFailed: "Unable to generate a promo code.",
+      codeRequired: "Enter a promo code.",
+      checkingCode: "Checking…",
+      codeAvailable: "Code available.",
+      codeTaken: "This code is already in use.",
+      saveFailed: "Unable to save promo code."
+    },
+    deleteModal: {
+      title: "Delete this promo code?",
+      body: "Code",
+      confirm: "Delete",
+      deleting: "Deleting…"
+    },
+    pagination: {
+      aria: "Promo codes pagination",
+      range: "{start}–{end} of {total}",
+      page: "Page {page} / {total}",
+      prev: "Previous",
+      next: "Next"
+    }
   },
   reservations: {
     title: "Bookings",

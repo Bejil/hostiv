@@ -297,7 +297,9 @@ type StepIconKey = keyof typeof stepIcons
 
   <HostivPricingSection />
 
-  <section id="cta" class="hostiv-section hostiv-section--light hostiv-section--cta">
+  <HostivFaqSection />
+
+  <section id="cta" class="hostiv-section hostiv-section--green hostiv-section--cta">
     <div class="hostiv-container hostiv-cta" v-scroll-reveal="{ rootMargin: '0px 0px -8% 0px' }">
       <div class="hostiv-cta__grid">
         <div class="hostiv-cta__copy">
@@ -306,7 +308,7 @@ type StepIconKey = keyof typeof stepIcons
           <ul class="hostiv-cta__highlights">
             <li v-for="point in hostivCta.highlights" :key="point">{{ point }}</li>
           </ul>
-          <button type="button" class="hostiv-btn hostiv-btn--primary" @click="openSignup">
+          <button type="button" class="hostiv-btn hostiv-btn--accent" @click="openSignup">
             {{ hostivCta.button }}
             <ArrowRight :size="18" />
           </button>
