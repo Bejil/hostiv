@@ -50,8 +50,11 @@ import {
   resolveLocalizedFeaturedSpace
 } from "../../utils/site-content-locale"
 import HostivLocaleSelect from "../hostiv/HostivLocaleSelect.vue"
-import { Mail } from "@lucide/vue"
+import PropertySiteNav from "./PropertySiteNav.vue"
+import { Mail, MessageCircle } from "@lucide/vue"
 import { appendAssetCacheRevision } from "../../utils/property-asset-url"
+import { filterSiteNavLinks } from "../../utils/property-site-nav"
+import { getSiteUi } from "../../data/site-ui"
 
 const props = withDefaults(
   defineProps<{
@@ -1675,6 +1678,9 @@ watch(isBookingModalOpen, (open) => {
 })
 
 const hostPhoto = computed(() => site.value.host_photo_path)
+const hostContactName = computed(
+  () => copy.value.host.caption?.trim() || copy.value.host.title?.trim() || ""
+)
 
 function isPublishedBenefitCard(card: { title?: string } | null | undefined) {
   return Boolean(card?.title?.trim())
@@ -1872,6 +1878,42 @@ const amenityPreviewSections = computed(() =>
 
 const showAmenitiesSection = computed(() => amenityPreviewSections.value.length > 0)
 
+const siteNavVisibility = computed(() => ({
+  resume: true,
+  espaces: featuredSpaces.value.length > 0,
+  quartier: hasPublishedLocation.value,
+  tarifs: true,
+  equipements: showAmenitiesSection.value,
+  avis: showReviewsSection.value,
+  reglement: showRulesSection.value,
+  contact: true
+}))
+
+const siteNavLinks = computed(() =>
+  filterSiteNavLinks(contentLocale.value, siteNavVisibility.value)
+)
+
+const siteHeaderUi = computed(() => getSiteUi(contentLocale.value).header)
+
+const locationCrossLinks = computed(() => {
+  const nav = getSiteUi(contentLocale.value).nav
+  const links: Array<{ href: string; label: string }> = []
+
+  if (siteNavVisibility.value.tarifs) {
+    links.push({ href: "#tarifs", label: nav.pricing })
+  }
+
+  if (siteNavVisibility.value.equipements) {
+    links.push({ href: "#equipements", label: nav.amenities })
+  }
+
+  if (siteNavVisibility.value.avis) {
+    links.push({ href: "#avis", label: nav.reviews })
+  }
+
+  return links
+})
+
 const reviewMarqueeItems = computed(() => [...reviews.value, ...reviews.value])
 
 provide(
@@ -1998,7 +2040,7 @@ const vReviewQuoteFade: Directive<HTMLElement> = {
     :class="[siteTemplateClass, siteLayoutClass, { 'property-site-page-view--live-preview': livePreview }]"
     data-live-section="site-top"
   >
-    <header class="site-header" data-live-section="site-header">
+    <header id="site-header-root" class="site-header" data-live-section="site-header">
       <div class="topbar">
         <div class="brand-block">
           <img
@@ -2012,16 +2054,18 @@ const vReviewQuoteFade: Directive<HTMLElement> = {
           </div>
         </div>
 
-        <div class="site-header__aside">
-          <button
-            type="button"
-            class="site-header__contact"
-            :aria-label="guestContactLabels.title"
-            @click="openGuestContactModal"
-          >
-            <Mail :size="15" stroke-width="2.2" aria-hidden="true" />
-            <span>{{ guestContactLabels.header }}</span>
-          </button>
+        <div class="site-header__end">
+          <div v-if="siteNavLinks.length" class="site-header__nav">
+            <PropertySiteNav
+              :links="siteNavLinks"
+              :nav-aria-label="siteHeaderUi.navAria"
+              :open-menu-label="siteHeaderUi.openMenu"
+              :close-menu-label="siteHeaderUi.closeMenu"
+              :book-label="siteHeaderUi.reserve"
+              @book="openBookingRequest"
+            />
+          </div>
+
           <HostivLocaleSelect class="site-header__locale" />
         </div>
       </div>
@@ -2767,6 +2811,14 @@ const vReviewQuoteFade: Directive<HTMLElement> = {
               </article>
             </div>
 
+            <p v-if="locationCrossLinks.length" class="location-cross-links">
+              <span>{{ getSiteUi(contentLocale).crossLinks.locationSeeAlso }} :</span>
+              <template v-for="(link, index) in locationCrossLinks" :key="link.href">
+                <span v-if="index > 0">, </span>
+                <a :href="link.href">{{ link.label }}</a>
+              </template>
+            </p>
+
           </div>
         </div>
       </div>
@@ -3029,6 +3081,58 @@ const vReviewQuoteFade: Directive<HTMLElement> = {
         </div>
       </div>
       </section>
+
+    <section
+      id="contact"
+      v-scroll-reveal
+      class="page-band page-band--sand section site-contact-section"
+      data-live-section="site-contact"
+    >
+      <div class="page-band__inner">
+        <div class="section-head">
+          <p class="eyebrow">{{ guestContactLabels.sectionEyebrow }}</p>
+          <div class="section-head-row">
+            <h2>{{ guestContactLabels.title }}</h2>
+            <p class="section-intro">{{ guestContactLabels.subtitle }}</p>
+          </div>
+        </div>
+
+        <div class="site-contact-card">
+          <div class="site-contact-card__identity">
+            <div class="site-contact-card__photo-shell">
+              <img
+                :src="propertyAsset(hostPhoto)"
+                :alt="copy.host.image_alt"
+                class="site-contact-card__photo"
+              />
+              <span class="site-contact-card__icon" aria-hidden="true">
+                <MessageCircle :size="18" stroke-width="2.1" />
+              </span>
+            </div>
+            <p v-if="hostContactName" class="site-contact-card__host-name">
+              {{ hostContactName }}
+            </p>
+          </div>
+
+          <div class="site-contact-card__content">
+            <ul class="site-contact-card__hints">
+              <li v-for="hint in guestContactLabels.sectionHints" :key="hint">
+                {{ hint }}
+              </li>
+            </ul>
+          </div>
+
+          <button
+            type="button"
+            class="booking-button site-contact-card__cta"
+            @click="openGuestContactModal"
+          >
+            <Mail :size="17" stroke-width="2.2" aria-hidden="true" />
+            <span>{{ guestContactLabels.sectionCta }}</span>
+          </button>
+        </div>
+      </div>
+    </section>
 
     </div>
   </div>

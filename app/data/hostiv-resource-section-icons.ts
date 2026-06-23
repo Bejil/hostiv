@@ -74,7 +74,8 @@ const SECTION_ICONS: Record<HostivResourceArticleId, HostivResourceSectionIconKe
   "comparer-starter-pro": ["scale", "sparkles", "star", "list-checks"],
   "premiere-reservation-directe": ["clipboard-check", "share-2", "calendar-check", "thumbs-up"],
   "factures-pdf": ["file-text", "receipt", "send", "sparkles"],
-  "guide-accueil-voyageurs": ["book-open", "list-checks", "mail", "refresh-cw"]
+  "guide-accueil-voyageurs": ["book-open", "list-checks", "mail", "refresh-cw"],
+  "referencement-site-direct": ["search", "link-2", "map-pin", "star"]
 }
 
 const ARTICLE_ICONS: Record<HostivResourceArticleId, HostivResourceSectionIconKey> = {
@@ -88,7 +89,8 @@ const ARTICLE_ICONS: Record<HostivResourceArticleId, HostivResourceSectionIconKe
   "comparer-starter-pro": "scale",
   "premiere-reservation-directe": "calendar-check",
   "factures-pdf": "receipt",
-  "guide-accueil-voyageurs": "book-open"
+  "guide-accueil-voyageurs": "book-open",
+  "referencement-site-direct": "search"
 }
 
 export function getHostivResourceArticleIcon(

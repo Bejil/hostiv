@@ -321,7 +321,8 @@ export const hostivFaqSection = {
   intro:
     "Tout ce qu’il faut savoir sur Hostiv, la réservation directe sans commission et la mise en ligne de votre site de location.",
   pricingCta: "Voir les tarifs",
-  resourcesCta: "Lire nos guides"
+  resourcesCta: "Lire nos guides",
+  guideCta: "Lire le guide détaillé →"
 } as const
 
 const hostivFaqsDirect = [

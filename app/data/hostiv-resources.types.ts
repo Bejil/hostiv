@@ -10,11 +10,18 @@ export type HostivResourceArticleId =
   | "premiere-reservation-directe"
   | "factures-pdf"
   | "guide-accueil-voyageurs"
+  | "referencement-site-direct"
+
+export type HostivResourceArticleInlineLink = {
+  articleId: HostivResourceArticleId
+  label?: string
+}
 
 export type HostivResourceArticleSection = {
   title?: string
   paragraphs: string[]
   list?: string[]
+  links?: HostivResourceArticleInlineLink[]
 }
 
 export type HostivResourceArticle = {

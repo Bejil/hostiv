@@ -2,8 +2,11 @@ import type { HostivLocale } from "../types/hostiv-locale"
 
 export type SiteGuestContactLabels = {
   header: string
+  sectionEyebrow: string
   title: string
   subtitle: string
+  sectionCta: string
+  sectionHints: readonly [string, string]
   close: string
   fields: {
     name: string
@@ -25,9 +28,15 @@ export type SiteGuestContactLabels = {
 
 const GUEST_CONTACT_FR: SiteGuestContactLabels = {
   header: "Contact",
+  sectionEyebrow: "Échange",
   title: "Contacter l’hôte",
   subtitle:
     "Posez votre question sur les dates, la capacité ou l’organisation de votre séjour. L’hôte vous répond par e-mail.",
+  sectionCta: "Envoyer un message",
+  sectionHints: [
+    "Réponse personnalisée par e-mail",
+    "Dates, capacité, accès ou organisation du séjour"
+  ],
   close: "Fermer",
   fields: {
     name: "Votre nom",
@@ -50,9 +59,12 @@ const GUEST_CONTACT_FR: SiteGuestContactLabels = {
 
 const GUEST_CONTACT_EN: SiteGuestContactLabels = {
   header: "Contact",
+  sectionEyebrow: "Get in touch",
   title: "Contact the host",
   subtitle:
     "Ask about dates, capacity, or how your stay would work. The host will reply by email.",
+  sectionCta: "Send a message",
+  sectionHints: ["Personal reply by email", "Dates, capacity, access or stay details"],
   close: "Close",
   fields: {
     name: "Your name",

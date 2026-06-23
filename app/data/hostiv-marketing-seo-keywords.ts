@@ -122,7 +122,9 @@ const FR_ARTICLE_KEYWORDS: Partial<Record<HostivResourceArticleId, string>> = {
     "première réservation directe, lancer site location saisonnière, hôte vacances",
   "factures-pdf": "facture location saisonnière PDF, réservation directe facturation",
   "guide-accueil-voyageurs":
-    "guide accueil location vacances, livret accueil saisonnière, PDF voyageurs"
+    "guide accueil location vacances, livret accueil saisonnière, PDF voyageurs",
+  "referencement-site-direct":
+    "référencement site location saisonnière, SEO location vacances, réservation directe Google"
 }
 
 const EN_ARTICLE_KEYWORDS: Partial<Record<HostivResourceArticleId, string>> = {
@@ -146,7 +148,9 @@ const EN_ARTICLE_KEYWORDS: Partial<Record<HostivResourceArticleId, string>> = {
     "first direct booking, launch rental website, holiday rental host",
   "factures-pdf": "vacation rental invoice PDF, direct booking billing",
   "guide-accueil-voyageurs":
-    "guest welcome guide, vacation rental welcome book, host PDF"
+    "guest welcome guide, vacation rental welcome book, host PDF",
+  "referencement-site-direct":
+    "vacation rental SEO, direct booking website Google, rental site ranking"
 }
 
 export function resolveHostivMarketingSeoKeywords(

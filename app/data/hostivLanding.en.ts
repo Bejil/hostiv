@@ -313,7 +313,8 @@ export const hostivFaqSection = {
   intro:
     "Everything you need to know about Hostiv, commission-free direct booking and launching your rental website.",
   pricingCta: "View pricing",
-  resourcesCta: "Read our guides"
+  resourcesCta: "Read our guides",
+  guideCta: "Read the full guide →"
 } as const
 
 const hostivFaqsDirect = [

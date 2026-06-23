@@ -21,6 +21,7 @@ export function getSiteNavLinks(locale: HostivLocale = "fr"): SiteNavLink[] {
     { href: "#tarifs", label: nav.pricing },
     { href: "#equipements", label: nav.amenities },
     { href: "#avis", label: nav.reviews },
-    { href: "#reglement", label: nav.rules }
+    { href: "#reglement", label: nav.rules },
+    { href: "#contact", label: nav.contact }
   ]
 }

@@ -382,5 +382,51 @@ export const hostivResourceArticlesExtra: Record<
         ],
       }
     ]
+  },
+  "referencement-site-direct": {
+    id: "referencement-site-direct",
+    title: "Get your rental site found on Google",
+    description:
+      "Titles, descriptions, keywords and internal linking — SEO basics for a direct booking website.",
+    seoTitle: "Vacation rental site SEO | Hostiv guide",
+    seoDescription:
+      "Optimize your Hostiv site SEO: title tags, neighbourhood keywords, page structure and internal links for direct bookings.",
+    publishedAt: "2026-06-11",
+    readingMinutes: 8,
+    sections: [
+      {
+        title: "Why SEO matters for direct booking",
+        paragraphs: [
+          "On an OTA, Airbnb or Booking bring the traffic. With direct booking, your site must rank when travellers search “vacation rental + your town”.",
+          "Good SEO does not replace promotion (Airbnb bio link, Google Business, social) but compounds those channels over time."
+        ]
+      },
+      {
+        title: "The basics in Hostiv",
+        paragraphs: [
+          "Under Customization → SEO, set a clear title (town + property type), a compelling meta description and focused keywords (area, amenities, capacity).",
+          "Use the “Search preview” block: the hero title feeds your title tag automatically unless you override the SEO field."
+        ],
+        links: [
+          { articleId: "optimiser-fiche-logement" },
+          { articleId: "promouvoir-site-direct" }
+        ]
+      },
+      {
+        title: "Structure the page for Google",
+        paragraphs: [
+          "Your Hostiv site is a rich single page: host intro, spaces, neighbourhood, rates, amenities, reviews. Each section is a chance for natural phrases (“near Versailles”, “fibre wifi”, “sleeps 6”).",
+          "The internal nav menu helps Google understand structure — and helps guests jump to rates or reviews."
+        ]
+      },
+      {
+        title: "Links and local signals",
+        paragraphs: [
+          "Link your site from Google Business, social profiles and email signatures. Quality inbound links build trust with Google.",
+          "Encourage guest reviews: the testimonials section enriches your page and reassures at booking time."
+        ],
+        links: [{ articleId: "convertir-visiteurs" }]
+      }
+    ]
   }
 }

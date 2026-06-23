@@ -12,7 +12,14 @@ import {
   Link2,
   Sparkles
 } from "@lucide/vue"
-const { landing } = useHostivLocale()
+import {
+  HOSTIV_LANDING_FEATURE_GUIDES,
+  HOSTIV_LANDING_STEP_GUIDES,
+  buildHostivResourceGuidePath,
+  getHostivResourceGuideLinkLabel
+} from "../../data/hostiv-resource-linking"
+
+const { landing, locale } = useHostivLocale()
 const { openSignup } = useHostivAccountModal()
 
 const hostivCommissionCompare = computed(() => landing.value.commissionCompare)
@@ -44,6 +51,8 @@ const stepIcons = {
 
 type FeatureIconKey = keyof typeof featureIcons
 type StepIconKey = keyof typeof stepIcons
+
+const featureGuideLabel = computed(() => getHostivResourceGuideLinkLabel(locale.value))
 </script>
 
 <template>
@@ -83,6 +92,13 @@ type StepIconKey = keyof typeof stepIcons
           </div>
           <h3>{{ feature.title }}</h3>
           <p>{{ feature.description }}</p>
+          <NuxtLink
+            v-if="HOSTIV_LANDING_FEATURE_GUIDES[index]"
+            :to="buildHostivResourceGuidePath(HOSTIV_LANDING_FEATURE_GUIDES[index], locale)"
+            class="hostiv-feature-card__guide-link"
+          >
+            {{ featureGuideLabel }}
+          </NuxtLink>
           <span class="hostiv-feature-card__num" aria-hidden="true">{{ String(index + 1).padStart(2, "0") }}</span>
         </article>
       </div>
@@ -288,6 +304,13 @@ type StepIconKey = keyof typeof stepIcons
                 <Sparkles :size="14" stroke-width="2" aria-hidden="true" />
                 {{ step.outcome }}
               </p>
+              <NuxtLink
+                v-if="HOSTIV_LANDING_STEP_GUIDES[index]"
+                :to="buildHostivResourceGuidePath(HOSTIV_LANDING_STEP_GUIDES[index], locale)"
+                class="hostiv-step-card__guide-link"
+              >
+                {{ featureGuideLabel }}
+              </NuxtLink>
             </div>
           </li>
         </ol>

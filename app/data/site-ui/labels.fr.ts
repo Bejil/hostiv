@@ -13,6 +13,11 @@ export const siteUiLabelsFr = {
     pricing: "Tarifs",
     amenities: "Équipements",
     reviews: "Avis",
-    rules: "Règles"
+    rules: "Règles",
+    contact: "Contact"
+  },
+  crossLinks: {
+    locationSeeAlso: "Voir aussi",
+    and: "et"
   }
 } as const

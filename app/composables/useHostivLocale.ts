@@ -17,6 +17,12 @@ import {
   readStoredHostivLocale,
   writeStoredHostivLocale
 } from "../utils/hostiv-locale-storage"
+import {
+  detectPropertySiteLocaleFromPath,
+  extractPropertySlugFromPath,
+  isPropertySiteRoute,
+  switchPropertySiteLocalePath
+} from "../utils/property-site-routes"
 
 export function useHostivLocale() {
   const route = useRoute()
@@ -24,7 +30,7 @@ export function useHostivLocale() {
   const storedLocale = useState<HostivLocale>("hostiv-locale", () => "fr")
 
   onMounted(() => {
-    if (isHostivMarketingRoute(route.path)) {
+    if (isHostivMarketingRoute(route.path) || isPropertySiteRoute(route.path)) {
       return
     }
 
@@ -40,6 +46,10 @@ export function useHostivLocale() {
       return detectHostivLocaleFromPath(route.path)
     }
 
+    if (isPropertySiteRoute(route.path)) {
+      return detectPropertySiteLocaleFromPath(route.path)
+    }
+
     return storedLocale.value
   })
 
@@ -50,14 +60,20 @@ export function useHostivLocale() {
   watch(
     () => route.path,
     (path) => {
-      if (!isHostivMarketingRoute(path)) {
+      if (isHostivMarketingRoute(path)) {
+        const pathLocale = detectHostivLocaleFromPath(path)
+
+        storedLocale.value = pathLocale
+        writeStoredHostivLocale(pathLocale)
         return
       }
 
-      const pathLocale = detectHostivLocaleFromPath(path)
+      if (isPropertySiteRoute(path)) {
+        const pathLocale = detectPropertySiteLocaleFromPath(path)
 
-      storedLocale.value = pathLocale
-      writeStoredHostivLocale(pathLocale)
+        storedLocale.value = pathLocale
+        writeStoredHostivLocale(pathLocale)
+      }
     },
     { immediate: true }
   )
@@ -83,6 +99,14 @@ export function useHostivLocale() {
     writeStoredHostivLocale(targetLocale)
 
     const path = normalizeHostivMarketingPath(route.path)
+
+    if (isPropertySiteRoute(route.path)) {
+      const propertySlug = extractPropertySlugFromPath(route.path)
+
+      if (propertySlug) {
+        return navigateTo(switchPropertySiteLocalePath(route.fullPath, propertySlug, targetLocale))
+      }
+    }
 
     if (!isHostivMarketingRoute(path) && !isHostivPasswordResetRoute(path)) {
       return

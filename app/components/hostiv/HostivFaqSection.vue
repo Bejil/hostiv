@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import { ChevronDown, CircleHelp } from "@lucide/vue"
 import { getHostivPricingPath, getHostivResourcesPath } from "../../data/hostiv-routes"
+import {
+  buildHostivResourceGuidePath,
+  resolveHostivFaqArticleId
+} from "../../data/hostiv-resource-linking"
 
 const { landing, locale } = useHostivLocale()
 
@@ -55,6 +59,18 @@ const resourcesPath = computed(() => getHostivResourcesPath(locale.value))
               </summary>
               <div class="hostiv-faq__answer-wrap">
                 <p class="hostiv-faq__answer">{{ faq.answer }}</p>
+                <p v-if="resolveHostivFaqArticleId(faq.question, locale)" class="hostiv-faq__guide-link">
+                  <NuxtLink
+                    :to="
+                      buildHostivResourceGuidePath(
+                        resolveHostivFaqArticleId(faq.question, locale)!,
+                        locale
+                      )
+                    "
+                  >
+                    {{ faqSection.guideCta }}
+                  </NuxtLink>
+                </p>
               </div>
             </details>
           </div>

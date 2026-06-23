@@ -4,12 +4,19 @@ import type { PropertySiteRecord } from "../types/property-site"
 import { derivePropertySeo } from "../utils/derive-property-seo"
 import { resolveSiteSeoKeywords } from "../utils/seo-keywords"
 import { faviconMimeType } from "../utils/favicon-mime"
+import { buildPropertySiteJsonLd } from "../utils/property-site-json-ld"
+import {
+  detectPropertySiteLocaleFromPath,
+  getPropertySitePath,
+  propertySiteHasEnglishLocale
+} from "../utils/property-site-routes"
 
 export function usePropertySiteSeo(options: {
   site: MaybeRefOrGetter<PropertySiteRecord>
   propertyAsset: (path: string) => string
   slug: MaybeRefOrGetter<string>
 }) {
+  const route = useRoute()
   const config = useRuntimeConfig()
 
   const site = computed(() => toValue(options.site))
@@ -45,22 +52,67 @@ export function usePropertySiteSeo(options: {
     return "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1"
   })
 
-  const canonicalUrl = computed(() => {
+  const baseUrl = computed(() => {
     const configured = String(config.public.siteUrl ?? "").replace(/\/$/, "")
 
     if (configured) {
-      return `${configured}/${slug.value}`
+      return configured
     }
 
     if (typeof window !== "undefined") {
-      const { origin, pathname } = window.location
-      return `${origin}${pathname}`
+      return window.location.origin
+    }
+
+    if (import.meta.server) {
+      return useRequestURL().origin
     }
 
     return ""
   })
 
+  const pageLocale = computed(() => detectPropertySiteLocaleFromPath(route.path))
+
+  const canonicalUrl = computed(() => {
+    if (!baseUrl.value) {
+      return ""
+    }
+
+    return `${baseUrl.value}${getPropertySitePath(slug.value, pageLocale.value)}`
+  })
+
+  const hreflangLinks = computed(() => {
+    if (!baseUrl.value || !site.value.published || site.value.seo_noindex) {
+      return [] as Array<{ rel: string; hreflang: string; href: string }>
+    }
+
+    const frHref = `${baseUrl.value}${getPropertySitePath(slug.value, "fr")}`
+    const links: Array<{ rel: string; hreflang: string; href: string }> = [
+      { rel: "alternate", hreflang: "fr", href: frHref },
+      { rel: "alternate", hreflang: "x-default", href: frHref }
+    ]
+
+    if (propertySiteHasEnglishLocale(site.value)) {
+      links.splice(1, 0, {
+        rel: "alternate",
+        hreflang: "en",
+        href: `${baseUrl.value}${getPropertySitePath(slug.value, "en")}`
+      })
+    }
+
+    return links
+  })
+
   const keywords = computed(() => resolveSiteSeoKeywords(site.value, locale.value))
+
+  const jsonLdGraph = computed(() =>
+    buildPropertySiteJsonLd({
+      site: site.value,
+      slug: slug.value,
+      pageUrl: canonicalUrl.value,
+      imageUrl: ogImageUrl.value,
+      locale: pageLocale.value
+    })
+  )
 
   useSeoMeta({
     title: () => derivedSeo.value.seo_title,
@@ -70,9 +122,10 @@ export function usePropertySiteSeo(options: {
     ogTitle: () => ogTitle.value,
     ogDescription: () => ogDescription.value,
     ogType: "website",
-    ogLocale: () => (locale.value === "en" ? "en_GB" : "fr_FR"),
+    ogLocale: () => (pageLocale.value === "en" ? "en_GB" : "fr_FR"),
     ogSiteName: () => site.value.brand_name,
     ogImage: () => ogImageUrl.value,
+    ogUrl: () => canonicalUrl.value || undefined,
     twitterCard: () => site.value.seo_twitter_card,
     twitterTitle: () => ogTitle.value,
     twitterDescription: () => ogDescription.value,
@@ -81,13 +134,17 @@ export function usePropertySiteSeo(options: {
 
   useHead({
     htmlAttrs: {
-      lang: () => locale.value
+      lang: () => pageLocale.value
     },
     link: computed(() => {
-      const links: Array<{ rel: string; href: string; type?: string }> = []
+      const links: Array<{ rel: string; href: string; type?: string; hreflang?: string }> = []
 
       if (canonicalUrl.value) {
         links.push({ rel: "canonical", href: canonicalUrl.value })
+      }
+
+      for (const alternate of hreflangLinks.value) {
+        links.push(alternate)
       }
 
       const faviconHref = options.propertyAsset(site.value.logo_path.trim())
@@ -101,6 +158,19 @@ export function usePropertySiteSeo(options: {
       }
 
       return links
+    }),
+    script: computed(() => {
+      if (!jsonLdGraph.value) {
+        return []
+      }
+
+      return [
+        {
+          key: `property-site-json-ld-${slug.value}`,
+          type: "application/ld+json",
+          innerHTML: JSON.stringify(jsonLdGraph.value)
+        }
+      ]
     })
   })
 }

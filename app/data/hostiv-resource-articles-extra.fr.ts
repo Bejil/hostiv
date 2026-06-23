@@ -382,5 +382,51 @@ export const hostivResourceArticlesExtra: Record<
         ],
       }
     ]
+  },
+  "referencement-site-direct": {
+    id: "referencement-site-direct",
+    title: "Référencer son site de location sur Google",
+    description:
+      "Titres, descriptions, mots-clés et maillage interne : les bases du SEO pour un site de réservation directe.",
+    seoTitle: "Référencement site location saisonnière | Guide Hostiv",
+    seoDescription:
+      "Optimisez le SEO de votre site Hostiv : balises title, mots-clés quartier, structure de page et liens internes pour attirer des réservations directes.",
+    publishedAt: "2026-06-11",
+    readingMinutes: 8,
+    sections: [
+      {
+        title: "Pourquoi le SEO compte en direct",
+        paragraphs: [
+          "Sur une plateforme OTA, c’est Airbnb ou Booking qui attirent le trafic. En direct, c’est votre site qui doit être trouvé sur Google quand un voyageur tape « location vacances + votre ville ».",
+          "Un bon référencement ne remplace pas la promotion (lien en bio Airbnb, Google Business, réseaux sociaux), mais il complète ces canaux sur le long terme."
+        ]
+      },
+      {
+        title: "Les fondamentaux dans Hostiv",
+        paragraphs: [
+          "Dans Personnalisation → SEO, renseignez un titre clair (ville + type de bien), une meta description qui donne envie, et des mots-clés ciblés (quartier, équipements, capacité).",
+          "Utilisez le bandeau « Moteur de recherche » : le titre du hero alimente automatiquement votre balise title si vous ne surchargez pas le champ SEO."
+        ],
+        links: [
+          { articleId: "optimiser-fiche-logement" },
+          { articleId: "promouvoir-site-direct" }
+        ]
+      },
+      {
+        title: "Structurer la page pour Google",
+        paragraphs: [
+          "Votre site Hostiv est une page riche : hébergement, espaces, quartier, tarifs, équipements, avis. Chaque section est une opportunité de placer des expressions naturelles (« proche Versailles », « wifi fibre », « 6 voyageurs »).",
+          "Le menu de navigation interne aide Google à comprendre la structure — et les voyageurs à trouver tarifs ou avis rapidement."
+        ]
+      },
+      {
+        title: "Maillage et signaux locaux",
+        paragraphs: [
+          "Liez votre site depuis votre fiche Google Business, vos réseaux sociaux et votre signature e-mail. Plus des sites de qualité pointent vers vous, plus Google vous fait confiance.",
+          "Encouragez les avis voyageurs : la section témoignages enrichit votre page et rassure au moment de réserver."
+        ],
+        links: [{ articleId: "convertir-visiteurs" }]
+      }
+    ]
   }
 }

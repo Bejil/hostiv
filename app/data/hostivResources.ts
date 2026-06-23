@@ -64,6 +64,10 @@ export const HOSTIV_RESOURCE_ARTICLE_PATHS: Record<
   "guide-accueil-voyageurs": {
     fr: "/ressources/guide-accueil-voyageurs",
     en: "/en/resources/welcome-guide-for-guests"
+  },
+  "referencement-site-direct": {
+    fr: "/ressources/referencement-site-direct",
+    en: "/en/resources/direct-site-seo"
   }
 }
 
