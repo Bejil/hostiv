@@ -11,6 +11,7 @@ import AdminIcon from "./AdminIcon.vue"
 import AdminImageUpload from "./AdminImageUpload.vue"
 import AdminToggle from "./AdminToggle.vue"
 import AdminGeneralSubscriptionCard from "./AdminGeneralSubscriptionCard.vue"
+import AdminGeneralTrafficPanel from "./AdminGeneralTrafficPanel.vue"
 import AdminPublishStripeRequiredModal from "./AdminPublishStripeRequiredModal.vue"
 import AdminOnboarding from "./AdminOnboarding.vue"
 import { useAdminProFeatureGate } from "../../composables/admin-pro-feature-context"
@@ -19,6 +20,7 @@ import { useAdminLiveEditorContext } from "../../composables/admin-live-editor-c
 import { adminSectionNavKey } from "../../composables/admin-section-nav-context"
 import type { PropertyAdminRecord } from "../../types/property-admin"
 import type { HostivSubscriptionAccess } from "../../utils/hostiv-subscription-access"
+import { withPropertyAdminAccess } from "../../utils/merge-property-admin-subscription-access"
 import { findAdminNavMeta } from "../../data/admin-nav-sections"
 import { getHostivLanding } from "../../data/hostivLanding"
 import { adminUiFormat } from "../../data/admin-ui"
@@ -174,7 +176,9 @@ function openStripeSetupFromPublishModal() {
 }
 
 function replaceRecord(value: PropertyAdminRecord) {
-  record.value = value
+  const adminAccess = value.admin_access ?? record.value.admin_access
+
+  record.value = adminAccess ? withPropertyAdminAccess(value, adminAccess) : value
 }
 
 function activeCopyRoot(): PropertySiteCopy {
@@ -510,6 +514,18 @@ defineExpose({
                   :disabled="!isPrimaryOwner"
                   @update:model-value="onPublishedChange"
                 />
+              </div>
+
+              <div class="admin-subpanel admin-general-card admin-general-card--traffic">
+                <div class="admin-subpanel__head admin-general-card__head">
+                  <div>
+                    <p class="admin-general-card__kicker">{{ ext.general.trafficKicker }}</p>
+                    <h3>{{ ext.general.trafficTitle }}</h3>
+                    <p class="admin-general-card__hint">{{ ext.general.trafficHint }}</p>
+                  </div>
+                </div>
+
+                <AdminGeneralTrafficPanel :slug="slug" :published="record.published" />
               </div>
 
               <div class="admin-subpanel admin-general-card admin-general-card--seo">

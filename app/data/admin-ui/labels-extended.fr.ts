@@ -9,7 +9,50 @@ export const adminUiLabelsExtendedFr = {
       "Visible par les visiteurs sur l’URL publique. Stripe Connect doit être configuré pour publier.",
     seoKicker: "Référencement",
     seoTitle: "SEO",
-    seoHint: "Titre, description et image de partage sont gérés dans la personnalisation."
+    seoHint: "Titre, description et image de partage sont gérés dans la personnalisation.",
+    trafficKicker: "Audience",
+    trafficTitle: "Visites du site",
+    trafficHint:
+      "Comptabilise les pages vues et visiteurs uniques sur votre site public publié (hors aperçu admin). Fuseau horaire : Europe/Paris.",
+    trafficUnpublished:
+      "Publiez votre site pour commencer à enregistrer les visites des visiteurs.",
+    trafficRefresh: "Actualiser"
+  },
+  traffic: {
+    periodLabel: "Période analysée",
+    presets: {
+      last7Days: "7 derniers jours",
+      last30Days: "30 derniers jours",
+      lastSixMonths: "6 derniers mois"
+    },
+    loading: "Chargement des statistiques…",
+    errors: {
+      load: "Impossible de charger les statistiques de trafic."
+    },
+    stats: {
+      pageViews: "Pages vues",
+      uniqueVisitors: "Visiteurs uniques",
+      dailyAverage: "Moyenne / jour",
+      onPeriod: "sur la période",
+      viewsPerDay: "pages vues / jour"
+    },
+    dailyTitle: "Par jour",
+    monthlyTitle: "Par mois",
+    chartAria: "Évolution du trafic sur la période",
+    chartTooltipViews: "Pages vues",
+    chartTooltipVisitors: "Visiteurs uniques",
+    summaryAria: "Synthèse du trafic",
+    dayMeta: "{views} vues · {visitors} visiteur(s)",
+    dayMetaPlural: "{views} vues · {visitors} visiteurs",
+    monthMeta: "{views} vues · {visitors} visiteur(s)",
+    monthMetaPlural: "{views} vues · {visitors} visiteurs",
+    empty: {
+      title: "Aucune visite sur cette période",
+      description:
+        "Les statistiques apparaissent dès qu’un visiteur consulte votre site public publié."
+    },
+    note:
+      "Les visiteurs uniques sont estimés sans cookie publicitaire, à partir d’une empreinte anonymisée renouvelée chaque jour."
   },
   cohosts: {
     kicker: "Équipe",

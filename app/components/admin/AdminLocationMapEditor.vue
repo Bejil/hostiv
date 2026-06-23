@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { ref, watch } from "vue"
+import LocationMap from "../LocationMap.vue"
 import AdminField from "./AdminField.vue"
 import { useAdminGeocode } from "../../composables/useAdminGeocode"
 import { adminCopyFieldExamples } from "../../data/admin-copy-sections"
 import { getAdminCustomizationLocationExamples } from "../../data/admin-customization-field-examples"
 import type { PropertyLocation } from "../../types/property-site"
+import { hasValidPropertyLocationCoordinates } from "../../utils/property-location"
 
 const props = defineProps<{
   slug: string
@@ -34,18 +36,25 @@ const geocodedAddress = ref(props.modelValue.address.trim())
 let geocodeTimer: ReturnType<typeof setTimeout> | null = null
 let geocodeRequestId = 0
 
+const showMap = computed(() => hasValidPropertyLocationCoordinates(props.modelValue))
+
+const mapKey = computed(
+  () =>
+    `${props.modelValue.latitude}:${props.modelValue.longitude}:${props.modelValue.radius_meters}`
+)
+
 function patchLocation(partial: Partial<PropertyLocation>) {
   emit("update:modelValue", { ...props.modelValue, ...partial })
 }
 
-function scheduleGeocode(address: string) {
+function scheduleGeocode(address: string, force = false) {
   if (geocodeTimer) {
     clearTimeout(geocodeTimer)
   }
 
   const query = address.trim()
 
-  if (!query || query === geocodedAddress.value) {
+  if (!query || (!force && query === geocodedAddress.value && showMap.value)) {
     return
   }
 
@@ -108,11 +117,26 @@ watch(
   (address) => {
     const trimmed = address.trim()
 
-    if (trimmed && trimmed === geocodedAddress.value) {
+    if (trimmed && trimmed === geocodedAddress.value && showMap.value) {
       geocodeStatus.value = "ok"
     }
   }
 )
+
+onMounted(() => {
+  const address = props.modelValue.address.trim()
+
+  if (!address) {
+    return
+  }
+
+  if (showMap.value && geocodedAddress.value === address) {
+    geocodeStatus.value = "ok"
+    return
+  }
+
+  scheduleGeocode(address, true)
+})
 </script>
 
 <template>
@@ -136,6 +160,24 @@ watch(
         >
           {{ geocodeMessage }}
         </p>
+
+        <div v-if="showMap" class="admin-location-map__preview">
+          <LocationMap
+            :key="mapKey"
+            :latitude="Number(modelValue.latitude)"
+            :longitude="Number(modelValue.longitude)"
+            :radius-meters="Number(modelValue.radius_meters) || 400"
+            :address="modelValue.address"
+          />
+        </div>
+
+        <div
+          v-else-if="modelValue.address.trim()"
+          class="admin-location-map__preview admin-location-map__preview--pending"
+        >
+          <p>{{ ext.location.mapPending }}</p>
+        </div>
+
         <AdminField
           :label="ext.location.leadLabel"
           type="textarea"

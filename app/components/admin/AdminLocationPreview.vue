@@ -3,6 +3,7 @@ import { computed } from "vue"
 import LocationHighlightIcon from "../LocationHighlightIcon.vue"
 import LocationMap from "../LocationMap.vue"
 import type { PropertyLocation, PropertyNeighborhoodHighlight } from "../../types/property-site"
+import { hasValidPropertyLocationCoordinates } from "../../utils/property-location"
 
 const props = defineProps<{
   location: PropertyLocation
@@ -41,6 +42,8 @@ const displayHighlights = computed(() =>
 const mapKey = computed(
   () => `${props.location.latitude}:${props.location.longitude}:${props.location.radius_meters}`
 )
+
+const hasMapCoordinates = computed(() => hasValidPropertyLocationCoordinates(props.location))
 </script>
 
 <template>
@@ -57,10 +60,7 @@ const mapKey = computed(
 
       <div class="admin-location-preview__layout">
         <div class="admin-location-preview__map-card">
-          <div
-            v-if="Number.isFinite(Number(location.latitude)) && Number.isFinite(Number(location.longitude))"
-            class="admin-location-preview__leaflet-shell"
-          >
+          <div v-if="hasMapCoordinates" class="admin-location-preview__map-shell">
             <LocationMap
               :key="mapKey"
               :latitude="Number(location.latitude)"

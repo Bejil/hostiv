@@ -9,7 +9,48 @@ export const adminUiLabelsExtendedEn = {
       "Visible to visitors on the public URL. Stripe Connect must be configured to publish.",
     seoKicker: "Search",
     seoTitle: "SEO",
-    seoHint: "Title, description and share image are managed in Customization."
+    seoHint: "Title, description and share image are managed in Customization.",
+    trafficKicker: "Audience",
+    trafficTitle: "Site visits",
+    trafficHint:
+      "Tracks page views and unique visitors on your published public site (admin preview excluded). Time zone: Europe/Paris.",
+    trafficUnpublished: "Publish your site to start recording visitor traffic.",
+    trafficRefresh: "Refresh"
+  },
+  traffic: {
+    periodLabel: "Period analysed",
+    presets: {
+      last7Days: "Last 7 days",
+      last30Days: "Last 30 days",
+      lastSixMonths: "Last 6 months"
+    },
+    loading: "Loading statistics…",
+    errors: {
+      load: "Unable to load traffic statistics."
+    },
+    stats: {
+      pageViews: "Page views",
+      uniqueVisitors: "Unique visitors",
+      dailyAverage: "Daily average",
+      onPeriod: "over the period",
+      viewsPerDay: "page views / day"
+    },
+    dailyTitle: "By day",
+    monthlyTitle: "By month",
+    chartAria: "Traffic trend over the selected period",
+    chartTooltipViews: "Page views",
+    chartTooltipVisitors: "Unique visitors",
+    summaryAria: "Traffic summary",
+    dayMeta: "{views} views · {visitors} visitor",
+    dayMetaPlural: "{views} views · {visitors} visitors",
+    monthMeta: "{views} views · {visitors} visitor",
+    monthMetaPlural: "{views} views · {visitors} visitors",
+    empty: {
+      title: "No visits in this period",
+      description: "Statistics appear once someone views your published public site."
+    },
+    note:
+      "Unique visitors are estimated without advertising cookies, using an anonymised fingerprint reset daily."
   },
   cohosts: {
     kicker: "Team",

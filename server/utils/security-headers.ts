@@ -16,7 +16,11 @@ function readSupabaseHost() {
 
 function buildContentSecurityPolicy() {
   const supabaseHost = readSupabaseHost()
-  const connectSrc = ["'self'", "https://api.stripe.com"]
+  const connectSrc = [
+    "'self'",
+    "https://api.stripe.com",
+    "https://tiles.openfreemap.org"
+  ]
 
   if (supabaseHost) {
     connectSrc.push(`https://${supabaseHost}`, `wss://${supabaseHost}`)
@@ -32,10 +36,12 @@ function buildContentSecurityPolicy() {
     "object-src 'none'",
     "script-src 'self' 'unsafe-inline' https://js.stripe.com",
     "style-src 'self' 'unsafe-inline'",
+    "worker-src 'self' blob:",
+    "child-src 'self' blob:",
     "img-src 'self' data: blob: https:",
-    "font-src 'self' data:",
+    "font-src 'self' data: https://tiles.openfreemap.org",
     `connect-src ${connectSrc.join(" ")}`,
-    "frame-src 'self' https://js.stripe.com https://hooks.stripe.com"
+    "frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://www.openstreetmap.org"
   ].join("; ")
 }
 

@@ -196,6 +196,10 @@ if (!props.livePreview) {
   usePropertySiteSeo({ site, propertyAsset, slug })
 }
 
+usePropertySiteTrafficTrack(slug, {
+  enabled: computed(() => !props.livePreview && !props.ownerSitePreview && props.site.published)
+})
+
 const heroImage = computed(() => site.value.hero_image_path)
 const heroImageSrc = computed(() => propertyAsset(heroImage.value))
 const testimonialsSectionBg = computed(

@@ -59,15 +59,7 @@ const { ui, formatDate } = useAdminUi()
 const slug = computed(() => String(route.params.slug))
 const draft = ref<PropertyAdminRecord | null>(null)
 
-const canAccessAccounting = computed(() => {
-  const access = draft.value?.admin_access
-
-  if (!access) {
-    return false
-  }
-
-  return access.role !== "cohost"
-})
+const canAccessAccounting = computed(() => draft.value?.admin_access?.role !== "cohost")
 
 const sectionNav = useAdminSectionNavigation(slug, {
   canAccessAccounting: () => canAccessAccounting.value
@@ -786,7 +778,10 @@ function flushDraftToSession() {
 }
 
 function onDraftUpdate(value: PropertyAdminRecord) {
-  draft.value = value
+  const adminAccess =
+    value.admin_access ?? draft.value?.admin_access ?? site.value?.admin_access
+
+  draft.value = adminAccess ? withPropertyAdminAccess(value, adminAccess) : value
   isDirty.value = true
   renderError.value = null
 
@@ -830,12 +825,13 @@ watch(
 )
 
 watch(
-  () => [sectionNav.activeMenuSection.value, canAccessAccounting.value] as const,
-  ([section, canAccessPayouts]) => {
-    if (section === "payouts" && !canAccessPayouts) {
+  () => [sectionNav.activeMenuSection.value, draft.value?.admin_access?.role] as const,
+  ([section, role]) => {
+    if (section === "payouts" && role === "cohost") {
       sectionNav.selectSection("general")
     }
-  }
+  },
+  { immediate: true }
 )
 
 async function persistDraft(): Promise<boolean> {

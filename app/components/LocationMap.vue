@@ -1,5 +1,13 @@
 <script setup lang="ts">
-import type { Circle, LatLngExpression, Map } from "leaflet"
+import type { Map as MapLibreMap } from "maplibre-gl"
+import {
+  boundsFromCircle,
+  buildOpenStreetMapEmbedUrl,
+  buildOpenStreetMapExternalUrl,
+  createCircleGeoJson
+} from "../utils/location-map-geo"
+
+const OPENFREEMAP_STYLE = "https://tiles.openfreemap.org/styles/liberty"
 
 const props = withDefaults(
   defineProps<{
@@ -13,128 +21,105 @@ const props = withDefaults(
   }
 )
 
-type LeafletNamespace = typeof import("leaflet")
+const { locale } = useHostivLocale()
 
 const mapRoot = ref<HTMLElement | null>(null)
-const isReady = ref(false)
+const useEmbedFallback = ref(false)
 
-let leafletLib: LeafletNamespace | null = null
-let map: Map | null = null
-let areaLayer: Circle | null = null
+let map: MapLibreMap | null = null
 let resizeObserver: ResizeObserver | null = null
-let initFrame = 0
+let visibilityObserver: IntersectionObserver | null = null
+let scrollRevealObserver: MutationObserver | null = null
+let loadFallbackTimer: ReturnType<typeof setTimeout> | null = null
+let initToken = 0
 
-function toCoord(value: number) {
-  return Number(value)
-}
+const latitude = computed(() => Number(props.latitude))
+const longitude = computed(() => Number(props.longitude))
+const radiusMeters = computed(() => Number(props.radiusMeters) || 400)
 
-function getCenter(): LatLngExpression {
-  return [toCoord(props.latitude), toCoord(props.longitude)]
-}
+const hasCoordinates = computed(
+  () =>
+    Number.isFinite(latitude.value) &&
+    Number.isFinite(longitude.value) &&
+    !(latitude.value === 0 && longitude.value === 0)
+)
 
-function invalidateSoon() {
-  nextTick(() => {
-    requestAnimationFrame(() => {
-      map?.invalidateSize()
-    })
-  })
-}
+const embedUrl = computed(() =>
+  hasCoordinates.value
+    ? buildOpenStreetMapEmbedUrl(latitude.value, longitude.value)
+    : null
+)
+
+const externalMapUrl = computed(() =>
+  hasCoordinates.value
+    ? buildOpenStreetMapExternalUrl(latitude.value, longitude.value)
+    : "#"
+)
+
+const mapAriaLabel = computed(() =>
+  locale.value === "en"
+    ? `Map around ${props.address}`
+    : `Carte du quartier autour de ${props.address}`
+)
+
+const externalMapLabel = computed(() =>
+  locale.value === "en" ? "Open in OpenStreetMap" : "Ouvrir dans OpenStreetMap"
+)
 
 function destroyMap() {
+  if (loadFallbackTimer) {
+    clearTimeout(loadFallbackTimer)
+    loadFallbackTimer = null
+  }
+
   resizeObserver?.disconnect()
   resizeObserver = null
+  visibilityObserver?.disconnect()
+  visibilityObserver = null
+  scrollRevealObserver?.disconnect()
+  scrollRevealObserver = null
   map?.remove()
   map = null
-  areaLayer = null
-  isReady.value = false
 }
 
-async function loadLeaflet(): Promise<LeafletNamespace> {
-  if (!leafletLib) {
-    await import("leaflet/dist/leaflet.css")
-    leafletLib = await import("leaflet")
-  }
-
-  return leafletLib
-}
-
-function updateMapView() {
-  if (!map || !areaLayer) {
+function fitMapToArea() {
+  if (!map) {
     return
   }
 
-  const center = getCenter()
+  const bounds = boundsFromCircle(latitude.value, longitude.value, radiusMeters.value)
 
-  areaLayer.setLatLng(center)
-  areaLayer.setRadius(props.radiusMeters)
-  map.fitBounds(areaLayer.getBounds(), { padding: [24, 24] })
-  invalidateSoon()
+  map.fitBounds(
+    [
+      [bounds.west, bounds.south],
+      [bounds.east, bounds.north]
+    ],
+    { padding: 28, duration: 0 }
+  )
 }
 
-async function createMap() {
-  if (!mapRoot.value || import.meta.server) {
+function updateAreaLayer() {
+  if (!map || !map.getSource("location-area")) {
     return
   }
 
-  const L = await loadLeaflet()
-  const center = getCenter()
+  const source = map.getSource("location-area")
 
-  map = L.map(mapRoot.value, {
-    center,
-    zoom: 15,
-    scrollWheelZoom: false,
-    zoomControl: true,
-    attributionControl: true
-  })
-
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    maxZoom: 19,
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-  }).addTo(map)
-
-  areaLayer = L.circle(center, {
-    radius: props.radiusMeters,
-    color: "#94633c",
-    weight: 2,
-    fillColor: "#94633c",
-    fillOpacity: 0.18
-  }).addTo(map)
-
-  map.fitBounds(areaLayer.getBounds(), { padding: [24, 24] })
-
-  resizeObserver = new ResizeObserver(() => {
-    map?.invalidateSize()
-  })
-  resizeObserver.observe(mapRoot.value)
-
-  isReady.value = true
-  invalidateSoon()
-}
-
-async function initMapWhenReady() {
-  if (import.meta.server) {
-    return
+  if (source?.type === "geojson") {
+    source.setData(createCircleGeoJson(latitude.value, longitude.value, radiusMeters.value))
   }
 
-  const frame = ++initFrame
+  fitMapToArea()
+}
 
-  await nextTick()
-
-  for (let attempt = 0; attempt < 30; attempt += 1) {
-    if (frame !== initFrame) {
-      return
-    }
-
-    const element = mapRoot.value
-
-    if (!element) {
-      return
+async function waitForMapSize(element: HTMLElement, token: number) {
+  for (let attempt = 0; attempt < 40; attempt += 1) {
+    if (token !== initToken) {
+      return false
     }
 
     if (element.offsetWidth > 0 && element.offsetHeight > 0) {
-      destroyMap()
-      await createMap()
-      return
+      return true
     }
 
     await new Promise<void>((resolve) => {
@@ -142,44 +127,286 @@ async function initMapWhenReady() {
     })
   }
 
-  if (mapRoot.value && frame === initFrame) {
+  return element.offsetWidth > 0 && element.offsetHeight > 0
+}
+
+async function createMapLibre() {
+  if (import.meta.server || !mapRoot.value || map || useEmbedFallback.value) {
+    return
+  }
+
+  const token = ++initToken
+  const hasSize = await waitForMapSize(mapRoot.value, token)
+
+  if (!hasSize || token !== initToken || !mapRoot.value) {
+    useEmbedFallback.value = true
+    return
+  }
+
+  try {
+    const maplibregl = await import("maplibre-gl")
+
+    if (token !== initToken || !mapRoot.value) {
+      return
+    }
+
+    map = new maplibregl.Map({
+      container: mapRoot.value,
+      style: OPENFREEMAP_STYLE,
+      center: [longitude.value, latitude.value],
+      zoom: 15,
+      scrollZoom: false,
+      attributionControl: true
+    })
+
+    map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-left")
+
+    loadFallbackTimer = window.setTimeout(() => {
+      if (!useEmbedFallback.value) {
+        useEmbedFallback.value = true
+        destroyMap()
+      }
+    }, 8_000)
+
+    map.on("load", () => {
+      if (loadFallbackTimer) {
+        clearTimeout(loadFallbackTimer)
+        loadFallbackTimer = null
+      }
+
+      if (!map) {
+        return
+      }
+
+      map.addSource("location-area", {
+        type: "geojson",
+        data: createCircleGeoJson(latitude.value, longitude.value, radiusMeters.value)
+      })
+
+      map.addLayer({
+        id: "location-area-fill",
+        type: "fill",
+        source: "location-area",
+        paint: {
+          "fill-color": "#94633c",
+          "fill-opacity": 0.18
+        }
+      })
+
+      map.addLayer({
+        id: "location-area-line",
+        type: "line",
+        source: "location-area",
+        paint: {
+          "line-color": "#94633c",
+          "line-width": 2
+        }
+      })
+
+      fitMapToArea()
+      map.resize()
+    })
+
+    resizeObserver = new ResizeObserver(() => {
+      map?.resize()
+    })
+    resizeObserver.observe(mapRoot.value)
+  } catch {
+    useEmbedFallback.value = true
     destroyMap()
-    await createMap()
   }
 }
 
-onMounted(() => {
-  void initMapWhenReady()
+async function ensureMap() {
+  if (useEmbedFallback.value || !hasCoordinates.value) {
+    return
+  }
+
+  if (map) {
+    map.resize()
+    updateAreaLayer()
+    return
+  }
+
+  await createMapLibre()
+}
+
+function observeVisibility() {
+  if (import.meta.server || useEmbedFallback.value || !mapRoot.value) {
+    return
+  }
+
+  if (typeof IntersectionObserver === "undefined") {
+    void ensureMap()
+    return
+  }
+
+  visibilityObserver?.disconnect()
+
+  visibilityObserver = new IntersectionObserver(
+    (entries) => {
+      if (!entries.some((entry) => entry.isIntersecting)) {
+        return
+      }
+
+      void ensureMap()
+    },
+    { threshold: 0.05, rootMargin: "40px 0px" }
+  )
+
+  visibilityObserver.observe(mapRoot.value)
+}
+
+function observeScrollRevealParent(root: HTMLElement) {
+  const section = root.closest<HTMLElement>(".scroll-reveal")
+
+  if (!section) {
+    return
+  }
+
+  const onReveal = () => {
+    if (section.classList.contains("scroll-reveal-visible")) {
+      void ensureMap()
+    }
+  }
+
+  scrollRevealObserver?.disconnect()
+
+  if (section.classList.contains("scroll-reveal-visible")) {
+    onReveal()
+    return
+  }
+
+  scrollRevealObserver = new MutationObserver(onReveal)
+  scrollRevealObserver.observe(section, { attributes: true, attributeFilter: ["class"] })
+}
+
+onMounted(async () => {
+  if (!hasCoordinates.value) {
+    return
+  }
+
+  await nextTick()
+  observeVisibility()
+  void ensureMap()
+
+  if (mapRoot.value) {
+    observeScrollRevealParent(mapRoot.value)
+  }
 })
 
 watch(
-  () => [props.latitude, props.longitude, props.radiusMeters] as const,
+  () => [latitude.value, longitude.value, radiusMeters.value] as const,
   () => {
-    if (import.meta.server) {
+    if (import.meta.server || !hasCoordinates.value) {
+      return
+    }
+
+    if (useEmbedFallback.value) {
       return
     }
 
     if (!map) {
-      void initMapWhenReady()
+      void ensureMap()
       return
     }
 
-    updateMapView()
+    updateAreaLayer()
   }
 )
 
 onBeforeUnmount(() => {
-  initFrame += 1
+  initToken += 1
   destroyMap()
 })
 </script>
 
 <template>
-  <div
-    ref="mapRoot"
-    class="location-map-frame"
-    :class="{ 'location-map-frame--ready': isReady }"
-    role="img"
-    :aria-label="`Carte du quartier autour de ${address}, zone approximative sur ${radiusMeters} m`"
-  />
+  <div class="location-map-shell">
+    <iframe
+      v-if="useEmbedFallback && embedUrl"
+      class="location-map-frame location-map-frame--embed"
+      :src="embedUrl"
+      :title="mapAriaLabel"
+      loading="lazy"
+      referrerpolicy="no-referrer-when-downgrade"
+    />
+
+    <div
+      v-else-if="hasCoordinates"
+      ref="mapRoot"
+      class="location-map-frame location-map-frame--maplibre"
+      role="img"
+      :aria-label="mapAriaLabel"
+    />
+
+    <div
+      v-else
+      class="location-map-frame location-map-frame--placeholder"
+      aria-hidden="true"
+    />
+
+    <a
+      v-if="hasCoordinates && useEmbedFallback"
+      class="location-map-external-link"
+      :href="externalMapUrl"
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      {{ externalMapLabel }}
+    </a>
+  </div>
 </template>
+
+<style scoped>
+.location-map-shell {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  width: 100%;
+  min-height: 280px;
+  height: 100%;
+}
+
+.location-map-frame {
+  display: block;
+  flex: 1 1 auto;
+  width: 100%;
+  height: 100%;
+  min-height: 280px;
+  border: 0;
+  background: #ebe4da;
+}
+
+.location-map-frame--embed {
+  border: 0;
+}
+
+.location-map-frame--maplibre :deep(.maplibregl-map),
+.location-map-frame--maplibre :deep(.maplibregl-canvas) {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.location-map-frame--placeholder {
+  background: linear-gradient(135deg, #ebe4da 0%, #e0d6c8 100%);
+}
+
+.location-map-external-link {
+  align-self: flex-end;
+  margin-top: 0.45rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #94633c;
+  text-decoration: none;
+}
+
+.location-map-external-link:hover {
+  text-decoration: underline;
+}
+
+.location-map-frame--maplibre :deep(.maplibregl-control-attribution) {
+  font-size: 10px;
+  background: rgba(255, 255, 255, 0.82);
+}
+</style>

@@ -1,6 +1,6 @@
 import { getHostivLanding } from "../data/hostivLanding"
 import type { PropertySiteRecord } from "../types/property-site"
-import { useLocalizedPropertySite } from "./useLocalizedPropertySite"
+import { applySiteContentLocale } from "../utils/site-content-locale"
 
 export async function usePropertySitePage() {
   const route = useRoute()
@@ -23,7 +23,7 @@ export async function usePropertySitePage() {
     })
   }
 
-  const site = useLocalizedPropertySite(rawSite)
+  const site = computed(() => applySiteContentLocale(rawSite.value!, locale.value))
 
   return {
     site,

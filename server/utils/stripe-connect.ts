@@ -41,8 +41,27 @@ export function getStripeKeyMode(secretKey: string): StripeKeyMode {
   return "unknown"
 }
 
+function isStripeConnectModeMismatch(error: unknown): boolean {
+  if (!error || typeof error !== "object") {
+    return false
+  }
+
+  const message = ((error as { message?: string }).message ?? "").toLowerCase()
+
+  return (
+    message.includes("was created in test mode") ||
+    message.includes("was created in live mode") ||
+    (message.includes("test mode") && message.includes("live")) ||
+    (message.includes("live mode") && message.includes("test"))
+  )
+}
+
 function isStripeConnectAccountUnavailable(error: unknown): boolean {
   if (!error || typeof error !== "object") {
+    return false
+  }
+
+  if (isStripeConnectModeMismatch(error)) {
     return false
   }
 
@@ -53,9 +72,7 @@ function isStripeConnectAccountUnavailable(error: unknown): boolean {
   return (
     code === "account_invalid" ||
     message.includes("no such account") ||
-    message.includes("does not have access to account") ||
-    message.includes("test mode") ||
-    message.includes("live mode")
+    message.includes("does not have access to account")
   )
 }
 
@@ -171,6 +188,10 @@ export async function disconnectStripeConnectIfUnavailable(
     await stripe.accounts.retrieve(row.stripe_account_id)
     return false
   } catch (error) {
+    if (isStripeConnectModeMismatch(error)) {
+      return false
+    }
+
     if (!isStripeConnectAccountUnavailable(error)) {
       throw error
     }
@@ -208,6 +229,17 @@ export async function refreshPropertyStripeStatus(
       stripeSecretKey
     )
   } catch (error) {
+    if (isStripeConnectModeMismatch(error)) {
+      console.warn(
+        `[stripe-connect] mode mismatch for ${slug} (${row.stripe_account_id}) — account kept in database`
+      )
+
+      return stripeStatusFromRow(row, platformFeePercent, {
+        ...statusOptions,
+        connectModeMismatch: true
+      })
+    }
+
     if (!isStripeConnectAccountUnavailable(error)) {
       throw error
     }
@@ -219,10 +251,7 @@ export async function refreshPropertyStripeStatus(
       throw createError({ statusCode: 404, message: "Site introuvable." })
     }
 
-    return stripeStatusFromRow(cleared, platformFeePercent, {
-      ...statusOptions,
-      connectModeMismatch: true
-    })
+    return stripeStatusFromRow(cleared, platformFeePercent, statusOptions)
   }
 }
 
@@ -275,11 +304,11 @@ export async function ensureExpressConnectAccount(
       await stripe.accounts.retrieve(row.stripe_account_id)
       return row.stripe_account_id
     } catch (error) {
-      if (!isStripeConnectAccountUnavailable(error)) {
+      if (isStripeConnectModeMismatch(error) || isStripeConnectAccountUnavailable(error)) {
+        await clearPropertyStripeConnect(slug)
+      } else {
         throw error
       }
-
-      await clearPropertyStripeConnect(slug)
     }
   }
 

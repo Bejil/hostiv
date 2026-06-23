@@ -160,8 +160,8 @@
     max-width: none;
   }
 
-  .location-map-frame {
-    min-height: 260px;
+  .location-map-card :deep(.location-map-shell) {
+    min-height: 240px;
   }
 
 

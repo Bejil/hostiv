@@ -52,6 +52,10 @@ function matchRule(path: string) {
     return { prefix: "/api/sites/contact", limit: 5, windowMs: 15 * 60 * 1000 }
   }
 
+  if (/^\/api\/sites\/[^/]+\/traffic$/.test(path)) {
+    return { prefix: "/api/sites/traffic", limit: 120, windowMs: 60 * 60 * 1000 }
+  }
+
   return RULES.find((rule) => path === rule.prefix || path.startsWith(`${rule.prefix}/`))
 }
 

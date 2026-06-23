@@ -22,14 +22,14 @@ export default defineNuxtConfig({
       routes: getHostivMarketingPrerenderPaths()
     }
   },
-  css: ["~/assets/css/nuxt-ui-admin.css"],
+  css: ["maplibre-gl/dist/maplibre-gl.css", "~/assets/css/nuxt-ui-admin.css"],
   ui: {
     colorMode: false,
     fonts: false
   },
   vite: {
     ssr: {
-      external: ["leaflet"]
+      external: ["maplibre-gl"]
     }
   },
   app: {
