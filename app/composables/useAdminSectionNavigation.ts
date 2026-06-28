@@ -14,7 +14,7 @@ import {
   type AdminTopSectionId
 } from "../data/admin-nav-sections"
 import { isAdminAccountViewId } from "../data/admin-account-sections"
-import { waitForAdminAuthHeaders } from "../../utils/admin-auth-session"
+import { waitForAdminAuthHeaders } from "../utils/admin-auth-session"
 
 export function useAdminSectionNavigation(
   slug: MaybeRefOrGetter<string>,
