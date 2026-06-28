@@ -23,6 +23,8 @@ import {
 } from "./booking-email-layout"
 import { HOSTIV_EMAIL } from "./hostiv-email-theme"
 
+const GUEST_EMAIL_ATTACHMENT_TAIL = "<!--HOSTIV_GUEST_EMAIL_TAIL-->"
+
 function escapeHtml(raw: string): string {
   return raw
     .replace(/&/g, "&amp;")
@@ -160,7 +162,8 @@ function buildGuestConfirmationHtml(parts: BookingEmailContentParts) {
           ${shared.messageBlock}
           ${shared.priceRecapSection}
           ${shared.apartmentSection}
-          ${shared.siteLinksSection}`
+          ${shared.siteLinksSection}
+          ${GUEST_EMAIL_ATTACHMENT_TAIL}`
 
   return buildEmailShell({
     title: "Réservation confirmée",
@@ -175,6 +178,34 @@ function buildGuestConfirmationHtml(parts: BookingEmailContentParts) {
       "Répondez à cet e-mail pour nous joindre — nous vous répondons depuis la même conversation."
     )
   })
+}
+
+function buildWelcomeGuideAttachmentNoticeHtml() {
+  return `<tr>
+            <td style="padding:8px 32px 0;">
+              <div style="border:1px solid ${HOSTIV_EMAIL.border};border-radius:12px;padding:18px 20px;background:${HOSTIV_EMAIL.surfaceMuted};">
+                <p style="margin:0 0 6px;font-size:12px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:${HOSTIV_EMAIL.accentDeep};">Guide d&rsquo;accueil</p>
+                <p style="margin:0;font-size:14px;color:${HOSTIV_EMAIL.inkSoft};line-height:1.6;">Vous trouverez en pi&egrave;ce jointe le guide d&rsquo;accueil du logement (PDF)&nbsp;: informations pratiques, Wi&#8209;Fi, r&egrave;gles et contacts utiles pour votre s&eacute;jour.</p>
+              </div>
+            </td>
+          </tr>`
+}
+
+const WELCOME_GUIDE_ATTACHMENT_TEXT = [
+  "",
+  "Guide d'accueil",
+  "Vous trouverez en pièce jointe le guide d'accueil du logement (PDF) : informations pratiques, Wi‑Fi, règles et contacts utiles pour votre séjour."
+].join("\n")
+
+export function applyWelcomeGuideAttachmentToGuestEmail(content: { text: string; html: string }) {
+  const noticeHtml = buildWelcomeGuideAttachmentNoticeHtml()
+
+  return {
+    text: `${content.text}${WELCOME_GUIDE_ATTACHMENT_TEXT}`,
+    html: content.html.includes(GUEST_EMAIL_ATTACHMENT_TAIL)
+      ? content.html.replace(GUEST_EMAIL_ATTACHMENT_TAIL, `${noticeHtml}\n          ${GUEST_EMAIL_ATTACHMENT_TAIL}`)
+      : content.html
+  }
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/

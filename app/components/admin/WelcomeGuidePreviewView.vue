@@ -1,21 +1,25 @@
 <script setup lang="ts">
+import type { HostivLocale } from "../../types/hostiv-locale"
 import type { PropertyAdminRecord } from "../../types/property-admin"
 import {
   welcomeGuidePreviewScrollSelector,
   type WelcomeGuidePreviewPageId
 } from "../../utils/admin-welcome-guide-preview-messages"
 import { normalizeWelcomeGuide } from "../../utils/welcome-guide-content"
+import { applyWelcomeGuideLocaleToRecord } from "../../utils/welcome-guide-locale"
 import { buildWelcomeGuidePagesHtml, welcomeGuidePreviewStyles } from "../../utils/welcome-guide-html"
 
 const props = withDefaults(
   defineProps<{
     record: PropertyAdminRecord
+    contentLocale?: HostivLocale
     supabaseUrl?: string
     scrollPage?: WelcomeGuidePreviewPageId | null
     assetRevision?: number
     previewNonce?: number
   }>(),
   {
+    contentLocale: "fr",
     supabaseUrl: "",
     scrollPage: null,
     assetRevision: 0,
@@ -25,37 +29,44 @@ const props = withDefaults(
 
 const shellRef = ref<HTMLElement | null>(null)
 
-const guide = computed(() =>
-  normalizeWelcomeGuide(props.record.content?.welcome_guide, props.record.brand_name, props.record)
+const previewRecord = computed(() =>
+  applyWelcomeGuideLocaleToRecord(props.record, props.contentLocale)
 )
 
-const storedGuide = computed(() => props.record.content?.welcome_guide)
+const guide = computed(() =>
+  normalizeWelcomeGuide(
+    previewRecord.value.content?.welcome_guide,
+    previewRecord.value.brand_name,
+    previewRecord.value
+  )
+)
 
 const pagesHtml = computed(() =>
-  buildWelcomeGuidePagesHtml(props.record, guide.value, {
+  buildWelcomeGuidePagesHtml(previewRecord.value, guide.value, {
     supabaseUrl: props.supabaseUrl,
     assetRevision: props.assetRevision,
-    previewNonce: props.previewNonce
+    previewNonce: props.previewNonce,
+    locale: props.contentLocale
   })
 )
 
 const pagesHtmlKey = computed(() => {
   const g = guide.value
-  const raw = storedGuide.value
 
   return [
+    props.contentLocale,
     props.assetRevision,
     props.previewNonce,
-    raw?.cover_image_path,
-    raw?.emergency_image_path,
-    raw?.dining_image_path,
+    g.cover_title,
+    g.welcome_body,
+    g.parking_street,
     g.cover_image_path,
     g.emergency_image_path,
     g.dining_image_path
   ].join("|")
 })
 
-const previewStyles = computed(() => welcomeGuidePreviewStyles(props.record))
+const previewStyles = computed(() => welcomeGuidePreviewStyles(previewRecord.value))
 
 useHead({
   link: [

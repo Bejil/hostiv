@@ -1,10 +1,12 @@
 import {
+  applyWelcomeGuideAttachmentToGuestEmail,
   parseBookingRequestBody,
   sendBookingRequestEmail,
   sendResendEmail
 } from "./booking-email"
 import type { ParsedBookingReservation } from "./booking-reservation"
 import { reservationToEmailPayload } from "./booking-reservation"
+import { buildBookingWelcomeGuideAttachment } from "./welcome-guide-booking-email"
 
 export async function sendBookingReservationEmails(
   data: ParsedBookingReservation,
@@ -25,6 +27,14 @@ export async function sendBookingReservationEmails(
     throw new Error(parsed.message)
   }
 
+  const welcomeGuideAttachment = await buildBookingWelcomeGuideAttachment(data.propertySlug)
+  const guestEmail = welcomeGuideAttachment
+    ? applyWelcomeGuideAttachmentToGuestEmail({
+        text: parsed.guestText,
+        html: parsed.guestHtml
+      })
+    : { text: parsed.guestText, html: parsed.guestHtml }
+
   await Promise.all([
     sendBookingRequestEmail({
       resendApiKey: config.resendApiKey,
@@ -41,8 +51,9 @@ export async function sendBookingReservationEmails(
       to: parsed.guestEmail,
       replyTo: config.notifyTo,
       subject: parsed.guestSubject,
-      text: parsed.guestText,
-      html: parsed.guestHtml
+      text: guestEmail.text,
+      html: guestEmail.html,
+      attachments: welcomeGuideAttachment ? [welcomeGuideAttachment] : undefined
     })
   ])
 }

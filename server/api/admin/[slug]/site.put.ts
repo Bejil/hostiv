@@ -45,7 +45,10 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: "Le slug ne peut pas être modifié." })
   }
 
-  if (body.published === true) {
+  const wasPublished = Boolean(existing.published)
+  const willPublish = body.published === true
+
+  if (willPublish && !wasPublished) {
     if (!access.isPrimaryOwner && !access.isPlatformAdmin) {
       throw createError({
         statusCode: 403,
@@ -67,9 +70,6 @@ export default defineEventHandler(async (event) => {
   if (body.calendar_config) {
     assertValidCalendarConfigFeeds(body.calendar_config)
   }
-
-  const wasPublished = Boolean(existing.published)
-  const willPublish = body.published === true
 
   const updated = await updatePropertyAdmin(slug, {
     ...body,

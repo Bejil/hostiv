@@ -15,6 +15,7 @@ import { adminSectionNavKey } from "../../composables/admin-section-nav-context"
 import { useAdminEditorContext } from "../../composables/admin-editor-context"
 import type { StripeConnectStatus } from "../../types/stripe-connect"
 import { normalizeBookingConfig } from "../../utils/booking-config"
+import { waitForAdminAuthHeaders } from "../../utils/admin-auth-session"
 import {
   isProductionAdminHost,
   stripeConnectNeedsAttention
@@ -103,11 +104,7 @@ function applyAccountingSectionFromRoute() {
 }
 
 async function authHeaders(): Promise<Record<string, string>> {
-  const supabase = useSupabaseClient()
-  const { data } = await supabase.auth.getSession()
-  const token = data.session?.access_token
-
-  return token ? { Authorization: `Bearer ${token}` } : {}
+  return waitForAdminAuthHeaders()
 }
 
 async function loadStatus() {
@@ -116,6 +113,12 @@ async function loadStatus() {
 
   try {
     const headers = await authHeaders()
+
+    if (!headers.Authorization) {
+      error.value = ext.value.accounting.stripeErrors.load
+      status.value = null
+      return
+    }
 
     status.value = await $fetch<StripeConnectStatus>(`/api/admin/${props.slug}/stripe-connect`, {
       headers

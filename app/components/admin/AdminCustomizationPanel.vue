@@ -8,6 +8,7 @@ import AdminIcon from "./AdminIcon.vue"
 import AdminSiteAppearanceEditor from "./AdminSiteAppearanceEditor.vue"
 import AdminCustomizationBlockStatus from "./AdminCustomizationBlockStatus.vue"
 import { useAdminEditorContext } from "../../composables/admin-editor-context"
+import { useAdminLiveEditorContext } from "../../composables/admin-live-editor-context"
 import { isCustomizationBlockComplete } from "../../utils/admin-customization-block-completion"
 import { normalizeSiteTemplate } from "../../data/site-layouts"
 
@@ -20,6 +21,7 @@ const emit = defineEmits<{
 }>()
 
 const ctx = useAdminEditorContext()
+const liveEditor = useAdminLiveEditorContext()
 const { locale } = useAdminUi()
 
 const customizationBlocks = computed(() => getAdminCustomizationBlocks(locale.value))
@@ -85,6 +87,7 @@ function patchTemplate(patch: Parameters<typeof normalizeSiteTemplate>[0]) {
       ...patch
     })
   )
+  liveEditor?.pushSitePreview()
 }
 </script>
 

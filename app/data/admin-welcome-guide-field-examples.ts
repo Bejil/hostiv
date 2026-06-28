@@ -26,6 +26,18 @@ export const adminWelcomeGuideFieldExamplesFr = {
   hostEmail: ["hote@exemple.fr", "contact@votre-logement.fr"],
   wifiNetwork: ["WiFi-Logement", "MonWiFi_Invites", "NomDuRéseau_5G"],
   wifiPassword: ["motdepasse2024", "Bienvenue123!", "Code affiché dans le logement"],
+  parkingStreet: [
+    "Rue des Lilas — places résidentielles côté pair",
+    "Parking souterrain « Centre » — entrée 12 avenue…"
+  ],
+  parkingPayment: [
+    "Gratuit 19 h–9 h · horodateur en journée (1,50 €/h)",
+    "Badge fourni dans le logement · 8 €/24 h"
+  ],
+  parkingNote: [
+    "Évitez la zone livraisons devant l’immeuble (7 h–11 h).",
+    "Place n° 14 au sous-sol — hauteur max. 1,90 m"
+  ],
   welcomeEyebrow: ["Un accueil", "Pour commencer", "Avant tout"],
   welcomeBanner: ["chaleureux", "personnalisé", "tout en douceur"],
   welcomeSalutation: ["Cher invité", "Chers voyageurs", "Bonjour et bienvenue"],
@@ -159,6 +171,18 @@ const adminWelcomeGuideFieldExamplesEn = {
   hostEmail: ["host@example.com", "contact@your-property.com"],
   wifiNetwork: ["WiFi-Property", "GuestWiFi", "NetworkName_5G"],
   wifiPassword: ["password2024", "Welcome123!", "Code shown in the property"],
+  parkingStreet: [
+    "Lilac Street — resident parking on even side",
+    "Underground car park « Centre » — entrance at 12 Avenue…"
+  ],
+  parkingPayment: [
+    "Free 7 p.m.–9 a.m. · metered daytime (€1.50/h)",
+    "Badge in the property · €8/24 h"
+  ],
+  parkingNote: [
+    "Avoid the delivery zone in front of the building (7 a.m.–11 a.m.).",
+    "Space no. 14 underground — max. height 1.90 m"
+  ],
   welcomeEyebrow: ["A warm", "To begin", "First things first"],
   welcomeBanner: ["welcome", "personalised", "gently"],
   welcomeSalutation: ["Dear guest", "Dear travellers", "Hello and welcome"],

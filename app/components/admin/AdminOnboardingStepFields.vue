@@ -50,6 +50,7 @@ function patchTemplate(patch: Parameters<typeof normalizeSiteTemplate>[0]) {
       ...patch
     })
   )
+  liveEditor?.pushSitePreview()
 }
 </script>
 

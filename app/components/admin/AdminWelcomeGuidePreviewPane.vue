@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { RefreshCw } from "@lucide/vue"
+import type { HostivLocale } from "../../types/hostiv-locale"
 import type { PropertyAdminRecord } from "../../types/property-admin"
 import { useAdminLiveEditorContext } from "../../composables/admin-live-editor-context"
 import {
@@ -8,7 +9,6 @@ import {
   type AdminWelcomeGuidePreviewGuideMessage,
   type WelcomeGuidePreviewPageId
 } from "../../utils/admin-welcome-guide-preview-messages"
-import { applyWelcomeGuideLocaleToRecord } from "../../utils/welcome-guide-locale"
 import { WELCOME_GUIDE_A4_WIDTH_PX } from "../../utils/welcome-guide-html"
 
 const props = defineProps<{
@@ -20,12 +20,7 @@ const props = defineProps<{
 
 const { ui } = useAdminUi()
 const liveEditor = useAdminLiveEditorContext()
-
-function buildLocalizedPreviewRecord() {
-  const locale = liveEditor?.siteEditLocale.value ?? "fr"
-
-  return applyWelcomeGuideLocaleToRecord(props.record, locale)
-}
+const siteEditLocale = liveEditor?.siteEditLocale ?? ref<HostivLocale>("fr")
 
 const runtimeConfig = useRuntimeConfig()
 const supabaseUrl = computed(() => String(runtimeConfig.public.supabaseUrl || "").trim())
@@ -35,11 +30,13 @@ const canvasRef = ref<HTMLElement | null>(null)
 const canvasWidth = ref(0)
 const canvasHeight = ref(720)
 const iframeReady = ref(false)
+let pendingPush = false
 
 const designWidth = WELCOME_GUIDE_A4_WIDTH_PX
 
 const embedSrc = computed(
-  () => `/${encodeURIComponent(props.slug)}/admin/welcome-guide-preview-embed`
+  () =>
+    `/${encodeURIComponent(props.slug)}/admin/welcome-guide-preview-embed?lang=${siteEditLocale.value}`
 )
 
 const scrollPage = computed(() => props.activePage ?? null)
@@ -84,16 +81,25 @@ const previewPushNonce = ref(0)
 function pushGuideToIframe(scrollTo: WelcomeGuidePreviewPageId | null = null) {
   const win = iframeRef.value?.contentWindow
 
-  if (!win || !iframeReady.value) {
+  if (!win) {
+    pendingPush = true
     return
   }
+
+  if (!iframeReady.value) {
+    pendingPush = true
+    return
+  }
+
+  pendingPush = false
 
   try {
     previewPushNonce.value += 1
 
     const payload: AdminWelcomeGuidePreviewGuideMessage = {
       type: ADMIN_WELCOME_GUIDE_PREVIEW_MESSAGE.guide,
-      record: cloneRecordForWelcomeGuidePreview(buildLocalizedPreviewRecord()),
+      record: cloneRecordForWelcomeGuidePreview(props.record),
+      locale: siteEditLocale.value,
       supabaseUrl: supabaseUrl.value,
       scrollPage: scrollTo,
       assetRevision: props.assetRevision,
@@ -137,6 +143,11 @@ function onWindowMessage(event: MessageEvent) {
 
   if (event.data?.type === ADMIN_WELCOME_GUIDE_PREVIEW_MESSAGE.ready) {
     iframeReady.value = true
+
+    if (pendingPush) {
+      pendingPush = false
+    }
+
     schedulePushGuideToIframe(scrollPage.value)
   }
 }
@@ -180,11 +191,20 @@ onMounted(() => {
 watch(canvasRef, (el) => observeCanvas(el), { immediate: true })
 
 watch(
+  siteEditLocale,
+  () => {
+    iframeReady.value = false
+    pendingPush = true
+    schedulePushGuideToIframe(null)
+  },
+  { flush: "post" }
+)
+
+watch(
   () =>
     [
       props.record,
       props.assetRevision,
-      liveEditor?.siteEditLocale.value,
       props.record.content.welcome_guide?.emergency_image_path,
       props.record.content.welcome_guide?.dining_image_path,
       props.record.content.welcome_guide?.cover_image_path,
@@ -239,6 +259,7 @@ onUnmounted(() => {
     <div ref="canvasRef" class="admin-live-preview__canvas">
       <div class="admin-live-preview__scaler" :style="scalerStyle">
         <iframe
+          :key="siteEditLocale"
           ref="iframeRef"
           class="admin-live-preview__iframe"
           :src="embedSrc"

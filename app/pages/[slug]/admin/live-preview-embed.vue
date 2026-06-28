@@ -2,10 +2,12 @@
 import PropertySitePageView from "../../../components/site/PropertySitePageView.vue"
 import type { HostivLocale } from "../../../types/hostiv-locale"
 import type { PropertySiteRecord } from "../../../types/property-site"
+import { normalizeSiteTemplate } from "../../../data/site-layouts"
 import {
   ADMIN_LIVE_PREVIEW_MESSAGE,
   isAdminLivePreviewSiteMessage
 } from "../../../utils/admin-live-preview-messages"
+import { readAdminPreviewLocale } from "../../../utils/admin-preview-locale"
 
 definePageMeta({
   layout: false,
@@ -42,11 +44,29 @@ useHead({
     }
   ]
 })
-const site = ref<PropertySiteRecord | null>(null)
+
+const rawSite = ref<PropertySiteRecord | null>(null)
 const scrollAnchor = ref<string | null>(null)
-const contentLocale = ref<HostivLocale>("fr")
+const contentLocale = ref<HostivLocale>(readAdminPreviewLocale(route.query.lang))
 const assetRevision = ref(0)
 const previewNonce = ref(0)
+
+watch(
+  () => route.query.lang,
+  (lang) => {
+    contentLocale.value = readAdminPreviewLocale(lang)
+  }
+)
+
+const sitePreviewKey = computed(() => {
+  if (!rawSite.value) {
+    return `empty-${contentLocale.value}-${previewNonce.value}`
+  }
+
+  const template = normalizeSiteTemplate(rawSite.value.content.template, { forPublic: true })
+
+  return `${template.layout}-${template.theme}-${contentLocale.value}-${previewNonce.value}`
+})
 
 let heightObserver: ResizeObserver | null = null
 let heightReportFrame = 0
@@ -86,7 +106,7 @@ function onParentMessage(event: MessageEvent) {
     return
   }
 
-  site.value = event.data.site
+  rawSite.value = event.data.site
   scrollAnchor.value = event.data.scrollAnchor
   contentLocale.value = event.data.locale
   assetRevision.value = event.data.assetRevision ?? 0
@@ -122,15 +142,16 @@ onUnmounted(() => {
   heightObserver = null
 })
 
-watch(site, () => {
+watch([rawSite, contentLocale], () => {
   nextTick(reportHeight)
 })
 </script>
 
 <template>
   <PropertySitePageView
-    v-if="site"
-    :site="site"
+    v-if="rawSite"
+    :key="sitePreviewKey"
+    :site="rawSite"
     :slug="slug"
     live-preview
     :content-locale="contentLocale"

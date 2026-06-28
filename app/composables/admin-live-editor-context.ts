@@ -24,6 +24,10 @@ export type AdminLiveEditorContext = {
   bumpSitePreviewAssets: () => void
   /** Enregistre un push immédiat vers l’iframe aperçu site (après upload d’image). */
   registerSitePreviewPusher: (push: () => void) => () => void
+  /** Pousse l’état courant des aperçus live (site + guide). */
+  pushLivePreviews: () => void
+  /** @deprecated Préférer pushLivePreviews */
+  pushSitePreview: () => void
 }
 
 export const adminLiveEditorContextKey: InjectionKey<AdminLiveEditorContext> =

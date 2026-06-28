@@ -46,6 +46,7 @@ import {
 } from "../../utils/house-rules-time"
 import { publishableGalleryCategories, resolveGalleryCategoryIdForCard } from "../../utils/gallery-category-admin"
 import {
+  applySiteContentLocale,
   resolveLocaleChromeField,
   resolveLocalizedFeaturedSpace
 } from "../../utils/site-content-locale"
@@ -82,7 +83,13 @@ const props = withDefaults(
   }
 )
 
-const site = computed(() => props.site)
+const site = computed(() => {
+  if (props.livePreview && props.contentLocale) {
+    return applySiteContentLocale(props.site, props.contentLocale)
+  }
+
+  return props.site
+})
 const slug = computed(() => props.slug)
 
 const { locale: hostivLocale } = useHostivLocale()

@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import WelcomeGuidePreviewView from "../../../components/admin/WelcomeGuidePreviewView.vue"
+import type { HostivLocale } from "../../../types/hostiv-locale"
 import type { PropertyAdminRecord } from "../../../types/property-admin"
 import {
   ADMIN_WELCOME_GUIDE_PREVIEW_MESSAGE,
   isAdminWelcomeGuidePreviewGuideMessage,
   type WelcomeGuidePreviewPageId
 } from "../../../utils/admin-welcome-guide-preview-messages"
+import { readAdminPreviewLocale } from "../../../utils/admin-preview-locale"
 
 definePageMeta({
   layout: false,
@@ -21,11 +23,32 @@ definePageMeta({
   }
 })
 
-const record = ref<PropertyAdminRecord | null>(null)
+const route = useRoute()
+
+const rawRecord = ref<PropertyAdminRecord | null>(null)
+const previewLocale = ref<HostivLocale>(readAdminPreviewLocale(route.query.lang))
 const supabaseUrl = ref("")
 const scrollPage = ref<WelcomeGuidePreviewPageId | null>(null)
 const assetRevision = ref(0)
 const previewNonce = ref(0)
+
+const previewViewKey = computed(
+  () =>
+    [
+      previewLocale.value,
+      assetRevision.value,
+      previewNonce.value,
+      rawRecord.value?.content?.welcome_guide?.cover_image_path,
+      rawRecord.value?.content?.welcome_guide_en?.cover_image_path
+    ].join("|")
+)
+
+watch(
+  () => route.query.lang,
+  (lang) => {
+    previewLocale.value = readAdminPreviewLocale(lang)
+  }
+)
 
 function onParentMessage(event: MessageEvent) {
   if (event.origin !== window.location.origin) {
@@ -36,23 +59,13 @@ function onParentMessage(event: MessageEvent) {
     return
   }
 
-  record.value = event.data.record
+  rawRecord.value = event.data.record
+  previewLocale.value = event.data.locale
   supabaseUrl.value = event.data.supabaseUrl
   scrollPage.value = event.data.scrollPage
   assetRevision.value = event.data.assetRevision ?? 0
   previewNonce.value = event.data.previewNonce ?? 0
 }
-
-const previewViewKey = computed(
-  () =>
-    [
-      assetRevision.value,
-      previewNonce.value,
-      record.value?.content?.welcome_guide?.cover_image_path,
-      record.value?.content?.welcome_guide?.emergency_image_path,
-      record.value?.content?.welcome_guide?.dining_image_path
-    ].join("|")
-)
 
 onMounted(() => {
   window.addEventListener("message", onParentMessage)
@@ -69,9 +82,10 @@ onUnmounted(() => {
 
 <template>
   <WelcomeGuidePreviewView
-    v-if="record"
+    v-if="rawRecord"
     :key="previewViewKey"
-    :record="record"
+    :record="rawRecord"
+    :content-locale="previewLocale"
     :supabase-url="supabaseUrl"
     :scroll-page="scrollPage"
     :asset-revision="assetRevision"

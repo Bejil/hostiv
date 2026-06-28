@@ -313,7 +313,7 @@ export function normalizePropertyAdminRecord(raw: PropertyAdminRecord): Property
           ...(raw.location ?? {}),
           address: String(raw.location?.address ?? DEFAULT_LOCATION.address)
         },
-        content
+        content: (raw.content ?? content) as PropertySiteContent
       } as PropertyAdminRecord),
       welcome_guide_en: raw.content?.welcome_guide_en
         ? normalizeWelcomeGuide(raw.content.welcome_guide_en, brandName, {
@@ -330,7 +330,7 @@ export function normalizePropertyAdminRecord(raw: PropertyAdminRecord): Property
               ...(raw.location ?? {}),
               address: String(raw.location?.address ?? DEFAULT_LOCATION.address)
             },
-            content
+            content: (raw.content ?? content) as PropertySiteContent
           } as PropertyAdminRecord)
         : undefined
     }

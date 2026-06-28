@@ -9,6 +9,7 @@ import type { WelcomeGuidePreviewPageId } from "../../utils/admin-welcome-guide-
 import type { AdminNavSectionId, AdminSectionId } from "../../data/admin-nav-sections"
 import type { PropertyAdminRecord } from "../../types/property-admin"
 import type { HostivLocale } from "../../types/hostiv-locale"
+import { normalizeSiteTemplate } from "../../data/site-layouts"
 
 const props = defineProps<{
   modelValue: PropertyAdminRecord
@@ -74,6 +75,23 @@ function bumpSitePreviewAssets() {
   })
 }
 
+function pushLivePreviews() {
+  nextTick(() => {
+    sitePreviewPushHandler?.()
+    welcomeGuidePreviewPushHandler?.()
+  })
+}
+
+function siteTemplatePreviewSignature(record: PropertyAdminRecord) {
+  const template = normalizeSiteTemplate(record.content?.template, { forPublic: true })
+
+  return `${template.layout}-${template.theme}`
+}
+
+function pushSitePreview() {
+  pushLivePreviews()
+}
+
 const record = computed({
   get: () => props.modelValue,
   set: (value) => emit("update:modelValue", value)
@@ -91,6 +109,18 @@ const previewToolbarNote = computed(() =>
   activeSection.value === "welcome-guide"
     ? ext.value.liveEditor.toolbarNoteWelcomeGuide
     : ext.value.liveEditor.toolbarNoteCustomization
+)
+
+watch(siteEditLocale, () => {
+  pushLivePreviews()
+})
+
+watch(
+  () => siteTemplatePreviewSignature(props.modelValue),
+  () => {
+    pushLivePreviews()
+  },
+  { flush: "post" }
 )
 
 watch(
@@ -144,7 +174,9 @@ provide(adminLiveEditorContextKey, {
   registerWelcomeGuidePreviewPusher,
   sitePreviewAssetRevision,
   bumpSitePreviewAssets,
-  registerSitePreviewPusher
+  registerSitePreviewPusher,
+  pushLivePreviews,
+  pushSitePreview
 })
 
 defineExpose({

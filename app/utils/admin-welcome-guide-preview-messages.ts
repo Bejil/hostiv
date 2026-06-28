@@ -1,3 +1,4 @@
+import type { HostivLocale } from "../types/hostiv-locale"
 import type { PropertyAdminRecord } from "../types/property-admin"
 
 export const ADMIN_WELCOME_GUIDE_PREVIEW_MESSAGE = {
@@ -17,6 +18,7 @@ export type WelcomeGuidePreviewPageId =
 export type AdminWelcomeGuidePreviewGuideMessage = {
   type: ADMIN_WELCOME_GUIDE_PREVIEW_MESSAGE.guide
   record: PropertyAdminRecord
+  locale: HostivLocale
   supabaseUrl: string
   scrollPage: WelcomeGuidePreviewPageId | null
   assetRevision: number
@@ -37,6 +39,8 @@ export function isAdminWelcomeGuidePreviewGuideMessage(
     (data as AdminWelcomeGuidePreviewGuideMessage).type ===
       ADMIN_WELCOME_GUIDE_PREVIEW_MESSAGE.guide &&
     typeof (data as AdminWelcomeGuidePreviewGuideMessage).record === "object" &&
+    ((data as AdminWelcomeGuidePreviewGuideMessage).locale === "fr" ||
+      (data as AdminWelcomeGuidePreviewGuideMessage).locale === "en") &&
     typeof (data as AdminWelcomeGuidePreviewGuideMessage).assetRevision === "number" &&
     typeof (data as AdminWelcomeGuidePreviewGuideMessage).previewNonce === "number"
   )

@@ -16,6 +16,15 @@ import AdminWelcomeGuideDiningEditor from "./AdminWelcomeGuideDiningEditor.vue"
 import AdminWelcomeGuideEmergencyEditor from "./AdminWelcomeGuideEmergencyEditor.vue"
 import AdminWelcomeGuidePlacesEditor from "./AdminWelcomeGuidePlacesEditor.vue"
 import AdminWelcomeGuideRulesEditor from "./AdminWelcomeGuideRulesEditor.vue"
+import {
+  isWelcomeGuidePage1Complete,
+  isWelcomeGuidePage2Complete,
+  isWelcomeGuidePage3Complete,
+  isWelcomeGuidePage4Complete,
+  isWelcomeGuidePage5Complete,
+  isWelcomeGuidePage6Complete,
+  isWelcomeGuidePage7Complete
+} from "../../utils/welcome-guide-completion"
 
 const { slug, record, getWelcomeGuide, patchWelcomeGuide, upload, previewUrl, saveDraft, siteEditLocale } =
   useAdminEditorContext()
@@ -64,99 +73,19 @@ const accordionUi = {
   body: "admin-customization-accordion__body"
 } as const
 
-const page1Complete = computed(() =>
-  [guide.value.cover_title, guide.value.cover_subtitle, guide.value.cover_image_path || record.value.hero_image_path].every(
-    (value) => String(value).trim().length > 0
-  )
-)
+const page1Complete = computed(() => isWelcomeGuidePage1Complete(guide.value, record.value))
 
-const page2Complete = computed(() => {
-  const hostPhoto = guide.value.host_image_path || record.value.host_photo_path
+const page2Complete = computed(() => isWelcomeGuidePage2Complete(guide.value, record.value))
 
-  return (
-    hasText(hostPhoto) &&
-    hasText(guide.value.host_name) &&
-    hasText(guide.value.welcome_body) &&
-    hasText(guide.value.welcome_signature) &&
-    hasText(guide.value.wifi_network) &&
-    hasText(guide.value.wifi_password) &&
-    (hasText(guide.value.host_phone) || hasText(guide.value.host_email))
-  )
-})
+const page3Complete = computed(() => isWelcomeGuidePage3Complete(guide.value))
 
-const page3Complete = computed(() => {
-  const rules = guide.value.rules ?? []
+const page5Complete = computed(() => isWelcomeGuidePage5Complete(guide.value))
 
-  return (
-    hasText(guide.value.rules_title) &&
-    hasText(guide.value.rules_banner) &&
-    hasText(guide.value.rules_footer) &&
-    rules.length > 0 &&
-    rules.every((rule) => hasText(rule.title) && hasText(rule.text))
-  )
-})
+const page6Complete = computed(() => isWelcomeGuidePage6Complete(guide.value, record.value))
 
-const page5Complete = computed(() => {
-  const places = guide.value.places ?? []
+const page7Complete = computed(() => isWelcomeGuidePage7Complete(guide.value))
 
-  return (
-    hasText(guide.value.places_city) &&
-    hasText(guide.value.places_title) &&
-    places.length > 0 &&
-    places.every(
-      (place) =>
-        hasText(place.image_path) &&
-        hasText(place.title) &&
-        hasText(place.description) &&
-        hasText(place.address)
-    )
-  )
-})
-
-const page6Complete = computed(() => {
-  const spots = guide.value.dining_spots ?? []
-  const photo = guide.value.dining_image_path || record.value.hero_image_path
-
-  return (
-    hasText(photo) &&
-    hasText(guide.value.dining_eyebrow) &&
-    hasText(guide.value.dining_banner) &&
-    hasText(guide.value.dining_intro) &&
-    spots.length > 0 &&
-    spots.every(
-      (spot) => hasText(spot.title) && hasText(spot.description) && hasText(spot.text)
-    )
-  )
-})
-
-const page7Complete = computed(() => {
-  const items = guide.value.checkout_items ?? []
-
-  return (
-    hasText(guide.value.checkout_title) &&
-    hasText(guide.value.checkout_banner) &&
-    hasText(guide.value.checkout_important) &&
-    hasText(guide.value.checkout_footer) &&
-    items.length > 0 &&
-    items.every((item) => hasText(item.title) && hasText(item.description))
-  )
-})
-
-const page4Complete = computed(() => {
-  const contacts = guide.value.emergency_contacts ?? []
-  const photo = guide.value.emergency_image_path || record.value.hero_image_path
-
-  return (
-    hasText(photo) &&
-    hasText(guide.value.emergency_eyebrow) &&
-    hasText(guide.value.emergency_banner) &&
-    hasText(guide.value.emergency_intro) &&
-    contacts.length > 0 &&
-    contacts.every(
-      (contact) => hasText(contact.title) && hasText(contact.description) && hasText(contact.text)
-    )
-  )
-})
+const page4Complete = computed(() => isWelcomeGuidePage4Complete(guide.value, record.value))
 
 function accordionIcon(value: string | undefined) {
   if (value === "page-1") {
@@ -214,10 +143,6 @@ function blockComplete(value: string | undefined) {
   return page2Complete.value
 }
 
-function hasText(value: string | undefined | null) {
-  return String(value ?? "").trim().length > 0
-}
-
 function updateGuide(partial: Partial<PropertyWelcomeGuide>) {
   patchWelcomeGuide(partial)
 }
@@ -248,7 +173,8 @@ async function onDownloadPdf() {
       slug.value,
       record.value,
       await authHeaders(),
-      welcomeGuideImagePreviewRevision.value
+      welcomeGuideImagePreviewRevision.value,
+      siteEditLocale.value
     )
   } catch (err: unknown) {
     const e = err as { data?: { message?: string }; message?: string }
@@ -475,6 +401,33 @@ const pageLeads = computed(() => {
                 :examples="[...fieldExamples.wifiPassword]"
                 full-width
                 @update:model-value="updateGuide({ wifi_password: String($event) })"
+              />
+              <AdminField
+                :label="ui.welcomeGuide.fields.parkingStreet"
+                type="textarea"
+                :rows="2"
+                :model-value="guide.parking_street"
+                :examples="[...fieldExamples.parkingStreet]"
+                full-width
+                @update:model-value="updateGuide({ parking_street: String($event) })"
+              />
+              <AdminField
+                :label="ui.welcomeGuide.fields.parkingPayment"
+                type="textarea"
+                :rows="2"
+                :model-value="guide.parking_payment"
+                :examples="[...fieldExamples.parkingPayment]"
+                full-width
+                @update:model-value="updateGuide({ parking_payment: String($event) })"
+              />
+              <AdminField
+                :label="ui.welcomeGuide.fields.parkingNote"
+                type="textarea"
+                :rows="2"
+                :model-value="guide.parking_note"
+                :examples="[...fieldExamples.parkingNote]"
+                full-width
+                @update:model-value="updateGuide({ parking_note: String($event) })"
               />
             </div>
           </div>

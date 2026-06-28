@@ -1,3 +1,4 @@
+import type { HostivLocale } from "../types/hostiv-locale"
 import type { PropertyAdminRecord } from "../types/property-admin"
 import { cloneRecordForWelcomeGuidePreview } from "./admin-welcome-guide-preview-messages"
 
@@ -5,14 +6,16 @@ export async function downloadWelcomeGuidePdf(
   slug: string,
   record: PropertyAdminRecord,
   headers: Record<string, string>,
-  assetRevision = 0
+  assetRevision = 0,
+  locale: HostivLocale = "fr"
 ) {
   const blob = await $fetch<Blob>(`/api/admin/${encodeURIComponent(slug)}/welcome-guide/pdf`, {
     method: "POST",
     headers,
     body: {
       record: cloneRecordForWelcomeGuidePreview(record),
-      assetRevision
+      assetRevision,
+      locale
     },
     responseType: "blob"
   })

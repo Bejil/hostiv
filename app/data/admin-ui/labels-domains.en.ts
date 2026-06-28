@@ -313,7 +313,7 @@ export const adminUiLabelsDomainsEn = {
     },
     pageLeads: {
       page1: "Background image, centred title and subtitle.",
-      page2: "Host and contact column on the left; welcome letter and Wi‑Fi on the right.",
+      page2: "Host column on the left; welcome letter on the right; contact and Wi‑Fi on one row, parking in a band below.",
       page3: "Centred title, list of 7 rules with icons and closing message.",
       page4: "Title banner, grid of 6 numbers and photo at the bottom of the page.",
       page5: "List of 4 places: photo on the left, title, address and description on the right.",
@@ -356,6 +356,9 @@ export const adminUiLabelsDomainsEn = {
       welcomeSignature: "Signature",
       wifiNetwork: "Wi‑Fi — network name",
       wifiPassword: "Wi‑Fi — password",
+      parkingStreet: "Parking — street / spot",
+      parkingPayment: "Parking — payment",
+      parkingNote: "Parking — good to know",
       rulesTitle: "Main title",
       rulesBanner: "Subtitle",
       rulesFooter: "Closing message",

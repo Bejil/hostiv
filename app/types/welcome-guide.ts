@@ -60,6 +60,10 @@ export type PropertyWelcomeGuide = {
   /** Page 2 — accès Wi‑Fi (colonne lettre d’accueil). */
   wifi_network: string
   wifi_password: string
+  /** Page 2 — stationnement (pied de page). */
+  parking_street: string
+  parking_payment: string
+  parking_note: string
 
   /** Page 2 — lettre d’accueil */
   welcome_eyebrow: string

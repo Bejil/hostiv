@@ -1,3 +1,4 @@
+import type { HostivLocale } from "../types/hostiv-locale"
 import type { PropertyAdminRecord } from "../types/property-admin"
 import { welcomeGuideRuleIconSvgHtml } from "../data/welcome-guide-rule-icons"
 import { normalizeWelcomeGuideRuleIcon } from "../data/welcome-guide-rule-icons"
@@ -34,6 +35,61 @@ export type WelcomeGuideHtmlOptions = {
   assetRevision?: number
   /** Pousse iframe — combiné à assetRevision pour forcer le rechargement des images. */
   previewNonce?: number
+  /** Libellés statiques de la page Accueil (p. 2) — distincts du contenu éditable. */
+  locale?: HostivLocale
+}
+
+type WelcomePageUiLabels = {
+  parkingTitle: string
+  contactTitle: string
+  parkingStreet: string
+  parkingPayment: string
+  parkingNote: string
+  wifiNetwork: string
+  wifiPassword: string
+}
+
+function welcomePageUiLabels(locale: HostivLocale = "fr"): WelcomePageUiLabels {
+  if (locale === "en") {
+    return {
+      parkingTitle: "Parking",
+      contactTitle: "Contact me",
+      parkingStreet: "Street / location",
+      parkingPayment: "Payment",
+      parkingNote: "Good to know",
+      wifiNetwork: "Network",
+      wifiPassword: "Password"
+    }
+  }
+
+  return {
+    parkingTitle: "Stationnement",
+    contactTitle: "Contactez-moi",
+    parkingStreet: "Rue / emplacement",
+    parkingPayment: "Paiement",
+    parkingNote: "À savoir",
+    wifiNetwork: "Réseau",
+    wifiPassword: "Mot de passe"
+  }
+}
+
+type CheckoutPageUiLabels = {
+  importantLabel: string
+  footerDefault: string
+}
+
+function checkoutPageUiLabels(locale: HostivLocale = "fr"): CheckoutPageUiLabels {
+  if (locale === "en") {
+    return {
+      importantLabel: "Very important",
+      footerDefault: "Thank you for your stay — we look forward to welcoming you again!"
+    }
+  }
+
+  return {
+    importantLabel: "Très important",
+    footerDefault: "Merci pour votre séjour — au plaisir de vous accueillir à nouveau !"
+  }
 }
 
 /** Format A4 à 96 CSS px/in (210 × 297 mm) — aperçu écran et viewport PDF. */
@@ -85,6 +141,9 @@ type WelcomePageContent = {
   hostEmail: string
   wifiNetwork: string
   wifiPassword: string
+  parkingStreet: string
+  parkingPayment: string
+  parkingNote: string
   welcomeEyebrow: string
   welcomeBanner: string
   welcomeSalutation: string
@@ -152,6 +211,9 @@ function buildWelcomePageContent(
     hostEmail: escapeHtml(guide.host_email.trim()),
     wifiNetwork: escapeHtml(guide.wifi_network.trim()),
     wifiPassword: escapeHtml(guide.wifi_password.trim()),
+    parkingStreet: escapeHtml(guide.parking_street.trim()),
+    parkingPayment: escapeHtml(guide.parking_payment.trim()),
+    parkingNote: escapeHtml(guide.parking_note.trim()),
     welcomeEyebrow: escapeHtml(guide.welcome_eyebrow.trim() || "Un accueil"),
     welcomeBanner: escapeHtml(guide.welcome_banner.trim() || "chaleureux"),
     welcomeSalutation: escapeHtml(guide.welcome_salutation.trim() || "Cher invité"),
@@ -192,6 +254,8 @@ const WG_ICON_MAIL = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
 
 const WG_ICON_WIFI = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.55a11 11 0 0 1 14 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M8.5 16.15a6 6 0 0 1 7 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="20" r="1.25" fill="currentColor"/></svg>`
 
+const WG_ICON_PARKING = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M10 7h3.2a2.8 2.8 0 1 1 0 5.6H10V7Zm0 5.6H13a2.6 2.6 0 1 1 0 5.2H10v-5.2Z" fill="currentColor"/></svg>`
+
 function welcomeContactLine(icon: string, value: string) {
   return `<p class="wg-welcome__contact-line">
     <span class="wg-welcome__contact-icon">${icon}</span>
@@ -199,7 +263,63 @@ function welcomeContactLine(icon: string, value: string) {
   </p>`
 }
 
-function welcomePageHtml(w: WelcomePageContent) {
+function welcomeFooterInfoRows(
+  rows: Array<{ label: string; value: string }>
+) {
+  return rows
+    .map(
+      (row) => `<div class="wg-welcome__footer-row">
+              <dt>${row.label}</dt>
+              <dd>${row.value}</dd>
+            </div>`
+    )
+    .join("")
+}
+
+function welcomeFooterInfoCard(
+  modifier: "wifi",
+  title: string,
+  icon: string,
+  rows: Array<{ label: string; value: string }>
+) {
+  if (rows.length === 0) {
+    return ""
+  }
+
+  return `<div class="wg-welcome__footer-card wg-welcome__footer-card--${modifier}">
+          <p class="wg-welcome__footer-card-title">
+            <span class="wg-welcome__footer-card-icon" aria-hidden="true">${icon}</span>
+            <strong>${title}</strong>
+          </p>
+          <dl class="wg-welcome__footer-details">${welcomeFooterInfoRows(rows)}</dl>
+        </div>`
+}
+
+function welcomeParkingBandHtml(rows: Array<{ label: string; value: string }>, parkingTitle: string) {
+  if (rows.length === 0) {
+    return ""
+  }
+
+  const items = rows
+    .map(
+      (row) => `<div class="wg-welcome__parking-row">
+            <dt class="wg-welcome__parking-label">${row.label}</dt>
+            <dd class="wg-welcome__parking-value">${row.value.replace(/\n/g, "<br />")}</dd>
+          </div>`
+    )
+    .join("")
+
+  return `<div class="wg-welcome__parking-band">
+        <div class="wg-welcome__parking-head">
+          <span class="wg-welcome__parking-icon" aria-hidden="true">${WG_ICON_PARKING}</span>
+          <p class="wg-welcome__parking-title"><strong>${parkingTitle}</strong></p>
+        </div>
+        <dl class="wg-welcome__parking-list">${items}</dl>
+      </div>`
+}
+
+function welcomePageHtml(w: WelcomePageContent, locale: HostivLocale = "fr") {
+  const labels = welcomePageUiLabels(locale)
   const photoStyle = w.hostImageUrl
     ? ` style="background-image:url('${escapeHtml(w.hostImageUrl)}')"`
     : ""
@@ -211,38 +331,37 @@ function welcomePageHtml(w: WelcomePageContent) {
 
   const contactHtml =
     contactLines.length > 0
-      ? `<div class="wg-welcome__contact">
-          <p class="wg-welcome__contact-title"><strong>Contactez-moi</strong></p>
+      ? `<div class="wg-welcome__footer-card wg-welcome__footer-card--contact">
+          <p class="wg-welcome__footer-card-title"><strong>${labels.contactTitle}</strong></p>
           <div class="wg-welcome__contact-lines">${contactLines.join("")}</div>
         </div>`
       : ""
 
-  const wifiHtml =
-    w.wifiNetwork || w.wifiPassword
-      ? `<div class="wg-welcome__wifi">
-          <p class="wg-welcome__wifi-title">
-            <span class="wg-welcome__wifi-icon" aria-hidden="true">${WG_ICON_WIFI}</span>
-            <strong>Wi‑Fi</strong>
-          </p>
-          <dl class="wg-welcome__wifi-details">
-            ${
-              w.wifiNetwork
-                ? `<div class="wg-welcome__wifi-row">
-              <dt>Réseau</dt>
-              <dd>${w.wifiNetwork}</dd>
-            </div>`
-                : ""
-            }
-            ${
-              w.wifiPassword
-                ? `<div class="wg-welcome__wifi-row">
-              <dt>Mot de passe</dt>
-              <dd>${w.wifiPassword}</dd>
-            </div>`
-                : ""
-            }
-          </dl>
-        </div>`
+  const wifiHtml = welcomeFooterInfoCard(
+    "wifi",
+    "Wi‑Fi",
+    WG_ICON_WIFI,
+    [
+      w.wifiNetwork ? { label: labels.wifiNetwork, value: w.wifiNetwork } : null,
+      w.wifiPassword ? { label: labels.wifiPassword, value: w.wifiPassword } : null
+    ].filter((row): row is { label: string; value: string } => Boolean(row))
+  )
+
+  const parkingRows = [
+    w.parkingStreet ? { label: labels.parkingStreet, value: w.parkingStreet } : null,
+    w.parkingPayment ? { label: labels.parkingPayment, value: w.parkingPayment } : null,
+    w.parkingNote ? { label: labels.parkingNote, value: w.parkingNote } : null
+  ].filter((row): row is { label: string; value: string } => Boolean(row))
+
+  const parkingHtml = welcomeParkingBandHtml(parkingRows, labels.parkingTitle)
+
+  const primaryFooterHtml = [contactHtml, wifiHtml].filter(Boolean).join("")
+  const footerHtml =
+    primaryFooterHtml || parkingHtml
+      ? `<footer class="wg-welcome__footer">
+      ${parkingHtml}
+      ${primaryFooterHtml ? `<div class="wg-welcome__footer-primary">${primaryFooterHtml}</div>` : ""}
+    </footer>`
       : ""
 
   const bodyHtml =
@@ -252,29 +371,24 @@ function welcomePageHtml(w: WelcomePageContent) {
 
   return `
   <section class="wg-page wg-welcome">
-    <aside class="wg-welcome__sidebar">
-      <div class="wg-welcome__host-photo wg-photo"${photoStyle} role="img" aria-label="${w.hostName || "Hôte"}"></div>
-      ${w.hostName ? `<p class="wg-welcome__host-name">${w.hostName}</p>` : ""}
-      <h2 class="wg-welcome__host-heading">${w.hostSectionTitle}</h2>
-      ${w.hostBio ? `<p class="wg-welcome__bio">${w.hostBio.replace(/\n/g, "<br />")}</p>` : ""}
-      ${contactHtml}
-    </aside>
-    <div class="wg-welcome__main">
-      <header class="wg-welcome__header">
-        <p class="wg-welcome__eyebrow">${w.welcomeEyebrow}</p>
-        <div class="wg-welcome__banner"><span>${w.welcomeBanner}</span></div>
-      </header>
-      <h2 class="wg-welcome__salutation">${w.welcomeSalutation}</h2>
-      ${bodyHtml ? `<div class="wg-welcome__body">${bodyHtml}</div>` : ""}
-      ${
-        w.welcomeSignature || wifiHtml
-          ? `<div class="wg-welcome__main-bottom">
-      ${w.welcomeSignature ? `<p class="wg-welcome__signature">${w.welcomeSignature}</p>` : ""}
-      ${wifiHtml}
-    </div>`
-          : ""
-      }
+    <div class="wg-welcome__columns">
+      <aside class="wg-welcome__sidebar">
+        <div class="wg-welcome__host-photo wg-photo"${photoStyle} role="img" aria-label="${w.hostName || "Hôte"}"></div>
+        ${w.hostName ? `<p class="wg-welcome__host-name">${w.hostName}</p>` : ""}
+        <h2 class="wg-welcome__host-heading">${w.hostSectionTitle}</h2>
+        ${w.hostBio ? `<p class="wg-welcome__bio">${w.hostBio.replace(/\n/g, "<br />")}</p>` : ""}
+      </aside>
+      <div class="wg-welcome__main">
+        <header class="wg-welcome__header">
+          <p class="wg-welcome__eyebrow">${w.welcomeEyebrow}</p>
+          <div class="wg-welcome__banner"><span>${w.welcomeBanner}</span></div>
+        </header>
+        <h2 class="wg-welcome__salutation">${w.welcomeSalutation}</h2>
+        ${bodyHtml ? `<div class="wg-welcome__body">${bodyHtml}</div>` : ""}
+        ${w.welcomeSignature ? `<p class="wg-welcome__signature">${w.welcomeSignature}</p>` : ""}
+      </div>
     </div>
+    ${footerHtml}
   </section>`
 }
 
@@ -573,24 +687,25 @@ function welcomeGuideTextBlocksHtml(text: string) {
 type CheckoutPageContent = {
   title: string
   banner: string
+  importantLabel: string
   important: string
   footer: string
   items: Array<{ icon: WelcomeGuideRuleIcon; title: string; description: string }>
 }
 
-function buildCheckoutPageContent(guide: PropertyWelcomeGuide): CheckoutPageContent {
+function buildCheckoutPageContent(guide: PropertyWelcomeGuide, locale: HostivLocale = "fr"): CheckoutPageContent {
+  const labels = checkoutPageUiLabels(locale)
   const importantDefault =
     "Merci de suivre attentivement chaque étape ci-dessous : elle compte pour les voyageurs qui vous succéderont, pour notre équipe d’entretien et pour que le logement reste accueillant."
 
   return {
     title: escapeHtml(guide.checkout_title.trim() || "Check-out"),
     banner: escapeHtml(guide.checkout_banner.trim() || "• Avant de partir •"),
+    importantLabel: labels.importantLabel,
     important: welcomeGuideTextBlocksHtml(
       guide.checkout_important.trim() || importantDefault
     ),
-    footer: escapeHtml(
-      guide.checkout_footer.trim() || "Merci pour votre séjour — au plaisir de vous accueillir à nouveau !"
-    ),
+    footer: escapeHtml(guide.checkout_footer.trim() || labels.footerDefault),
     items: (guide.checkout_items ?? [])
       .slice(0, WELCOME_GUIDE_MAX_CHECKOUT_COUNT)
       .map((item) => ({
@@ -628,7 +743,7 @@ function checkoutPageHtml(c: CheckoutPageContent) {
       ${
         c.important
           ? `<aside class="wg-checkout__important">
-        <p class="wg-checkout__important-label">Très important</p>
+        <p class="wg-checkout__important-label">${c.importantLabel}</p>
         <div class="wg-checkout__important-body">${c.important}</div>
       </aside>`
           : ""
@@ -898,17 +1013,24 @@ function welcomeGuideSharedStyles(theme = resolvePropertyInvoiceTheme({})) {
 
     .wg-welcome {
       display: flex;
-      flex-direction: row;
+      flex-direction: column;
       min-height: 100%;
       height: 100%;
       color: var(--wg-ink);
+    }
+    .wg-welcome__columns {
+      flex: 1;
+      display: flex;
+      flex-direction: row;
+      align-items: stretch;
+      min-height: 0;
     }
     .wg-welcome__sidebar {
       flex: 0 0 34%;
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 14mm 7mm 0;
+      padding: 14mm 7mm 10mm;
       background: var(--wg-rose);
       text-align: center;
     }
@@ -945,77 +1067,15 @@ function welcomeGuideSharedStyles(theme = resolvePropertyInvoiceTheme({})) {
       padding: 0 1mm;
       flex: 1;
     }
-    .wg-welcome__contact {
-      margin-top: auto;
-      width: calc(100% + 14mm);
-      margin-left: -7mm;
-      margin-right: -7mm;
-      margin-bottom: 0;
-      padding: 4.5mm 5mm 5mm;
-      background: var(--wg-burgundy);
-      color: var(--wg-accent-text);
-      font-family: var(--wg-sans);
-      font-size: 0.78rem;
-      line-height: 1.45;
-      letter-spacing: 0.02em;
-      text-align: center;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-    .wg-welcome__contact-title {
-      margin: 0 0 2.5mm;
-      font-size: 0.84rem;
-      line-height: 1.3;
-    }
-    .wg-welcome__contact-title strong {
-      font-weight: 700;
-    }
-    .wg-welcome__contact-lines {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 1.5mm;
-      width: 100%;
-    }
-    .wg-welcome__contact-line {
-      margin: 0;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 1.5mm;
-      flex-wrap: wrap;
-    }
-    .wg-welcome__contact-icon {
-      display: inline-flex;
-      width: 3.8mm;
-      height: 3.8mm;
-      flex-shrink: 0;
-    }
-    .wg-welcome__contact-icon svg {
-      width: 100%;
-      height: 100%;
-      display: block;
-    }
-    .wg-welcome__contact-value {
-      font-weight: 400;
-    }
 
     .wg-welcome__main {
       flex: 1;
       display: flex;
       flex-direction: column;
-      min-height: 100%;
-      padding: 12mm 11mm 0 10mm;
+      min-height: 0;
+      padding: 12mm 11mm 10mm 10mm;
       min-width: 0;
       box-sizing: border-box;
-    }
-    .wg-welcome__main-bottom {
-      margin-top: auto;
-      flex-shrink: 0;
-      width: calc(100% + 10mm);
-      margin-left: -10mm;
-      margin-right: -11mm;
     }
     .wg-welcome__header {
       text-align: center;
@@ -1061,60 +1121,100 @@ function welcomeGuideSharedStyles(theme = resolvePropertyInvoiceTheme({})) {
     .wg-welcome__body p + p {
       margin-top: 3.5mm;
     }
-    .wg-welcome__main-bottom .wg-welcome__signature {
-      margin-top: 0;
+    .wg-welcome__signature {
+      margin-top: auto;
+      padding-top: 4mm;
+      text-align: right;
+      font-family: var(--wg-script);
+      font-size: 1.95rem;
+      font-weight: 600;
+      line-height: 1.2;
     }
-    .wg-welcome__main-bottom .wg-welcome__wifi {
-      margin-top: 3mm;
-      margin-bottom: 0;
-      border-left: none;
-      border-right: none;
-      border-bottom: none;
-      border-radius: 0;
-    }
-    .wg-welcome__main .wg-welcome__wifi {
+
+    .wg-welcome__footer {
+      display: flex;
+      flex-direction: column;
       flex-shrink: 0;
-      padding: 5mm 11mm 5mm 10mm;
-      background: var(--wg-rose);
-      border: 1px solid rgba(139, 58, 58, 0.18);
-      text-align: left;
-      color: var(--wg-ink);
+      width: 100%;
+      margin: 0;
     }
-    .wg-welcome__main .wg-welcome__wifi-title {
-      margin: 0 0 3.5mm;
+    .wg-welcome__footer-primary {
+      display: flex;
+      flex-direction: row;
+      align-items: stretch;
+      width: 100%;
+    }
+    .wg-welcome__footer-card {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      min-height: 24mm;
+      padding: 4.5mm 5mm 5mm;
+      box-sizing: border-box;
+    }
+    .wg-welcome__footer-card--contact {
+      flex: 0 0 34%;
+      background: var(--wg-burgundy);
+      color: var(--wg-accent-text);
+      font-family: var(--wg-sans);
+      font-size: 0.78rem;
+      line-height: 1.45;
+      letter-spacing: 0.02em;
+      text-align: center;
+      align-items: center;
+    }
+    .wg-welcome__footer-card--wifi {
+      flex: 1 1 0;
+      min-width: 0;
+      background: var(--wg-rose);
+      color: var(--wg-ink);
+      border-top: 1px solid rgba(139, 58, 58, 0.14);
+      text-align: left;
+    }
+    .wg-welcome__footer-card-title {
+      margin: 0 0 2.5mm;
       display: flex;
       align-items: center;
-      justify-content: flex-start;
-      gap: 2.5mm;
+      justify-content: center;
+      gap: 2mm;
       font-family: var(--wg-serif);
+      font-size: 0.84rem;
+      line-height: 1.3;
+    }
+    .wg-welcome__footer-card--wifi .wg-welcome__footer-card-title {
+      justify-content: flex-start;
       font-size: 0.88rem;
       font-weight: 700;
       letter-spacing: 0.14em;
       text-transform: uppercase;
       color: var(--wg-burgundy);
     }
-    .wg-welcome__main .wg-welcome__wifi-title strong {
+    .wg-welcome__footer-card-title strong {
+      font-weight: 700;
+    }
+    .wg-welcome__footer-card--wifi .wg-welcome__footer-card-title strong {
       font-weight: 800;
     }
-    .wg-welcome__main .wg-welcome__wifi-icon {
+    .wg-welcome__footer-card-icon {
       display: inline-flex;
       width: 4.8mm;
       height: 4.8mm;
       flex-shrink: 0;
       color: var(--wg-burgundy);
     }
-    .wg-welcome__main .wg-welcome__wifi-icon svg {
+    .wg-welcome__footer-card-icon svg {
       width: 100%;
       height: 100%;
       display: block;
     }
-    .wg-welcome__main .wg-welcome__wifi-details {
+    .wg-welcome__footer-details {
       margin: 0;
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 4mm 8mm;
+      grid-template-columns: 1fr;
+      gap: 2.5mm;
+      width: 100%;
     }
-    .wg-welcome__main .wg-welcome__wifi-row {
+    .wg-welcome__footer-row {
       display: flex;
       flex-direction: column;
       gap: 1mm;
@@ -1123,7 +1223,7 @@ function welcomeGuideSharedStyles(theme = resolvePropertyInvoiceTheme({})) {
       font-size: 0.82rem;
       line-height: 1.4;
     }
-    .wg-welcome__main .wg-welcome__wifi-row dt {
+    .wg-welcome__footer-row dt {
       margin: 0;
       font-weight: 600;
       letter-spacing: 0.06em;
@@ -1131,7 +1231,10 @@ function welcomeGuideSharedStyles(theme = resolvePropertyInvoiceTheme({})) {
       font-size: 0.72rem;
       color: var(--wg-muted);
     }
-    .wg-welcome__main .wg-welcome__wifi-row dd {
+    .wg-welcome__footer-card--contact .wg-welcome__footer-row dt {
+      color: rgba(255, 248, 241, 0.78);
+    }
+    .wg-welcome__footer-row dd {
       margin: 0;
       font-size: 0.92rem;
       font-weight: 700;
@@ -1139,13 +1242,121 @@ function welcomeGuideSharedStyles(theme = resolvePropertyInvoiceTheme({})) {
       overflow-wrap: anywhere;
       word-break: break-word;
     }
-    .wg-welcome__signature {
-      margin-top: 4mm;
-      text-align: right;
-      font-family: var(--wg-script);
-      font-size: 1.95rem;
-      font-weight: 600;
-      line-height: 1.2;
+    .wg-welcome__footer-card--contact .wg-welcome__footer-row dd {
+      color: var(--wg-accent-text);
+      font-weight: 400;
+    }
+    .wg-welcome__parking-band {
+      display: flex;
+      flex-direction: column;
+      gap: 2.5mm;
+      width: 100%;
+      padding: 3.5mm 7mm 4mm;
+      background: rgba(139, 58, 58, 0.06);
+      border-bottom: 1px solid rgba(139, 58, 58, 0.14);
+      box-sizing: border-box;
+    }
+    .wg-welcome__parking-head {
+      display: flex;
+      align-items: center;
+      gap: 2mm;
+      padding-bottom: 1.5mm;
+      border-bottom: 1px solid rgba(139, 58, 58, 0.12);
+    }
+    .wg-welcome__parking-title {
+      margin: 0;
+      font-family: var(--wg-serif);
+      font-size: 0.82rem;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--wg-burgundy);
+    }
+    .wg-welcome__parking-title strong {
+      font-weight: 800;
+    }
+    .wg-welcome__parking-icon {
+      display: inline-flex;
+      width: 4.5mm;
+      height: 4.5mm;
+      flex-shrink: 0;
+      color: var(--wg-burgundy);
+    }
+    .wg-welcome__parking-icon svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    .wg-welcome__parking-list {
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 2mm;
+      width: 100%;
+    }
+    .wg-welcome__parking-row {
+      display: grid;
+      grid-template-columns: 30mm minmax(0, 1fr);
+      gap: 4mm;
+      align-items: start;
+      margin: 0;
+      padding: 1.8mm 0 1.8mm 3mm;
+      border-left: 2px solid rgba(139, 58, 58, 0.35);
+    }
+    .wg-welcome__parking-row + .wg-welcome__parking-row {
+      border-top: 1px solid rgba(139, 58, 58, 0.08);
+      padding-top: 2.8mm;
+    }
+    .wg-welcome__parking-label {
+      margin: 0;
+      font-family: var(--wg-sans);
+      font-size: 0.66rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      line-height: 1.35;
+      color: var(--wg-burgundy);
+      hyphens: auto;
+    }
+    .wg-welcome__parking-value {
+      margin: 0;
+      font-family: var(--wg-sans);
+      font-size: 0.78rem;
+      font-weight: 400;
+      line-height: 1.48;
+      color: var(--wg-ink);
+      overflow-wrap: break-word;
+      word-break: normal;
+      hyphens: auto;
+    }
+    .wg-welcome__contact-lines {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.5mm;
+      width: 100%;
+    }
+    .wg-welcome__contact-line {
+      margin: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1.5mm;
+      flex-wrap: wrap;
+    }
+    .wg-welcome__contact-icon {
+      display: inline-flex;
+      width: 3.8mm;
+      height: 3.8mm;
+      flex-shrink: 0;
+    }
+    .wg-welcome__contact-icon svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    .wg-welcome__contact-value {
+      font-weight: 400;
     }
 
     .wg-rules {
@@ -1916,11 +2127,12 @@ export function buildWelcomeGuidePagesHtml(
   const e = buildEmergencyPageContent(property, guide, assets)
   const d = buildDiningPageContent(property, guide, assets)
   const p = buildPlacesPageContent(property, guide, assets)
-  const co = buildCheckoutPageContent(guide)
+  const locale = options.locale ?? "fr"
+  const co = buildCheckoutPageContent(guide, locale)
 
   return [
     coverPageHtml(c),
-    welcomePageHtml(w),
+    welcomePageHtml(w, locale),
     rulesPageHtml(r),
     emergencyPageHtml(e),
     placesPageHtml(p),
@@ -1936,9 +2148,10 @@ export function buildWelcomeGuideHtml(
 ): string {
   const pages = buildWelcomeGuidePagesHtml(property, guide, options)
   const displayName = escapeHtml(welcomeGuideDisplayName(guide, property.brand_name))
+  const locale = options.locale ?? "fr"
 
   return `<!DOCTYPE html>
-<html lang="fr" class="wg-pdf">
+<html lang="${locale}" class="wg-pdf">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />

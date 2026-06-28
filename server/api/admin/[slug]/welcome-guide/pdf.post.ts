@@ -1,3 +1,4 @@
+import type { HostivLocale } from "../../../../../app/types/hostiv-locale"
 import { requirePropertyPremiumTools } from "../../../../utils/hostiv-premium-tools-access"
 import { buildWelcomeGuidePdf, welcomeGuidePdfFilename } from "../../../../utils/welcome-guide-pdf"
 import { normalizePropertyAdminRecord } from "../../../../../app/utils/normalize-property-admin"
@@ -15,6 +16,7 @@ export default defineEventHandler(async (event) => {
   const body = await readBody<{
     record?: PropertyAdminRecord
     assetRevision?: number
+    locale?: HostivLocale
   } | PropertyAdminRecord>(event)
 
   const incoming =
@@ -31,13 +33,16 @@ export default defineEventHandler(async (event) => {
       ? body.assetRevision
       : 0
 
+  const locale: HostivLocale =
+    body && typeof body === "object" && "record" in body && body.locale === "en" ? "en" : "fr"
+
   const property = normalizePropertyAdminRecord({
     ...incoming,
     slug
   } as PropertyAdminRecord)
 
   try {
-    const pdf = await buildWelcomeGuidePdf(property, undefined, { assetRevision })
+    const pdf = await buildWelcomeGuidePdf(property, undefined, { assetRevision, locale })
     const filename = welcomeGuidePdfFilename(slug)
 
     setResponseHeader(event, "Content-Type", "application/pdf")

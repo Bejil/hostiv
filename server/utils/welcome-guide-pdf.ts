@@ -1,7 +1,9 @@
+import type { HostivLocale } from "../../app/types/hostiv-locale"
 import type { PropertyAdminRecord } from "../../app/types/property-admin"
 import type { PropertyWelcomeGuide } from "../../app/types/welcome-guide"
 import type { WelcomeGuideHtmlOptions } from "../../app/utils/welcome-guide-html"
 import { normalizeWelcomeGuide } from "../../app/utils/welcome-guide-content"
+import { getActiveWelcomeGuide } from "../../app/utils/welcome-guide-locale"
 import { renderHtmlToPdfBuffer } from "./html-to-pdf"
 import { buildWelcomeGuideHtml } from "./welcome-guide-html"
 
@@ -15,7 +17,7 @@ function welcomeGuidePdfSupabaseUrl() {
   return process.env.SUPABASE_URL?.trim() || ""
 }
 
-export type BuildWelcomeGuidePdfOptions = Pick<WelcomeGuideHtmlOptions, "assetRevision">
+export type BuildWelcomeGuidePdfOptions = Pick<WelcomeGuideHtmlOptions, "assetRevision" | "locale">
 
 /** PDF magazine via HTML/CSS + Chromium (Playwright). */
 export async function buildWelcomeGuidePdf(
@@ -23,15 +25,18 @@ export async function buildWelcomeGuidePdf(
   guide?: PropertyWelcomeGuide,
   htmlOptions: BuildWelcomeGuidePdfOptions = {}
 ): Promise<Buffer> {
+  const locale: HostivLocale = htmlOptions.locale ?? "fr"
   const normalizedGuide = normalizeWelcomeGuide(
-    guide ?? property.content.welcome_guide,
+    guide ??
+      getActiveWelcomeGuide(property.content, locale, property),
     property.brand_name,
     property
   )
   const supabaseUrl = welcomeGuidePdfSupabaseUrl()
   const html = buildWelcomeGuideHtml(property, normalizedGuide, {
     supabaseUrl,
-    assetRevision: htmlOptions.assetRevision
+    assetRevision: htmlOptions.assetRevision,
+    locale
   })
 
   return renderHtmlToPdfBuffer(html, { waitForImages: true })

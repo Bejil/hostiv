@@ -38,7 +38,8 @@ import {
 } from "../../utils/site-content-locale"
 import type { PropertyWelcomeGuide } from "../../types/welcome-guide"
 import {
-  getActiveWelcomeGuide,
+  cloneWelcomeGuide,
+  getEditableWelcomeGuide,
   getStoredWelcomeGuide,
   localizedWelcomeGuideKey,
   seedWelcomeGuide
@@ -230,6 +231,7 @@ watch(siteEditLocale, (locale) => {
   }
 
   seedLocalizedContentForLocale(locale)
+  liveEditor.pushLivePreviews()
 })
 
 function patchActiveCopy(nextCopy: PropertySiteCopy) {
@@ -415,7 +417,7 @@ function patchContentList<K extends LocalizedSiteListKey>(
 }
 
 function getWelcomeGuide(): PropertyWelcomeGuide {
-  return getActiveWelcomeGuide(record.value.content, siteEditLocale.value, record.value)
+  return getEditableWelcomeGuide(record.value.content, siteEditLocale.value, record.value)
 }
 
 function patchWelcomeGuide(partial: Partial<PropertyWelcomeGuide>) {
@@ -424,7 +426,7 @@ function patchWelcomeGuide(partial: Partial<PropertyWelcomeGuide>) {
   }
 
   const storageKey = localizedWelcomeGuideKey(siteEditLocale.value)
-  const stored = getStoredWelcomeGuide(record.value.content, siteEditLocale.value)
+  const stored = cloneWelcomeGuide(getStoredWelcomeGuide(record.value.content, siteEditLocale.value))
 
   patchContent(storageKey, {
     ...stored,

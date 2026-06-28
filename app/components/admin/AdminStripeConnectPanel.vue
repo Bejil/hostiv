@@ -294,5 +294,24 @@ const platformFeeLabel = computed(() =>
         <p>{{ status.requirements.disabledReason }}</p>
       </details>
     </template>
+
+    <div v-else class="admin-accounting__status-card">
+      <div class="admin-accounting__status-top">
+        <span class="admin-accounting__badge admin-accounting__badge--error">
+          {{ ext.stripeConnect.status.notConfigured }}
+        </span>
+      </div>
+      <footer class="admin-stripe-connect-panel__footer">
+        <button
+          type="button"
+          class="hostiv-btn hostiv-btn--primary"
+          :disabled="actionLoading"
+          @click="emit('start-onboarding')"
+        >
+          <AdminIcon name="external" :size="16" />
+          {{ ext.stripeConnect.cta.connect }}
+        </button>
+      </footer>
+    </div>
   </div>
 </template>

@@ -7,6 +7,7 @@ import {
   type AdminLivePreviewViewport
 } from "../../data/admin-live-editor"
 import type { AdminNavSectionId, AdminSectionId } from "../../data/admin-nav-sections"
+import type { HostivLocale } from "../../types/hostiv-locale"
 import type { PropertyAdminRecord } from "../../types/property-admin"
 import {
   ADMIN_LIVE_PREVIEW_MESSAGE,
@@ -14,6 +15,7 @@ import {
   type AdminLivePreviewSiteMessage
 } from "../../utils/admin-live-preview-messages"
 import { useAdminLiveEditorContext } from "../../composables/admin-live-editor-context"
+import { normalizeSiteTemplate } from "../../data/site-layouts"
 import { mapAdminRecordToSitePreview } from "../../utils/map-admin-site-preview"
 
 const props = defineProps<{
@@ -27,6 +29,7 @@ const props = defineProps<{
 const { ui, locale } = useAdminUi()
 const ext = computed(() => ui.value.extended)
 const liveEditor = useAdminLiveEditorContext()
+const siteEditLocale = liveEditor?.siteEditLocale ?? ref<HostivLocale>("fr")
 
 const previewViewports = computed(() => getAdminLivePreviewViewports(locale.value))
 
@@ -36,13 +39,21 @@ const iframeRef = ref<HTMLIFrameElement | null>(null)
 const canvasWidth = ref(0)
 const canvasHeight = ref(720)
 const iframeReady = ref(false)
+let pendingPush = false
 let pushScheduled = false
+let needsAnotherPush = false
 const previewPushNonce = ref(0)
 
-const previewSite = computed(() =>
-  mapAdminRecordToSitePreview(props.record, {
-    locale: liveEditor?.siteEditLocale.value ?? "fr"
-  })
+const previewSite = computed(() => mapAdminRecordToSitePreview(props.record))
+
+const siteTemplatePreviewKey = computed(() => {
+  const template = normalizeSiteTemplate(props.record.content?.template, { forPublic: true })
+
+  return `${template.layout}-${template.theme}`
+})
+
+const iframeKey = computed(
+  () => `${viewport.value}-${siteEditLocale.value}-${siteTemplatePreviewKey.value}`
 )
 
 const viewportMeta = computed(
@@ -59,7 +70,7 @@ const previewScrollAnchor = computed(() =>
 
 const embedSrc = computed(
   () =>
-    `/${encodeURIComponent(props.slug)}/admin/live-preview-embed?w=${designWidth.value}`
+    `/${encodeURIComponent(props.slug)}/admin/live-preview-embed?w=${designWidth.value}&lang=${siteEditLocale.value}`
 )
 
 /** Hauteur visible du panneau d’aperçu (le site défile à l’intérieur de l’iframe). */
@@ -111,9 +122,17 @@ const iframeStyle = computed(() => ({
 function pushSiteToIframe() {
   const win = iframeRef.value?.contentWindow
 
-  if (!win || !iframeReady.value) {
+  if (!win) {
+    pendingPush = true
     return
   }
+
+  if (!iframeReady.value) {
+    pendingPush = true
+    return
+  }
+
+  pendingPush = false
 
   try {
     previewPushNonce.value += 1
@@ -122,7 +141,7 @@ function pushSiteToIframe() {
       type: ADMIN_LIVE_PREVIEW_MESSAGE.site,
       site: cloneSiteForLivePreviewPostMessage(previewSite.value),
       scrollAnchor: previewScrollAnchor.value,
-      locale: liveEditor?.siteEditLocale.value ?? "fr",
+      locale: siteEditLocale.value,
       assetRevision: props.assetRevision,
       previewNonce: previewPushNonce.value
     }
@@ -135,6 +154,7 @@ function pushSiteToIframe() {
 
 function schedulePushSiteToIframe() {
   if (pushScheduled) {
+    needsAnotherPush = true
     return
   }
 
@@ -143,6 +163,11 @@ function schedulePushSiteToIframe() {
   requestAnimationFrame(() => {
     pushScheduled = false
     pushSiteToIframe()
+
+    if (needsAnotherPush) {
+      needsAnotherPush = false
+      schedulePushSiteToIframe()
+    }
   })
 }
 
@@ -153,6 +178,11 @@ function onWindowMessage(event: MessageEvent) {
 
   if (event.data?.type === ADMIN_LIVE_PREVIEW_MESSAGE.ready) {
     iframeReady.value = true
+
+    if (pendingPush) {
+      pendingPush = false
+    }
+
     schedulePushSiteToIframe()
   }
 }
@@ -205,6 +235,24 @@ onUnmounted(() => {
 })
 
 watch(
+  previewSite,
+  () => {
+    schedulePushSiteToIframe()
+  },
+  { deep: true }
+)
+
+watch(
+  siteTemplatePreviewKey,
+  () => {
+    iframeReady.value = false
+    pendingPush = true
+    schedulePushSiteToIframe()
+  },
+  { flush: "post" }
+)
+
+watch(
   () => props.record,
   () => {
     schedulePushSiteToIframe()
@@ -217,10 +265,13 @@ watch(previewScrollAnchor, () => {
 })
 
 watch(
-  () => liveEditor?.siteEditLocale.value,
+  siteEditLocale,
   () => {
+    iframeReady.value = false
+    pendingPush = true
     schedulePushSiteToIframe()
-  }
+  },
+  { flush: "post" }
 )
 
 watch(
@@ -274,7 +325,7 @@ onErrorCaptured((err) => {
     <div ref="canvasRef" class="admin-live-preview__canvas">
       <div class="admin-live-preview__scaler" :style="scalerStyle">
         <iframe
-          :key="viewport"
+          :key="iframeKey"
           ref="iframeRef"
           class="admin-live-preview__iframe"
           :class="`admin-live-preview__iframe--${viewport}`"

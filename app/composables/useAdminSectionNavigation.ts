@@ -14,7 +14,7 @@ import {
   type AdminTopSectionId
 } from "../data/admin-nav-sections"
 import { isAdminAccountViewId } from "../data/admin-account-sections"
-import { useSupabaseClient } from "./useSupabaseClient"
+import { waitForAdminAuthHeaders } from "../../utils/admin-auth-session"
 
 export function useAdminSectionNavigation(
   slug: MaybeRefOrGetter<string>,
@@ -256,16 +256,45 @@ export function useAdminSectionNavigation(
         } else {
           updateStripeConnectStatus(null)
         }
-      }
+      },
+      { immediate: true }
     )
   }
 
   async function authHeaders(): Promise<Record<string, string>> {
-    const supabase = useSupabaseClient()
-    const { data } = await supabase.auth.getSession()
-    const token = data.session?.access_token
+    return waitForAdminAuthHeaders()
+  }
 
-    return token ? { Authorization: `Bearer ${token}` } : {}
+  async function loadStripeConnectStatus() {
+    const normalizedSlug = toValue(slug).trim()
+
+    if (!normalizedSlug || !canLoadStripeConnect()) {
+      updateStripeConnectStatus(null)
+      return
+    }
+
+    stripeConnectLoading.value = true
+    stripeConnectLoadError.value = false
+
+    const headers = await authHeaders()
+
+    if (!headers.Authorization) {
+      updateStripeConnectStatus(null, { loadError: true })
+      return
+    }
+
+    try {
+      const response = await $fetch<StripeConnectStatus>(
+        `/api/admin/${normalizedSlug}/stripe-connect`,
+        {
+          headers
+        }
+      )
+
+      updateStripeConnectStatus(response)
+    } catch {
+      updateStripeConnectStatus(null, { loadError: true })
+    }
   }
 
   async function loadUpcomingReservationCount() {
@@ -289,31 +318,6 @@ export function useAdminSectionNavigation(
       ).length
     } catch {
       upcomingReservationCount.value = 0
-    }
-  }
-
-  async function loadStripeConnectStatus() {
-    const normalizedSlug = toValue(slug).trim()
-
-    if (!normalizedSlug || !canLoadStripeConnect()) {
-      updateStripeConnectStatus(null)
-      return
-    }
-
-    stripeConnectLoading.value = true
-    stripeConnectLoadError.value = false
-
-    try {
-      const response = await $fetch<StripeConnectStatus>(
-        `/api/admin/${normalizedSlug}/stripe-connect`,
-        {
-          headers: await authHeaders()
-        }
-      )
-
-      updateStripeConnectStatus(response)
-    } catch {
-      updateStripeConnectStatus(null, { loadError: true })
     }
   }
 

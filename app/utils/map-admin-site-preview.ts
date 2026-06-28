@@ -1,3 +1,4 @@
+import { normalizeSiteTemplate } from "../data/site-layouts"
 import type { HostivLocale } from "../types/hostiv-locale"
 import type { PropertyAdminRecord } from "../types/property-admin"
 import type { PropertySiteRecord } from "../types/property-site"
@@ -16,6 +17,7 @@ export function mapAdminRecordToSitePreview(
   options?: MapAdminSitePreviewOptions
 ): PropertySiteRecord {
   const normalized = normalizePropertyAdminRecord(admin)
+  const previewTemplate = normalizeSiteTemplate(normalized.content.template, { forPublic: true })
 
   const site: PropertySiteRecord = {
     id: normalized.id,
@@ -43,7 +45,10 @@ export function mapAdminRecordToSitePreview(
     stripe_payments_ready: Boolean(options?.stripePaymentsReady),
     booking_config: normalized.booking_config,
     location: normalized.location,
-    content: normalized.content
+    content: {
+      ...normalized.content,
+      template: previewTemplate
+    }
   }
 
   if (options?.locale) {

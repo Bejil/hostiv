@@ -1,8 +1,8 @@
 import type { HostivLocale } from "../types/hostiv-locale"
 import type { PropertyAdminRecord } from "../types/property-admin"
 import type { PropertySiteContent } from "../types/property-site"
-import type { PropertyAdminRecord } from "../types/property-admin"
 import type { PropertyWelcomeGuide } from "../types/welcome-guide"
+import { applyWelcomeGuideDefaultsFromRecord, normalizeWelcomeGuide } from "./welcome-guide-content"
 import { welcomeGuideDedicatedImagePath } from "./welcome-guide-images"
 import { resolveLocalizedList } from "./site-content-locale"
 
@@ -37,6 +37,9 @@ const WELCOME_GUIDE_TEXT_SCALAR_KEYS = [
   "host_email",
   "wifi_network",
   "wifi_password",
+  "parking_street",
+  "parking_payment",
+  "parking_note",
   "welcome_eyebrow",
   "welcome_banner",
   "welcome_salutation",
@@ -208,6 +211,29 @@ export function getActiveWelcomeGuide(
         )
 
   return record ? sanitizeWelcomeGuideImagePaths(merged, record) : merged
+}
+
+/** Guide éditable dans l’admin : textes de la locale active uniquement (pas de repli FR↔EN sur les champs). */
+export function getEditableWelcomeGuide(
+  content: PropertySiteContent,
+  locale: HostivLocale,
+  record: PropertyAdminRecord
+): PropertyWelcomeGuide {
+  const stored = getStoredWelcomeGuide(content, locale)
+  const lists = resolveWelcomeGuideLists(content, locale)
+
+  const base = applyWelcomeGuideImagePaths(
+    {
+      ...stored,
+      ...lists
+    },
+    stored
+  )
+
+  return applyWelcomeGuideDefaultsFromRecord(
+    normalizeWelcomeGuide(base, record.brand_name, record),
+    record
+  )
 }
 
 export function cloneWelcomeGuide(guide: PropertyWelcomeGuide): PropertyWelcomeGuide {

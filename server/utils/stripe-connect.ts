@@ -240,18 +240,15 @@ export async function refreshPropertyStripeStatus(
       })
     }
 
-    if (!isStripeConnectAccountUnavailable(error)) {
-      throw error
+    if (isStripeConnectAccountUnavailable(error)) {
+      console.warn(
+        `[stripe-connect] sync failed for ${slug} (${row.stripe_account_id}) — keeping stored account`
+      )
+
+      return stripeStatusFromRow(row, platformFeePercent, statusOptions)
     }
 
-    await clearPropertyStripeConnect(slug)
-    const cleared = await getPropertyStripeBySlug(slug)
-
-    if (!cleared) {
-      throw createError({ statusCode: 404, message: "Site introuvable." })
-    }
-
-    return stripeStatusFromRow(cleared, platformFeePercent, statusOptions)
+    throw error
   }
 }
 

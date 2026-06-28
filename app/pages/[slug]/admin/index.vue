@@ -59,7 +59,9 @@ const { ui, formatDate } = useAdminUi()
 const slug = computed(() => String(route.params.slug))
 const draft = ref<PropertyAdminRecord | null>(null)
 
-const canAccessAccounting = computed(() => draft.value?.admin_access?.role !== "cohost")
+const canAccessAccounting = computed(
+  () => Boolean(draft.value) && draft.value.admin_access?.role !== "cohost"
+)
 
 const sectionNav = useAdminSectionNavigation(slug, {
   canAccessAccounting: () => canAccessAccounting.value
@@ -121,6 +123,10 @@ const configError = ref<string | null>(null)
 const editorError = ref<string | null>(null)
 const renderError = ref<string | null>(null)
 const isDirty = ref(false)
+/** Bloque la resync depuis `watch(site)` pendant un enregistrement (évite de re-marquer le brouillon sale). */
+const skipSiteDraftSync = ref(false)
+/** Ignore les émissions v-model déclenchées par l’application du draft serveur. */
+const suppressDraftDirty = ref(false)
 const loginSubmitting = ref(false)
 
 const subscriptionBlocksEditor = computed(
@@ -547,7 +553,24 @@ function applyFreshAdminContextToDraft() {
   )
 }
 
-async function syncDraftFromSite(options: { force?: boolean } = {}) {
+async function applyDraftRecord(record: PropertyAdminRecord) {
+  suppressDraftDirty.value = true
+
+  try {
+    draft.value = record
+    await nextTick()
+  } finally {
+    suppressDraftDirty.value = false
+  }
+}
+
+async function syncDraftFromSite(
+  options: { force?: boolean; afterSave?: boolean } = {}
+) {
+  if (saving.value && !options.force) {
+    return
+  }
+
   editorError.value = null
 
   if (!site.value) {
@@ -563,12 +586,14 @@ async function syncDraftFromSite(options: { force?: boolean } = {}) {
     const storedDraft = loadAdminDraft(slug.value)
 
     if (storedDraft) {
-      draft.value = withPropertyAdminAccess(
-        withPropertyAdminSubscriptionAccess(
-          clonePropertyAdminRecord(storedDraft),
-          freshAccess
-        ),
-        site.value.admin_access
+      await applyDraftRecord(
+        withPropertyAdminAccess(
+          withPropertyAdminSubscriptionAccess(
+            clonePropertyAdminRecord(storedDraft),
+            freshAccess
+          ),
+          site.value.admin_access
+        )
       )
       isDirty.value = true
       return
@@ -583,7 +608,7 @@ async function syncDraftFromSite(options: { force?: boolean } = {}) {
   }
 
   try {
-    draft.value = withPropertyAdminAccess(
+    const nextDraft = withPropertyAdminAccess(
       withPropertyAdminSubscriptionAccess(
         clonePropertyAdminRecord(site.value),
         freshAccess
@@ -591,19 +616,24 @@ async function syncDraftFromSite(options: { force?: boolean } = {}) {
       site.value.admin_access
     )
 
-    try {
-      const supabase = useSupabaseClient()
-      const { data } = await supabase.auth.getSession()
-      const signupName = readSignupPropertyName(data.session?.user.user_metadata)
+    if (!options.afterSave) {
+      try {
+        const supabase = useSupabaseClient()
+        const { data } = await supabase.auth.getSession()
+        const signupName = readSignupPropertyName(data.session?.user.user_metadata)
 
-      if (applySignupPropertyNameToRecord(draft.value, signupName, slug.value)) {
-        isDirty.value = true
-      } else {
-        isDirty.value = false
+        if (applySignupPropertyNameToRecord(nextDraft, signupName, slug.value)) {
+          await applyDraftRecord(nextDraft)
+          isDirty.value = true
+          return
+        }
+      } catch {
+        /* ignore signup metadata */
       }
-    } catch {
-      isDirty.value = false
     }
+
+    await applyDraftRecord(nextDraft)
+    isDirty.value = false
   } catch (err: unknown) {
     editorError.value =
       err instanceof Error ? err.message : ui.value.shell.prepareEditorFailed
@@ -612,7 +642,17 @@ async function syncDraftFromSite(options: { force?: boolean } = {}) {
   }
 }
 
-watch(site, syncDraftFromSite, { immediate: true })
+watch(
+  site,
+  () => {
+    if (skipSiteDraftSync.value) {
+      return
+    }
+
+    void syncDraftFromSite()
+  },
+  { immediate: true }
+)
 
 watch(showEditor, (show) => {
   if (show) {
@@ -782,6 +822,11 @@ function onDraftUpdate(value: PropertyAdminRecord) {
     value.admin_access ?? draft.value?.admin_access ?? site.value?.admin_access
 
   draft.value = adminAccess ? withPropertyAdminAccess(value, adminAccess) : value
+
+  if (suppressDraftDirty.value) {
+    return
+  }
+
   isDirty.value = true
   renderError.value = null
 
@@ -803,6 +848,16 @@ watch(
   () => {
     renderError.value = null
   }
+)
+
+watch(
+  () => authenticated.value && canAccessAccounting.value,
+  (ready) => {
+    if (ready) {
+      void sectionNav.loadStripeConnectStatus()
+    }
+  },
+  { immediate: true }
 )
 
 watch(
@@ -835,6 +890,11 @@ watch(
 )
 
 async function persistDraft(): Promise<boolean> {
+  if (draftPersistTimer) {
+    clearTimeout(draftPersistTimer)
+    draftPersistTimer = null
+  }
+
   if (!draft.value) {
     return false
   }
@@ -846,14 +906,22 @@ async function persistDraft(): Promise<boolean> {
   saveMessage.value = null
   renderError.value = null
 
-  const ok = await saveSite(draft.value)
+  skipSiteDraftSync.value = true
 
-  if (ok) {
-    saveMessage.value = ui.value.shell.saved
-    await syncDraftFromSite({ force: true })
+  try {
+    const ok = await saveSite(draft.value)
+
+    if (ok) {
+      saveMessage.value = ui.value.shell.saved
+      clearAdminDraft(slug.value)
+      await syncDraftFromSite({ force: true, afterSave: true })
+      isDirty.value = false
+    }
+
+    return ok
+  } finally {
+    skipSiteDraftSync.value = false
   }
-
-  return ok
 }
 
 async function onSave() {

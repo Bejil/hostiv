@@ -316,7 +316,7 @@ export const adminUiLabelsDomainsFr = {
     },
     pageLeads: {
       page1: "Image de fond, titre et sous-titre centrés.",
-      page2: "Colonne hôte et contact à gauche ; lettre d’accueil et Wi‑Fi à droite.",
+      page2: "Colonne hôte à gauche ; lettre d’accueil à droite ; contact et Wi‑Fi sur une ligne, stationnement en bandeau dessous.",
       page3: "Titre centré, liste de 7 règles avec icônes et message de clôture.",
       page4: "Bandeau titre, grille de 6 numéros et photo en bas de page.",
       page5: "Liste de 4 lieux : photo à gauche, titre, adresse et description à droite.",
@@ -359,6 +359,9 @@ export const adminUiLabelsDomainsFr = {
       welcomeSignature: "Signature",
       wifiNetwork: "Wi‑Fi — nom du réseau",
       wifiPassword: "Wi‑Fi — mot de passe",
+      parkingStreet: "Stationnement — rue / emplacement",
+      parkingPayment: "Stationnement — paiement",
+      parkingNote: "Stationnement — à savoir",
       rulesTitle: "Titre principal",
       rulesBanner: "Sous-titre",
       rulesFooter: "Message de clôture",
