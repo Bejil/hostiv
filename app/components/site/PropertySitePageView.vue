@@ -56,6 +56,16 @@ import { Mail, MessageCircle } from "@lucide/vue"
 import { appendAssetCacheRevision } from "../../utils/property-asset-url"
 import { filterSiteNavLinks } from "../../utils/property-site-nav"
 import { getSiteUi } from "../../data/site-ui"
+import {
+  canArriveOnBlockedCalendar,
+  findFirstValidDepartureDate,
+  findUniqueValidDepartureDate,
+  isCalendarDayDisabled,
+  isCalendarDayMarkedReserved,
+  isValidBookingDepartureDate,
+  maximumDepartureDateForArrival,
+  minimumDepartureDateForArrival
+} from "../../utils/booking-calendar-availability"
 
 const props = withDefaults(
   defineProps<{
@@ -364,7 +374,7 @@ const activeCalendarStep = ref<CalendarSelectionStep>("arrival")
 const visibleCalendarMonth = ref(startOfMonth(fromInputDate(minimumArrivalDate.value)))
 const heroParallaxOffset = ref(0)
 const isStickyBookingStripVisible = ref(false)
-const { blockedDates, refreshBlockedDates, isNightBlocked } = useBlockedCalendarDates(slug)
+const { blockedDates, refreshBlockedDates } = useBlockedCalendarDates(slug)
 
 let heroParallaxFrame: number | null = null
 
@@ -375,11 +385,20 @@ const guestCounts = reactive({
 })
 
 const minimumDepartureDate = computed(() =>
-  toInputDate(addDays(fromInputDate(arrivalDate.value), minStayNights.value))
+  minimumDepartureDateForArrival(
+    arrivalDate.value,
+    minStayNights.value,
+    blockedDates.value,
+    maxStayNights.value
+  )
 )
 
 const maximumDepartureDate = computed(() =>
-  toInputDate(addDays(fromInputDate(arrivalDate.value), maxStayNights.value))
+  maximumDepartureDateForArrival(
+    arrivalDate.value,
+    maxStayNights.value,
+    blockedDates.value
+  )
 )
 
 const visibleCalendarMonths = computed(() => [
@@ -536,21 +555,31 @@ watch(arrivalDate, (nextArrivalDate) => {
     bookingModalErrors.dates = null
   }
 
-  const nextMinimumDeparture = toInputDate(
-    addDays(fromInputDate(nextArrivalDate), minStayNights.value)
-  )
-  const nextMaximumDeparture = toInputDate(
-    addDays(fromInputDate(nextArrivalDate), maxStayNights.value)
+  const nextMinimumDeparture = minimumDepartureForArrival(nextArrivalDate)
+  const nextMaximumDeparture = maximumDepartureDateForArrival(
+    nextArrivalDate,
+    maxStayNights.value,
+    blockedDates.value
   )
 
-  if (departureDate.value < nextMinimumDeparture) {
+  if (compareInputDates(departureDate.value, nextMinimumDeparture) < 0) {
     departureDate.value = nextMinimumDeparture
   }
 
-  if (departureDate.value > nextMaximumDeparture) {
+  if (compareInputDates(departureDate.value, nextMaximumDeparture) > 0) {
     departureDate.value = nextMaximumDeparture
   }
+
+  syncBookingAvailability()
 })
+
+watch(
+  blockedDates,
+  () => {
+    syncBookingAvailability()
+  },
+  { deep: true }
+)
 
 watch(openBookingPopover, async (popover) => {
   if (!popover) {
@@ -607,6 +636,9 @@ function toggleBookingPopover(popover: Exclude<BookingPopover, null>) {
   }
 
   if (popover === "dates" && openBookingPopover.value !== "dates") {
+    void refreshBlockedDates().then(() => {
+      syncBookingAvailability()
+    })
     activeCalendarStep.value = "arrival"
     visibleCalendarMonth.value = startOfMonth(fromInputDate(arrivalDate.value))
   }
@@ -639,6 +671,9 @@ function toggleBookingModalPopover(popover: Exclude<BookingPopover, null>) {
   }
 
   if (popover === "dates" && openBookingModalPopover.value !== "dates") {
+    void refreshBlockedDates().then(() => {
+      syncBookingAvailability()
+    })
     activeCalendarStep.value = "arrival"
     visibleCalendarMonth.value = startOfMonth(fromInputDate(arrivalDate.value))
   }
@@ -708,8 +743,7 @@ function validateBookingModal() {
     isValid = false
   } else if (
     compareInputDates(arrivalDate.value, minimumArrivalDate.value) < 0 ||
-    compareInputDates(departureDate.value, minimumDepartureDate.value) < 0 ||
-    compareInputDates(departureDate.value, maximumDepartureDate.value) > 0
+    !isSelectableDepartureDate(departureDate.value)
   ) {
     bookingModalErrors.dates = errors.datesInvalid
     isValid = false
@@ -1059,85 +1093,137 @@ function shiftCalendarMonths(offset: number) {
 }
 
 function minimumDepartureForArrival(arrival: string) {
-  return toInputDate(addDays(fromInputDate(arrival), minStayNights.value))
-}
-
-/** Jours du séjour (arrivée → départ inclus) qui chevauchent une nuit réservée. */
-function wouldStayOverlapBlocked(arrival: string, departure: string) {
-  for (
-    let cursor = fromInputDate(arrival);
-    compareInputDates(toInputDate(cursor), departure) <= 0;
-    cursor = addDays(cursor, 1)
-  ) {
-    if (blockedDates.value.has(toInputDate(cursor))) {
-      return true
-    }
-  }
-
-  return false
+  return minimumDepartureDateForArrival(
+    arrival,
+    minStayNights.value,
+    blockedDates.value,
+    maxStayNights.value
+  )
 }
 
 function canArriveOnDate(isoDate: string) {
-  if (isNightBlocked(isoDate)) {
+  return canArriveOnBlockedCalendar(
+    isoDate,
+    minStayNights.value,
+    maxStayNights.value,
+    blockedDates.value
+  )
+}
+
+function isSelectableDepartureDate(isoDate: string) {
+  return isValidBookingDepartureDate(
+    arrivalDate.value,
+    isoDate,
+    minStayNights.value,
+    maxStayNights.value,
+    blockedDates.value
+  )
+}
+
+function tryCompleteSingleNightStay(arrival: string) {
+  const uniqueDeparture = findUniqueValidDepartureDate(
+    arrival,
+    minStayNights.value,
+    maxStayNights.value,
+    blockedDates.value
+  )
+
+  if (!uniqueDeparture) {
     return false
   }
 
-  return !wouldStayOverlapBlocked(isoDate, minimumDepartureForArrival(isoDate))
+  departureDate.value = uniqueDeparture
+  activeCalendarStep.value = "arrival"
+  return true
+}
+
+function syncBookingAvailability() {
+  if (!arrivalDate.value) {
+    return
+  }
+
+  if (tryCompleteSingleNightStay(arrivalDate.value)) {
+    return
+  }
+
+  if (
+    isValidBookingDepartureDate(
+      arrivalDate.value,
+      departureDate.value,
+      minStayNights.value,
+      maxStayNights.value,
+      blockedDates.value
+    )
+  ) {
+    return
+  }
+
+  const nextDeparture = findFirstValidDepartureDate(
+    arrivalDate.value,
+    minStayNights.value,
+    maxStayNights.value,
+    blockedDates.value
+  )
+
+  if (nextDeparture) {
+    departureDate.value = nextDeparture
+    return
+  }
+
+  if (!canArriveOnDate(arrivalDate.value)) {
+    arrivalDate.value = minimumArrivalDate.value
+    departureDate.value =
+      findFirstValidDepartureDate(
+        minimumArrivalDate.value,
+        minStayNights.value,
+        maxStayNights.value,
+        blockedDates.value
+      ) ??
+      minimumDepartureDateForArrival(
+        minimumArrivalDate.value,
+        minStayNights.value,
+        blockedDates.value,
+        maxStayNights.value
+      )
+    activeCalendarStep.value = "arrival"
+  }
 }
 
 function ensureSelectableBookingDates() {
-  if (!wouldStayOverlapBlocked(arrivalDate.value, departureDate.value)) {
+  syncBookingAvailability()
+}
+
+function applyArrivalSelection(isoDate: string) {
+  arrivalDate.value = isoDate
+
+  if (tryCompleteSingleNightStay(isoDate)) {
     return
   }
 
-  arrivalDate.value = minimumArrivalDate.value
-  departureDate.value = toInputDate(
-    addDays(fromInputDate(minimumArrivalDate.value), minStayNights.value)
-  )
-  activeCalendarStep.value = "arrival"
+  departureDate.value = minimumDepartureForArrival(isoDate)
+  activeCalendarStep.value = "departure"
 }
 
 function selectCalendarDate(isoDate: string) {
-  if (isNightBlocked(isoDate)) {
-    return
-  }
-
-  if (
-    activeCalendarStep.value === "departure" &&
-    compareInputDates(isoDate, arrivalDate.value) < 0
-  ) {
-    if (!canArriveOnDate(isoDate)) {
-      return
-    }
-
-    arrivalDate.value = isoDate
-    departureDate.value = minimumDepartureForArrival(isoDate)
-    activeCalendarStep.value = "departure"
-    return
-  }
-
-  if (
-    activeCalendarStep.value === "departure" &&
-    wouldStayOverlapBlocked(arrivalDate.value, isoDate)
-  ) {
-    return
-  }
-
   if (activeCalendarStep.value === "arrival") {
     if (!canArriveOnDate(isoDate)) {
       return
     }
 
-    arrivalDate.value = isoDate
-    departureDate.value = minimumDepartureForArrival(isoDate)
-    activeCalendarStep.value = "departure"
+    applyArrivalSelection(isoDate)
     return
   }
 
-  if (
-    compareInputDates(isoDate, minimumDepartureDate.value) < 0 ||
-    compareInputDates(isoDate, maximumDepartureDate.value) > 0
-  ) {
+  if (compareInputDates(isoDate, arrivalDate.value) < 0) {
+    if (!canArriveOnDate(isoDate)) {
+      return
+    }
+
+    applyArrivalSelection(isoDate)
+    return
+  }
+
+  if (!isSelectableDepartureDate(isoDate)) {
     return
   }
 
@@ -1177,27 +1263,22 @@ function buildCalendarDays(month: Date) {
 
   for (let day = 1; day <= daysInMonth; day += 1) {
     const isoDate = toInputDate(new Date(month.getFullYear(), month.getMonth(), day))
-    const isBeforeMinimumArrival = compareInputDates(isoDate, minimumArrivalDate.value) < 0
-    const isBeforeAllowedDeparture = compareInputDates(isoDate, minimumDepartureDate.value) < 0
-    const isAfterAllowedDeparture = compareInputDates(isoDate, maximumDepartureDate.value) > 0
-    const isBlockedNight = isNightBlocked(isoDate)
-    const isBeforeCurrentArrival =
-      activeCalendarStep.value === "departure" &&
-      compareInputDates(isoDate, arrivalDate.value) < 0
-    const cannotArriveOnDate =
-      (activeCalendarStep.value === "arrival" || isBeforeCurrentArrival) &&
-      !canArriveOnDate(isoDate)
-    const cannotSelectDeparture =
-      activeCalendarStep.value === "departure" &&
-      !isBeforeCurrentArrival &&
-      (isBeforeAllowedDeparture ||
-        isAfterAllowedDeparture ||
-        wouldStayOverlapBlocked(arrivalDate.value, isoDate))
-    const isDisabled =
-      isBeforeMinimumArrival ||
-      isBlockedNight ||
-      cannotArriveOnDate ||
-      cannotSelectDeparture
+    const calendarStep = activeCalendarStep.value
+    const isDisabled = isCalendarDayDisabled(
+      isoDate,
+      calendarStep,
+      arrivalDate.value,
+      minStayNights.value,
+      maxStayNights.value,
+      blockedDates.value,
+      minimumArrivalDate.value
+    )
+    const isReserved = isCalendarDayMarkedReserved(
+      isoDate,
+      calendarStep,
+      arrivalDate.value,
+      blockedDates.value
+    )
 
     const isArrival = isoDate === arrivalDate.value
     const isDeparture = isoDate === departureDate.value
@@ -1210,7 +1291,7 @@ function buildCalendarDays(month: Date) {
       label: String(day),
       isoDate,
       isDisabled,
-      isReserved: isBlockedNight,
+      isReserved,
       isArrival,
       isDeparture,
       isInRange,

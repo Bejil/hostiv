@@ -248,7 +248,13 @@ export const adminUiLabelsExtendedEn = {
       clickToBlock: "Click to block this date",
       clickToUnblock: "Click to unblock this date",
       manualBlockSource: "Manual block",
-      hostivReservationSource: "Hostiv booking"
+      hostivReservationSource: "Hostiv booking",
+      syncedCalendarHint:
+        "Greyed-out dates come from synced calendars (Airbnb, Booking, Abritel, etc.). Only direct bookings on your site appear in the list below.",
+      syncedOtaTitle: "Stays synced from your platforms",
+      syncedOtaStay: "{arrival} → {departure}",
+      emptyWithSyncedCalendars:
+        "No direct Hostiv bookings yet. Stays from Airbnb, Booking or Abritel appear in the calendar above once calendars are synced."
     },
     errors: {
       invoicePdf: "Unable to generate PDF invoice.",

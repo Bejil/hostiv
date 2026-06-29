@@ -251,7 +251,13 @@ export const adminUiLabelsExtendedFr = {
       clickToBlock: "Cliquer pour bloquer cette date",
       clickToUnblock: "Cliquer pour débloquer cette date",
       manualBlockSource: "Blocage manuel",
-      hostivReservationSource: "Réservation Hostiv"
+      hostivReservationSource: "Réservation Hostiv",
+      syncedCalendarHint:
+        "Les dates grisées proviennent des calendriers synchronisés (Airbnb, Booking, Abritel, etc.). Seules les réservations directes sur votre site apparaissent dans la liste ci-dessous.",
+      syncedOtaTitle: "Séjours synchronisés depuis vos plateformes",
+      syncedOtaStay: "{arrival} → {departure}",
+      emptyWithSyncedCalendars:
+        "Aucune réservation directe Hostiv pour le moment. Les séjours Airbnb, Booking ou Abritel s’affichent dans le calendrier ci-dessus une fois les flux synchronisés."
     },
     errors: {
       invoicePdf: "Impossible de générer la facture PDF.",

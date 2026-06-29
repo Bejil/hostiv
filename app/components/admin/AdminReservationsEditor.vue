@@ -11,6 +11,7 @@ import AdminReservationsIcsUrlModal from "./AdminReservationsIcsUrlModal.vue"
 import type { DateRangeValue } from "../../composables/useDateRangeCalendar"
 import type { AdminBookingReservation, AdminBookingReservationStatus } from "../../types/booking-reservation"
 import type { PropertyCalendarConfig, PropertyCalendarFeed } from "../../types/property-site"
+import type { BookingStayRange } from "../../utils/booking-turnover-gaps"
 import { normalizeCalendarConfig } from "../../utils/calendar-config"
 import { downloadBookingInvoicePdf } from "../../utils/download-booking-invoice"
 import {
@@ -43,6 +44,8 @@ const calendarWeekdayLabels = ["L", "M", "M", "J", "V", "S", "D"]
 const visibleMonth = ref(startOfMonth(new Date()))
 const blockedDates = ref<Set<string>>(new Set())
 const blockedDateSources = ref<Record<string, string[]>>({})
+const otaReservationRanges = ref<BookingStayRange[]>([])
+const previewSources = ref<{ total: number; succeeded: number; failed: number } | null>(null)
 const previewLoading = ref(false)
 const previewError = ref<string | null>(null)
 const reservations = ref<AdminBookingReservation[]>([])
@@ -62,6 +65,22 @@ const manualBlockSaving = ref(false)
 let refreshTimer: ReturnType<typeof setTimeout> | null = null
 
 const manualBlocks = computed(() => props.modelValue?.manual_blocks ?? [])
+
+const hasSyncedCalendarBlocks = computed(() => blockedDates.value.size > 0)
+
+const sortedOtaReservationRanges = computed(() =>
+  [...otaReservationRanges.value].sort((left, right) =>
+    left.arrival_date.localeCompare(right.arrival_date)
+  )
+)
+
+const reservationsEmptyDescription = computed(() => {
+  if (hasSyncedCalendarBlocks.value || sortedOtaReservationRanges.value.length > 0) {
+    return ext.value.calendar.emptyWithSyncedCalendars
+  }
+
+  return ext.value.empty.description
+})
 
 const reservedNightDates = computed(() => {
   const dates = new Set<string>()
@@ -287,6 +306,13 @@ function pluralize(value: number, singular: string, plural: string) {
 
 function pluralizeNights(value: number) {
   return pluralize(value, ext.value.plurals.night, ext.value.plurals.nights)
+}
+
+function formatOtaStayRange(range: BookingStayRange) {
+  return adminUiFormat(ext.value.calendar.syncedOtaStay, {
+    arrival: formatReservationDate(range.arrival_date),
+    departure: formatReservationDate(range.departure_date)
+  })
 }
 
 function formatReservationDateRange(reservation: AdminBookingReservation) {
@@ -670,6 +696,7 @@ async function refreshPreview() {
       dates: string[]
       dateSources: Record<string, string[]>
       feedBlocks: Array<{ name: string; dates: string[] }>
+      otaReservationRanges?: BookingStayRange[]
       fetchedAt: string
       sources: { total: number; succeeded: number; failed: number }
     }>(`/api/admin/${props.slug}/calendar-preview`, {
@@ -679,12 +706,16 @@ async function refreshPreview() {
     })
 
     blockedDates.value = new Set(response.dates)
+    otaReservationRanges.value = response.otaReservationRanges ?? []
+    previewSources.value = response.sources
     applyPreviewSources(response)
   } catch (err: unknown) {
     const e = err as { data?: { message?: string }; message?: string }
 
     blockedDates.value = new Set()
     blockedDateSources.value = {}
+    otaReservationRanges.value = []
+    previewSources.value = null
     previewError.value = e.data?.message || e.message || ext.value.errors.icsLoad
   } finally {
     previewLoading.value = false
@@ -836,8 +867,36 @@ onUnmounted(() => {
       </div>
 
       <p class="admin-reservations__calendar-hint">{{ ext.calendar.manualBlockHint }}</p>
+      <p
+        v-if="hasSyncedCalendarBlocks || sortedOtaReservationRanges.length"
+        class="admin-reservations__calendar-hint admin-reservations__calendar-hint--synced"
+      >
+        {{ ext.calendar.syncedCalendarHint }}
+      </p>
 
       <p v-if="previewError" class="admin-reservations__error">{{ previewError }}</p>
+      <p
+        v-else-if="previewSources && previewSources.total > 0 && previewSources.succeeded === 0"
+        class="admin-reservations__error"
+      >
+        {{ ext.errors.icsLoad }}
+      </p>
+
+      <section
+        v-if="sortedOtaReservationRanges.length"
+        class="admin-reservations__synced-stays"
+        :aria-label="ext.calendar.syncedOtaTitle"
+      >
+        <h4 class="admin-reservations__synced-stays-title">{{ ext.calendar.syncedOtaTitle }}</h4>
+        <ul class="admin-reservations__synced-stays-list" role="list">
+          <li
+            v-for="(stay, index) in sortedOtaReservationRanges"
+            :key="`${stay.arrival_date}-${stay.departure_date}-${index}`"
+          >
+            {{ formatOtaStayRange(stay) }}
+          </li>
+        </ul>
+      </section>
 
       <div class="admin-reservations-calendar booking-calendar-shell">
         <button type="button" class="calendar-nav-button" @click="shiftCalendarMonths(-1)">
@@ -905,7 +964,7 @@ onUnmounted(() => {
         v-else-if="!reservations.length"
         icon="check"
         :title="ext.empty.title"
-        :description="ext.empty.description"
+        :description="reservationsEmptyDescription"
         compact
       />
 

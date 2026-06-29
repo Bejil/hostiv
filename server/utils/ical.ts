@@ -1,7 +1,10 @@
 type IcalEventRange = {
   start: Date
   end: Date
+  summary?: string
 }
+
+export type IcalStayKind = "reservation" | "block" | "closure"
 
 function unfoldIcal(source: string) {
   return source
@@ -81,6 +84,7 @@ export function parseIcalEvents(source: string): IcalEventRange[] {
 
     const startValue = extractProperty(eventBlock, "DTSTART")
     const endValue = extractProperty(eventBlock, "DTEND")
+    const summary = extractProperty(eventBlock, "SUMMARY") ?? ""
 
     if (!startValue) {
       continue
@@ -96,12 +100,13 @@ export function parseIcalEvents(source: string): IcalEventRange[] {
     if (!end || Number.isNaN(end.getTime())) {
       events.push({
         start,
-        end: addDays(start, 1)
+        end: addDays(start, 1),
+        summary
       })
       continue
     }
 
-    events.push({ start, end })
+    events.push({ start, end, summary })
   }
 
   return events
@@ -126,6 +131,10 @@ export function getBlockedNightDates(events: IcalEventRange[]) {
   const blocked = new Set<string>()
 
   for (const event of events) {
+    if (classifyIcalStayKind(event.summary ?? "") === "block") {
+      continue
+    }
+
     const night = new Date(event.start.getFullYear(), event.start.getMonth(), event.start.getDate())
     const lastNight = new Date(event.end.getFullYear(), event.end.getMonth(), event.end.getDate())
 
@@ -136,6 +145,41 @@ export function getBlockedNightDates(events: IcalEventRange[]) {
   }
 
   return blocked
+}
+
+/** Blocage turnover Airbnb (ignoré) vs fermeture OTA réelle vs réservation voyageur. */
+export function classifyIcalStayKind(summary: string): IcalStayKind {
+  const normalized = summary.trim().toLowerCase()
+
+  if (normalized.includes("airbnb") && normalized.includes("not available")) {
+    return "block"
+  }
+
+  if (
+    normalized.includes("closed") ||
+    normalized.includes("indisponible") ||
+    normalized.includes("blocked") ||
+    normalized.includes("fermé") ||
+    normalized.includes("ferme") ||
+    normalized.includes("not available") ||
+    normalized.includes("unavailable")
+  ) {
+    return "closure"
+  }
+
+  return "reservation"
+}
+
+/** Arrivée = DTSTART, départ = DTEND (jour de checkout, exclus des nuits occupées). */
+export function icalEventToBookingRange(event: IcalEventRange) {
+  const start = new Date(event.start.getFullYear(), event.start.getMonth(), event.start.getDate())
+  const end = new Date(event.end.getFullYear(), event.end.getMonth(), event.end.getDate())
+
+  return {
+    arrival_date: toIsoDate(start),
+    departure_date: toIsoDate(end),
+    kind: classifyIcalStayKind(event.summary ?? "")
+  }
 }
 
 export function mergeBlockedNightDates(sources: Iterable<Set<string>>) {

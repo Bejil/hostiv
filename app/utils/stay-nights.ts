@@ -18,3 +18,12 @@ export function enumerateStayNights(arrivalDate: string, departureDate: string) 
 
   return nights
 }
+
+/** Vrai si une nuit du séjour chevauche une date indisponible (pas le jour de départ seul). */
+export function stayOverlapsBlockedNights(
+  arrivalDate: string,
+  departureDate: string,
+  blockedNights: ReadonlySet<string>
+) {
+  return enumerateStayNights(arrivalDate, departureDate).some((night) => blockedNights.has(night))
+}

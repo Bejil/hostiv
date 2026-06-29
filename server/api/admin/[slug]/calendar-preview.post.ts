@@ -17,13 +17,14 @@ export default defineEventHandler(async (event) => {
   assertValidCalendarConfig(body as Parameters<typeof assertValidCalendarConfig>[0])
 
   const calendarConfig = normalizeCalendarConfig(body)
-  const { dates, dateSources, feedBlocks, sources } = await getPropertyBlockedNightDates(
-    slug,
-    calendarConfig
-  )
+  const { dates, bookingRanges, manualBlocks, otaReservationRanges, dateSources, feedBlocks, sources } =
+    await getPropertyBlockedNightDates(slug, calendarConfig)
 
   return {
     dates,
+    bookingRanges,
+    manualBlocks,
+    otaReservationRanges,
     dateSources,
     feedBlocks,
     fetchedAt: new Date().toISOString(),

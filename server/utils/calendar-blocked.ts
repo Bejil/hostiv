@@ -1,7 +1,16 @@
 import type { PropertyCalendarConfig } from "../../app/types/property-site"
+import {
+  applyBookingRangeAvailability,
+  type BookingStayRange
+} from "../../app/utils/booking-turnover-gaps"
 import { normalizeCalendarConfig } from "../../app/utils/calendar-config"
 import { listAdminBookingReservations } from "./booking-reservation-repository"
-import { getBlockedNightDates, mergeBlockedNightDates, parseIcalEvents } from "./ical"
+import {
+  getBlockedNightDates,
+  icalEventToBookingRange,
+  mergeBlockedNightDates,
+  parseIcalEvents
+} from "./ical"
 import { getPropertyCalendarConfig } from "./property-site-repository"
 import { enumerateStayNights } from "./stay-nights"
 import { assertAllowedCalendarFeedUrl } from "./calendar-feed-url"
@@ -10,6 +19,8 @@ const FETCH_TIMEOUT_MS = 12_000
 
 export const HOSTIV_MANUAL_BLOCK_SOURCE = "Blocage manuel"
 export const HOSTIV_RESERVATION_BLOCK_SOURCE = "Réservation Hostiv"
+
+export type { BookingStayRange }
 
 async function fetchCalendarFeed(url: string) {
   assertAllowedCalendarFeedUrl(url)
@@ -56,43 +67,43 @@ function sortDateSources(map: Record<string, string[]>) {
   }
 }
 
-async function getReservationBlockedNightDates(slug: string) {
-  const reservations = await listAdminBookingReservations(slug)
-  const dates = new Set<string>()
-
-  for (const reservation of reservations) {
-    if (reservation.status === "cancelled") {
-      continue
-    }
-
-    for (const night of enumerateStayNights(reservation.arrival_date, reservation.departure_date)) {
-      dates.add(night)
-    }
-  }
-
-  return dates
+function collectHostivBookingRanges(
+  reservations: Array<BookingStayRange & { status: string }>
+): BookingStayRange[] {
+  return reservations
+    .filter((reservation) => reservation.status !== "cancelled")
+    .map((reservation) => ({
+      arrival_date: reservation.arrival_date,
+      departure_date: reservation.departure_date,
+      kind: "reservation" as const
+    }))
 }
 
-export async function getMergedBlockedNightDates(feeds?: CalendarFeedInput[]) {
+async function fetchIcalFeedData(feeds?: CalendarFeedInput[]) {
   const feedUrls = normalizeFeedUrls(feeds)
   const results = await Promise.allSettled(
     feedUrls.map(async (feed) => {
       const ics = await fetchCalendarFeed(feed.url)
+      const events = parseIcalEvents(ics)
+
       return {
         feed,
-        dates: getBlockedNightDates(parseIcalEvents(ics))
+        events,
+        dates: getBlockedNightDates(events),
+        bookingRanges: events.map((event) => icalEventToBookingRange(event))
       }
     })
   )
 
   const blockedSets: Set<string>[] = []
+  const bookingRanges: BookingStayRange[] = []
   const dateSources: Record<string, string[]> = {}
   const feedBlocks: Array<{ name: string; dates: string[] }> = []
   let failed = 0
 
   for (const result of results) {
     if (result.status === "fulfilled") {
-      const { feed, dates } = result.value
+      const { feed, dates, bookingRanges: feedRanges } = result.value
       const dateList = [...dates]
 
       feedBlocks.push({
@@ -105,6 +116,7 @@ export async function getMergedBlockedNightDates(feeds?: CalendarFeedInput[]) {
       }
 
       blockedSets.push(dates)
+      bookingRanges.push(...feedRanges)
     } else {
       failed += 1
     }
@@ -114,6 +126,7 @@ export async function getMergedBlockedNightDates(feeds?: CalendarFeedInput[]) {
 
   return {
     dates: mergeBlockedNightDates(blockedSets),
+    bookingRanges,
     dateSources,
     feedBlocks,
     sources: {
@@ -121,6 +134,17 @@ export async function getMergedBlockedNightDates(feeds?: CalendarFeedInput[]) {
       succeeded: blockedSets.length,
       failed
     }
+  }
+}
+
+export async function getMergedBlockedNightDates(feeds?: CalendarFeedInput[]) {
+  const { dates, dateSources, feedBlocks, sources } = await fetchIcalFeedData(feeds)
+
+  return {
+    dates,
+    dateSources,
+    feedBlocks,
+    sources
   }
 }
 
@@ -132,25 +156,41 @@ export async function getPropertyBlockedNightDates(
     ? normalizeCalendarConfig(calendarConfigInput)
     : await getPropertyCalendarConfig(slug)
 
-  const ical = await getMergedBlockedNightDates(calendarConfig.ics_feeds)
-  const manualBlocks = new Set(calendarConfig.manual_blocks ?? [])
-  const reservationBlocks = await getReservationBlockedNightDates(slug)
+  const ical = await fetchIcalFeedData(calendarConfig.ics_feeds)
+  const manualBlocks = calendarConfig.manual_blocks ?? []
+  const reservations = await listAdminBookingReservations(slug)
+  const hostivRanges = collectHostivBookingRanges(reservations)
+  const bookingRanges = [...hostivRanges, ...ical.bookingRanges]
   const dateSources = { ...ical.dateSources }
 
   for (const date of manualBlocks) {
     addDateSource(dateSources, date, HOSTIV_MANUAL_BLOCK_SOURCE)
   }
 
-  for (const date of reservationBlocks) {
-    addDateSource(dateSources, date, HOSTIV_RESERVATION_BLOCK_SOURCE)
+  for (const range of hostivRanges) {
+    for (const night of enumerateStayNights(range.arrival_date, range.departure_date)) {
+      addDateSource(dateSources, night, HOSTIV_RESERVATION_BLOCK_SOURCE)
+    }
   }
 
   sortDateSources(dateSources)
 
-  const dates = mergeBlockedNightDates([ical.dates, manualBlocks, reservationBlocks])
+  const mergedBlocked = applyBookingRangeAvailability(bookingRanges, manualBlocks)
+
+  for (const date of Object.keys(dateSources)) {
+    if (!mergedBlocked.has(date)) {
+      delete dateSources[date]
+    }
+  }
+
+  const dates = [...mergedBlocked].sort()
+  const otaReservationRanges = ical.bookingRanges.filter((range) => range.kind === "reservation")
 
   return {
     dates,
+    bookingRanges,
+    manualBlocks,
+    otaReservationRanges,
     dateSources,
     feedBlocks: ical.feedBlocks,
     sources: ical.sources
@@ -158,10 +198,21 @@ export async function getPropertyBlockedNightDates(
 }
 
 export async function getMergedBlockedNightDatesForProperty(slug: string) {
-  const { dates, dateSources, feedBlocks, sources } = await getPropertyBlockedNightDates(slug)
+  const {
+    dates,
+    bookingRanges,
+    manualBlocks,
+    otaReservationRanges,
+    dateSources,
+    feedBlocks,
+    sources
+  } = await getPropertyBlockedNightDates(slug)
 
   return {
     dates,
+    bookingRanges,
+    manualBlocks,
+    otaReservationRanges,
     dateSources,
     feedBlocks,
     sources

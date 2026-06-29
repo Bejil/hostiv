@@ -1,4 +1,6 @@
+import { isValidBookingDepartureDate } from "../../app/utils/booking-calendar-availability"
 import { computeBookingPriceEstimate } from "../../app/utils/booking-price"
+import { enumerateStayNights } from "../../app/utils/stay-nights"
 import { getMergedBlockedNightDatesForProperty } from "./calendar-blocked"
 import { getPropertySiteBySlug } from "./property-site-repository"
 
@@ -67,21 +69,6 @@ function isValidPhone(value: string) {
   const digits = normalizePhone(value)
 
   return digits.length >= 8 && digits.length <= 15
-}
-
-function enumerateStayNights(arrivalDate: string, departureDate: string) {
-  const nights: string[] = []
-  const departure = fromInputDate(departureDate)
-
-  for (
-    let cursor = fromInputDate(arrivalDate);
-    cursor < departure;
-    cursor = addDays(cursor, 1)
-  ) {
-    nights.push(toInputDate(cursor))
-  }
-
-  return nights
 }
 
 export type ParsedBookingReservation = {
@@ -159,39 +146,42 @@ export async function parseBookingReservationBody(
     return { ok: false as const, message: "Dates de séjour invalides." }
   }
 
-  const minimumDepartureDate = toInputDate(
-    addDays(fromInputDate(arrivalDate), booking.min_stay_nights)
-  )
-  const maximumDepartureDate = toInputDate(
-    addDays(fromInputDate(arrivalDate), booking.max_stay_nights)
-  )
-
-  if (
-    compareInputDates(arrivalDate, minimumArrivalDate) < 0 ||
-    compareInputDates(departureDate, minimumDepartureDate) < 0 ||
-    compareInputDates(departureDate, maximumDepartureDate) > 0
-  ) {
+  if (compareInputDates(arrivalDate, minimumArrivalDate) < 0) {
     return { ok: false as const, message: "Les dates sélectionnées ne sont pas valides." }
-  }
-
-  const stayNights = enumerateStayNights(arrivalDate, departureDate).length
-
-  if (stayNights < booking.min_stay_nights || stayNights > booking.max_stay_nights) {
-    return { ok: false as const, message: "Durée de séjour invalide." }
   }
 
   const { dates: blockedDateList } = await getMergedBlockedNightDatesForProperty(normalizedSlug)
   const blockedDates = new Set(blockedDateList)
-  const blockedNight = enumerateStayNights(arrivalDate, departureDate).find((night) =>
-    blockedDates.has(night)
-  )
 
-  if (blockedNight) {
-    return {
-      ok: false as const,
-      message: "Ces dates ne sont plus disponibles. Choisissez d’autres dates."
+  if (
+    !isValidBookingDepartureDate(
+      arrivalDate,
+      departureDate,
+      booking.min_stay_nights,
+      booking.max_stay_nights,
+      blockedDates
+    )
+  ) {
+    const stayNights = enumerateStayNights(arrivalDate, departureDate).length
+    const blockedNight = enumerateStayNights(arrivalDate, departureDate).find((night) =>
+      blockedDates.has(night)
+    )
+
+    if (blockedNight) {
+      return {
+        ok: false as const,
+        message: "Ces dates ne sont plus disponibles. Choisissez d’autres dates."
+      }
     }
+
+    if (stayNights < 1 || stayNights > booking.max_stay_nights) {
+      return { ok: false as const, message: "Durée de séjour invalide." }
+    }
+
+    return { ok: false as const, message: "Les dates sélectionnées ne sont pas valides." }
   }
+
+  const stayNights = enumerateStayNights(arrivalDate, departureDate).length
 
   if (!Number.isFinite(adults) || adults < 1) {
     return { ok: false as const, message: "Nombre de voyageurs invalide." }
